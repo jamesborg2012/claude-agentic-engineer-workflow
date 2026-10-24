@@ -510,7 +510,7 @@ Matchers: `Bash`; `Edit|Write`; one `SubagentStop` entry with `^aew:(developer|q
   The guard is a heuristic (it does not unwrap `bash -c` or `eval`); its limits are documented in the script header.
 - **`PreToolUse` on Edit and Write (guard).** Blocks writes to `.env*`, known secret files and `.git/`. It may not cover `MultiEdit` or `NotebookEdit` (undocumented, see section 3).
 - **`SubagentStop` for qa-engineer (gate).** Blocks unless the latest QA artefact for the current stage exists (stage-to-artefact mapping) and ends with a valid return block.
-- **`SubagentStop` for developer (gate).** Blocks unless the newest `06-dev-report*.md` exists, is not older than `state.json`, and, when `STATUS: ok`, lists the commands run with their results.
+- **`SubagentStop` for developer (gate).** Blocks unless the newest `06-dev-report*.md` exists, is not older than `state.json`, ends with a valid return block, and, when `STATUS: ok`, lists the commands run with their results.
 - **Gates block once.** The reason becomes the agent's next instruction. When `stop_hook_active` is true, the gate allows the stop and the orchestrator's normal return check decides.
 - **`SessionStart`.** If `.aew/runs/current` exists and that run is not `done`, it adds context: "Active aew run <id> at stage <stage> (<status>). Use /aew:resume."
 - **All hooks:**
