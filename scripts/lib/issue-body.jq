@@ -104,7 +104,10 @@ def serialise_unmanaged($v; $m):
 | ($specs | length == 1) as $managed
 | if ($prevs | map(.k) | unique | length) != ($prevs | length) then malformed else . end
 | if $managed
-  then (if ($prevs | map(.k) | sort) != [range(1; $specs[0].k)] then malformed else . end)
+  # Count first: `or` short-circuits, so a huge vN never builds range(1; N).
+  then (if ($prevs | length) != $specs[0].k - 1
+           or ($prevs | map(.k) | sort) != [range(1; $specs[0].k)]
+        then malformed else . end)
   else (if ($prevs | length) > 0 then malformed else . end)
   end
 | (if $mts | length == 1 then inner($L; $mts[0]) | join("\n") else null end) as $m

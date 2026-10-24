@@ -390,3 +390,82 @@ v3_check() {
   assert_success
   assert_contains "$output" "revise <n> <spec-file> <version>"
 }
+
+# --- review regressions -------------------------------------------------------
+
+@test "R1. B-2 on a CRLF body is a fixed point, and a later LF revise round-trips" {
+  perl -pe 's/\n/\r\n/' "$I/expected-v2.md" > "$W/crlf"
+  gh_mock_issue 7 --body-file "$W/crlf"
+  revise 7 "$I/spec-v2.md" 2
+  assert_success
+  gh_mock_body 7 > "$W/b2"
+  local n
+  n=$(edits)
+  revise 7 "$I/spec-v2.md" 2
+  assert_success
+  assert_equal "$(edits)" "$n"
+  gh_mock_body 7 | cmp - "$W/b2"
+  revise 7 "$I/spec-v3.md" 3
+  assert_success
+  gh_mock_body 7 > "$W/b3"
+  spec_of "$W/b3" | cmp - "$I/spec-v3.md"
+  prev_of "$W/b3" 2 | cmp - <(spec_of "$W/crlf")
+  prev_of "$W/b3" 1 | cmp - <(prev_of "$W/crlf" 1)
+  assert_no_line_lost "$W/crlf" "$W/b3"
+  n=$(edits)
+  revise 7 "$I/spec-v3.md" 3
+  assert_success
+  assert_equal "$(edits)" "$n"
+  printf '# v4\n' > "$W/s4.md"
+  revise 7 "$W/s4.md" 4
+  assert_success
+  gh_mock_body 7 > "$W/b4"
+  prev_of "$W/b4" 3 | cmp - "$I/spec-v3.md"
+  prev_of "$W/b4" 2 | cmp - <(spec_of "$W/crlf")
+  prev_of "$W/b4" 1 | cmp - <(prev_of "$W/crlf" 1)
+  assert_no_line_lost "$W/b3" "$W/b4"
+}
+
+@test "R2. multi-byte characters across 4096-byte read chunks survive byte for byte" {
+  local pre
+  for pre in 1 2 4094; do
+    perl -CS -e 'print "a" x $ARGV[0]; print "\x{e9}\x{1F600}\x{20AC}\n" x 1500' "$pre" > "$W/mb.md"
+    gh_mock_issue 7 --body-file "$W/mb.md"
+    revise 7 "$W/mb.md" 2
+    assert_success
+    gh_mock_body 7 > "$W/after"
+    prev_of "$W/after" 1 | cmp - "$W/mb.md"
+    spec_of "$W/after" | cmp - "$W/mb.md"
+  done
+}
+
+@test "R3. a spec file without a final newline is stored exactly and is idempotent" {
+  printf '# no newline at end' > "$W/nonl.md"
+  gh_mock_issue 7 --body-file "$I/body-v1.md"
+  revise 7 "$W/nonl.md" 2
+  assert_success
+  gh_mock_body 7 > "$W/after"
+  spec_of "$W/after" | cmp - "$W/nonl.md"
+  revise 7 "$W/nonl.md" 2
+  assert_success
+  assert_equal "$(edits)" 1
+  printf '# no newline at end\n' > "$W/nl.md"
+  expect_refusal "$W/after" "$W/nl.md" 2 "already recorded with different content"
+}
+
+@test "R4. more malformed shapes are refused: duplicate prev, missing prev, stray close, unclosed tail block" {
+  local v2="$I/expected-v2.md" b
+  b="$W/r-dupprev"; { cat "$v2"; printf '\n<!-- aew:spec-prev v1 -->\n<details>\n<summary>Spec v1 (original)</summary>\n\nx\n\n</details>\n<!-- /aew:spec-prev v1 -->\n'; } > "$b"
+  expect_refusal "$b" "$I/spec-v3.md" 3 "malformed aew blocks"
+  b="$W/r-missingprev"; sed -e 's/aew:spec v2/aew:spec v3/' -e 's/aew:spec-prev v1/aew:spec-prev v2/' "$v2" > "$b"
+  expect_refusal "$b" "$I/spec-v3.md" 3 "malformed aew blocks"
+  # a huge version must be refused at once, not build range(1; N)
+  b="$W/r-hugev"; sed 's/aew:spec v2/aew:spec v99999999999999999999/' "$v2" > "$b"
+  expect_refusal "$b" "$I/spec-v3.md" 3 "malformed aew blocks"
+  b="$W/r-strayclose"; awk '$0 == "<!-- aew:spec-prev v1 -->" { print "<!-- /aew:spec-prev v1 -->" } { print }' "$v2" > "$b"
+  expect_refusal "$b" "$I/spec-v3.md" 3 "malformed aew blocks"
+  b="$W/r-unclosed"; { cat "$v2"; printf '\n<!-- aew:manual-tests -->\n- [ ] x\n'; } > "$b"
+  expect_refusal "$b" "$I/spec-v3.md" 3 "malformed aew blocks"
+  b="$W/r-unclosed-v1"; { cat "$I/body-v1.md"; printf '<!-- aew:manual-tests -->\n- [ ] x'; } > "$b"
+  expect_refusal "$b" "$I/spec-v2.md" 2 "malformed aew blocks"
+}
