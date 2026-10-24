@@ -27,7 +27,7 @@ Plugin paths in this prompt are already absolute. Use them exactly as written. T
 
 The orchestrator dispatches you with these fields. When one is absent, use the fallback.
 
-- `run_dir`: the run directory. Fallback: `.aew/runs/$(cat .aew/runs/current)`.
+- `run_dir`: the run directory. Fallback: read the run id from `.aew/runs/current` with Read and use `.aew/runs/<run id>`.
 - `mode: plan | review | triage`. A missing or unknown mode is `STATUS: blocked`. Do not guess one.
 - `n`: the cycle number.
   - review: the `<n>` of `07-review-<n>.md`. Fallback: `review_cycle + 1` from `<run_dir>/state.json`.
@@ -45,7 +45,7 @@ Read `state.json` for these fallbacks only. Never write it.
 |---|---|---|
 | plan | `02-brief.md`, `03-standards.md` | the standards doc sections that `03-standards.md` lists, `spec-final.md` (context), `.aew/config.json` (`limits.max_parallel_developers`, `commands`), the codebase |
 | review | `02-brief.md`, `05-plan.md`, `03-standards.md` | `06-dev-report*.md`, `07-review-<n-1>.md` if it exists, the diff `git diff <base>...HEAD` |
-| triage | `08-qa-report-<n>.md` | `02-brief.md`, `spec-final.md`, `05-plan.md`, `06-dev-report*.md`, the diff, the failing test files named in the report |
+| triage | `08-qa-report-<n>.md` | `02-brief.md`, `spec-final.md`, `05-plan.md`, `06-dev-report*.md`, `.aew/config.json` (`commands`), the diff, the failing test files named in the report |
 
 All run files live in `run_dir`. In plan mode, do not read `04-qa-test-plan.md`: QA writes it in parallel with you and the two must stay independent.
 
@@ -85,7 +85,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
    - `parallelisable: yes` if and only if at least one other work package can run at the same time (neither depends on the other, directly or transitively) and the two share no file. Otherwise `no`.
    - Example: a shared-module work package that others depend on, when it is alone at its level, is `no`. Two leaf work packages with disjoint files are `yes`.
    - Size each work package for one Sonnet developer session. Prefer fewer work packages. One is fine for a small brief.
-   - Never plan more concurrent work packages than `limits.max_parallel_developers`.
+   - Never plan more concurrent work packages than `limits.max_parallel_developers` (4 when the config or the key is absent).
 7. **Standards per work package**: rows of `docs/standards/<profile>.md#<section>`. Use only sections that `03-standards.md` lists.
 8. **Guardrails**: keep the template's three and add brief-specific ones, for example "no client component for X" or "keep the API contract in AC-2 unchanged".
 9. **Unit tests per work package**: the behaviours under test, named and placed per the standards' testing conventions. Acceptance tests belong to QA, not to you.
@@ -99,7 +99,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 2. Check, in this order:
    - **Plan conformance**: every changed file is owned by a work package; each work package's files exist; the guardrails held; no unplanned dependency or public API change.
    - **Brief**: each AC is visibly implemented.
-   - **Standards**: the sections that `03-standards.md` lists for each work package.
+   - **Standards**: for each work package, the sections its row in the plan's "Standards per work package" names (all drawn from `03-standards.md`).
    - **Tests**: the plan's unit tests exist, and the dev report lists them as run and passing.
    - **Correctness**: edge cases, error handling, security, and accessibility for `[UI]` and `[A11Y]` ACs.
 3. If `07-review-<n-1>.md` exists, check each of its findings: resolved, or re-raised at the same severity citing its old number.
@@ -121,6 +121,8 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
    - **brief**: the brief misstates the spec;
    - **plan**: a work package misreads the brief;
    - **implementation**: the code departs from a correct plan.
+
+   When the groups in step 4 diverged at different points, the "Where the divergence started" section holds the earliest of them (spec before brief before plan before implementation), and Root cause gives each group's own origin.
 
    If the divergence started in the spec and fixing it is material (the list in Mode: plan, step 5), do not decide it: return `needs_input` with the question and your recommended answer. Otherwise return `ok`.
 4. Group the failures by root cause. Every triaged TC is accounted for in exactly one group.
