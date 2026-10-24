@@ -61,10 +61,10 @@ Stdout contract:
 | Script | Prints |
 |---|---|
 | `state.sh` | `get`: JSON or the field; `bump`: the new value; `current`: the run id |
-| `gh-issue.sh` | `comment`: the comment URL; the others are quiet |
+| `gh-issue.sh` | `comment`: the comment URL; `revise` and `manual-tests`: the issue URL when they edit (gh's own output); `fetch`: quiet |
 | `gh-labels.sh` | quiet |
 | `git-branch.sh` | `create` and `push`: the branch name (git chatter on stderr) |
-| `gh-pr.sh` | `create`: the PR number; the others are quiet |
+| `gh-pr.sh` | `create`: the PR number; `update` and `comment`: gh's own output (the PR or comment URL); `ready`: nothing on stdout |
 | `gh-milestone.sh` | a JSON array of `{number, title, labels, state, depends_on}` |
 | `gh-retro.sh` | one line per item: `created #n` or `commented #n` |
 
@@ -73,5 +73,4 @@ Stdout contract:
 - No rewrite of a real issue body (`revise`, `manual-tests`) until prompt 07's sandbox end-to-end run passes. Sandbox issues only until then.
 - Rollback for a bad rewrite: GitHub's issue edit history ("edited" menu), or `00-issue-original.md` / `issue.json` in the run dir, which `fetch` writes verbatim.
 - `revise` and `manual-tests` read the body, then edit it; a human edit between the two is lost (lost-update race).
-- `blockedBy` links are read up to 50 per issue.
 - `gh-retro.sh` may drop the retro label when the token lacks triage rights; the issue is still filed.
