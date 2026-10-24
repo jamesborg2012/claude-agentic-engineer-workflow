@@ -56,13 +56,15 @@ hook_init() {
     exit 0
   fi
 
-  # 4. Payload. jq exits 0 on empty input, so reject that explicitly. The
-  # never-empty field goes first: tab is IFS whitespace and would collapse a
-  # leading empty field.
-  local parsed
+  # 4. Payload. jq exits 0 with no output on empty or whitespace-only input,
+  # and accepts null or several documents, so the payload must be exactly one
+  # object giving exactly one line. The never-empty field goes first: tab is
+  # IFS whitespace and would collapse a leading empty field.
+  local parsed=""
   HOOK_PAYLOAD=$(cat) || HOOK_PAYLOAD=""
   if [ -z "$HOOK_PAYLOAD" ] ||
-    ! parsed=$(jq -r '[(.stop_hook_active == true | tostring), (.cwd // "" | tostring)] | @tsv' <<<"$HOOK_PAYLOAD" 2> /dev/null); then
+    ! parsed=$(jq -r 'if type == "object" then [(.stop_hook_active == true | tostring), (.cwd // "" | tostring)] | @tsv else error("not an object") end' <<<"$HOOK_PAYLOAD" 2> /dev/null) ||
+    [ -z "$parsed" ] || [ "${parsed%%$'\n'*}" != "$parsed" ]; then
     warn "unreadable hook payload; failing open"
     exit 0
   fi

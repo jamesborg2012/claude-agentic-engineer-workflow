@@ -149,7 +149,7 @@ payload_for() {
 @test "an unreadable payload fails open" {
   setup_project
   local p
-  for p in '' 'not json' '[]'; do
+  for p in '' 'not json' '[]' 'null' '   ' '"str"' '{"cwd":"/x"} {"cwd":"/y"}'; do
     run_stub "$p"
     assert_success
     refute_contains "$output" "cwd="
@@ -179,6 +179,15 @@ payload_for() {
     assert_success
     assert_contains "$stderr" "failing open"
     if [ "$t" = "die boom" ]; then assert_contains "$stderr" "error: boom"; fi
+  done
+}
+
+@test "an explicit exit 2 or an unbound variable after init still exits 0" {
+  setup_project
+  local t
+  for t in 'exit 2' 'echo "$no_such_var"'; do
+    STUB_TAIL=$t run_stub "$(payload_for pretooluse-bash.json "$PROJECT")"
+    assert_success
   done
 }
 
