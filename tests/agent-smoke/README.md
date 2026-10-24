@@ -519,6 +519,9 @@ not start the run (record its checks as `open`). Apply the same test before any 
 | 961 fan-out attempt 1 (cap 10; 1.91 + 10 = 11.91, under 60) | 961 | 0.65 | 2.56 | no |
 | 961 fan-out attempt 2, after the git -C fix (cap 10; 2.56 + 10 = 12.56, under 60) | 961 | 0.80 | 3.36 | no |
 | 961 fan-out attempt 3, after the main-checkout git fix (cap 10; 3.36 + 10 = 13.36, under 60) | 961 | 0.79 | 4.15 | no |
+| 951 developer fix, cycle 1 (cap 5; 4.15 + 5 = 9.15, under 60) | 951 | 0.47 | 4.62 | no |
+| 951 QA cycle 2 attempt 1 (cap 8; 4.62 + 8 = 12.62, under 60) | 951 | 0.54 | 5.16 | no |
+| 951 QA cycle 2 attempt 2, after fix d4b2c86 (cap 8; 5.16 + 8 = 13.16, under 60) | 951 | 0.36 | 5.52 | no |
 
 ### 8.2 Playwright MCP tool names (AC-2, probe 940)
 
@@ -694,7 +697,7 @@ ALLOW=(--allowedTools
   "Bash(curl *)" "Bash(nohup sh -c *)" "Bash(sh -c *)" "Bash(tail -n 20 *)" "Bash(lsof -ti tcp:4173 -sTCP:LISTEN)" "Bash(kill *)"
   "Bash(rm -rf $P/docs/qa/201/screenshots)" "Bash(rm -rf $P_REAL/docs/qa/201/screenshots)"
   "Bash(AEW_EVIDENCE_DIR=* npx playwright test)" "Bash(AEW_EVIDENCE_DIR=* npx playwright test *)"
-  "Bash(mkdir -p *)" "Bash(file -b *)" "Bash(jq *)"
+  "Bash(mkdir -p *)" "Bash(file -b *)" "Bash(jq *)" "Bash(cp *)"
   "Bash(git status *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git rev-parse *)" "Bash(git add *)" "Bash(git commit *)"
   "${T}_navigate" "${T}_snapshot" "${T}_click" "${T}_type" "${T}_press_key" "${T}_select_option"
   "${T}_hover" "${T}_resize" "${T}_console_messages" "${T}_wait_for" "${T}_close"
@@ -833,3 +836,41 @@ Nested `SubagentStop` observation (A29, AC-23), from `stop-payloads.jsonl` (Clau
 | parent developer | `aew:developer` | `a38ccb8541a2446b8` | false | `.aew/runs/961/06-dev-report.md` | allowed (exit 0) |
 
 Nested sub-developers do fire `SubagentStop`, with the same `agent_type` as the parent and distinct `agent_id`s; the debug log shows the plugin gate running for each of the three stops. The gate resolves the main worktree's run dir and each sub-developer wrote its own report before stopping, so the newest-report rule did not mis-block anyone in this run (the WP reports were written at different times, each before its own stop; the parent's report came last). A29's fallback (gate the report named in ARTEFACTS) is not needed.
+
+#### 951: developer fix, then QA cycle 2 (E3)
+
+Both steps run from `smoke_use shop loop 951` on the kept cycle-1 project. `smoke_use` sets `O=out-951` and does not clear it, so each step sets `O` itself (`out-951-fix1`, `out-951-qa2`). Each step is a script file (not inline Bash: the plugin hook blocks command text containing `git push`) with `< /dev/null`; it snapshots `$P` with `cp -Rp` to `snap-951-fix1` / `snap-951-qa2` first, so a re-run restores the same state, and it checks that port 4173 is free. Step 1 records `C1=$(git rev-parse HEAD)` (`828ba57`) and runs `state.sh bump fix_cycle` then `state.sh stage develop`; step 2 runs `state.sh stage qa`.
+
+```sh
+# step 1: developer ALLOW = the 961 developer line above, plus the ui-qa app lifecycle (the Skill call to aew:ui-qa needed no allow entry)
+ALLOW+=("Bash(curl *)" "Bash(nohup sh -c *)" "Bash(sh -c *)" "Bash(tail -n 20 *)" "Bash(lsof -ti tcp:4173 -sTCP:LISTEN)" "Bash(kill *)")
+smoke_dispatch developer "run_dir: $RUN, mode: fix, n: 1, fix_from: 08-qa-report-1.md"; CAP=5
+# step 2: the phase B ALLOW line of section 8.3 (it now includes "Bash(cp *)"), P_REAL recomputed
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: B, n: 2"; CAP=8
+```
+
+Both used the 961 `SETTINGS` capture hook for `SubagentStop` payloads.
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 fix | F1 fix commits | pass | `C1..HEAD` is two commits, both matching `^fix\([^)]+\): .+ \(#201\)$`: `54d1046 fix(basket): write the count into the status text (#201)` (`site/app.js`, TC-1) and `004fd43 fix(basket): name the icon-only basket button (#201)` (`site/index.html`, TC-2 and TC-3). One commit per root cause. |
+| 951 fix | F2 no `tests/e2e/` change | pass | `git diff --name-only C1 HEAD` is `site/app.js`, `site/index.html` only. |
+| 951 fix | F3 report | pass | `06-dev-report.md` has `Mode: fix (cycle 1)`, filled `## Commands run` (node --test pass; `npx playwright test tests/e2e/201-add-to-basket.spec.ts` without `AEW_EVIDENCE_DIR`: 8 passed), headings equal the template's, valid return block `ok`; `final.txt` is `ok` with NEXT `qa-engineer phase B (cycle 2)`. |
+| 951 fix | F4 fix-mode process | pass | Read `08-qa-report-1.md`; the `aew:ui-qa` Skill call worked headless with no allow entry; app started with `nohup sh -c` (no trailing `&`), ready `curl --retry`, `lsof -ti` then `kill <pid>`; port free after. No `frontend-design` call, no Agent call. |
+| 951 fix | F5 gate allow (AC-23) | pass | `stop-payloads.jsonl`: one `SubagentStop`, `agent_type` `aew:developer`; the plugin gate finished with status 0; no `"decision":"block"` in the debug log or stream. |
+| 951 fix | F6 shared rows | pass | Preloaded `aew:run-protocol` and the three superpowers skills; no skip line; `permission_denials` `[]`; `$REPO` status clean; cost 0.47. |
+| 951 c2 | Q1 return blocks and headings | pass (after fix) | Attempt 1: `final.txt` and `08-qa-report-2.md` valid `ok`, headings equal the template's, all four automated TCs pass at both viewports, but `docs/qa/201/report.md` was missing. Cause: Claude Code refuses a subagent's `Write` of a file named `report.md` ("Subagents should return findings as text, not write report files"); `08-qa-report-2.md` is not refused. Agent fault, fixed in d4b2c86: step 13 copies with one `cp`, the Guardrails allow that `cp`, ui-qa section 10 says why; the harness `ALLOW` gains `Bash(cp *)`. Attempt 2 (restored `snap-951-qa2`): valid `ok`, headings equal. |
+| 951 c2 | Q2 report content | pass | Results: TC-1 to TC-4 `pass (desktop, mobile)`, TC-5 `manual`; 8 passed in the evidence run; axe 0 violations at `wcag22aa` on both viewports; the `Exploratory checks (Playwright MCP)` label is present. |
+| 951 c2 | Q3 `docs/qa/201/report.md` | pass (after fix) | Present after attempt 2 and `cmp`-identical to `08-qa-report-2.md`; part of QA's commit. |
+| 951 c2 | Q4 `manual-tests.md` | pass | Still one TC-5 line (the confirmation email), unchanged format. |
+| 951 c2 | Q5 overwrite (CTO cut 1) | pass | Screenshot names equal cycle 1's (`TC-{1..4}-{desktop,mobile}.jpg`, no stale file); `find ... ! -newer out-951-qa1/stream.jsonl` prints nothing; all eight are JPEGs by `file -b` (four 1440x900, four 390x844). |
+| 951 c2 | Q6 commit and tree | pass | `36fd498 test(e2e): QA pass and final evidence for add to basket (#201)`; changes `docs/qa/201/report.md` and the four JPEGs of the TCs the fix changed (TC-1, TC-2; the others were byte-identical); no `tests/e2e/` or `site/` change; `$P` status clean; HEAD to `C1` is the two fix commits plus this one. |
+| 951 c2 | Q7 app lifecycle and gate | pass | Reuse `curl`, start, ready `curl`, `lsof -ti`, `kill`, `lsof -ti` (empty); port free. qa-engineer `SubagentStop`: gate status 0, no block; `permission_denials` `[]`; preload shows the three skills, no skip line; `$REPO` status clean. Cost 0.36 (attempt 2); attempt 1 cost 0.54. |
+
+Notes for E4 and E5:
+
+- Final state of `$SMOKE/smoke-shop-loop` (kept for the doc-writer): stage `qa`, `fix_cycle` 1, HEAD `36fd498`, branch `feat/201-add-to-basket`, `docs/qa/201/report.md` present, `.aew/runs/951` holds `06-dev-report.md` (fix), `08-qa-report-1.md`, `08-qa-report-2.md`, `manual-tests.md`. Outputs: `out-951-fix1`, `out-951-qa2` (attempt 2; attempt 1's was overwritten by the script's `rm -rf "$O"`). Snapshots `snap-951-fix1` (cycle-1 state) and `snap-951-qa2` (after the developer fix, stage `develop`).
+- The two fix commits and QA's commit carry a `Co-Authored-By: Claude Sonnet 5.5` trailer. The developer prompt says no co-author trailer, but the headless session's harness attribution instruction asked for one and the developer followed it, noting the conflict in its Deviations. The trailer sits in a second `-m`, so the allowlisted command form held and the subjects match. Open item for prompt 05 (attribution policy), not a check failure.
+- A subagent's `Write` of a file named `report.md` is refused by Claude Code. Any future agent writing such a name (the doc-writer has no Bash) must be checked for the same refusal.
+- The `Mode: fix` developer needed no `Bash(git -C ...)` rule: it works in the main checkout.
+- Fix d4b2c86 edits qa-engineer's phase B step 13 and one phase B bullet of its Guardrails. Run 941 (phase A, which has no Bash) was not re-run, and cycle 1 is never re-run for E's sake; if the senior review reads the Guardrails bullet as a shared-section edit, 941 is the case to repeat (about $0.35).
