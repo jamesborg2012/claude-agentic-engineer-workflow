@@ -130,6 +130,16 @@ remote_ref_count() { git --git-dir="$REMOTE" for-each-ref | grep -c '' || true; 
   assert_equal "$(branch_count)" "1"
 }
 
+@test "create: untracked file is refused even with status.showUntrackedFiles=no" {
+  git config status.showUntrackedFiles no
+  echo u > untracked.txt
+  gb create 7 dirty
+  assert_failure 1
+  assert_contains "$stderr" "error:"
+  assert_equal "$(head_branch)" "main"
+  assert_equal "$(branch_count)" "1"
+}
+
 @test "create: a file under the gitignored .aew/runs/ does not block" {
   mkdir -p .aew/runs/1
   echo log > .aew/runs/1/log.md

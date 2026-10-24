@@ -82,7 +82,8 @@ cmd_create() {
     base=$default
   fi
 
-  st=$(git status --porcelain) || die "git status failed"
+  # -unormal: a user's status.showUntrackedFiles=no must not hide untracked files.
+  st=$(git status --porcelain --untracked-files=normal) || die "git status failed"
   [ -z "$st" ] || die "working tree is not clean; commit or stash first (untracked files count)"
   if git show-ref --verify --quiet "refs/heads/$b"; then
     die "branch already exists: $b"
