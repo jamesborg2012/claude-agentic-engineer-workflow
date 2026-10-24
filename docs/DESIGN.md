@@ -448,6 +448,8 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
   - `Closes #n` for every issue in the run.
 - **`retro.md`:** improvements to the plugin seen during the run (agent mistakes, missing rules, slow stages, cycles used, false-positive hooks). The orchestrator files these to the retro repo. They never go in the project repo.
 
+The doc-writer has no Bash and doesn't commit. The orchestrator commits its docs after the stage, as it does `docs/standards/` (prompt 05).
+
 ## 9. Orchestrator (`ship` skill)
 
 Runs on the main thread.
