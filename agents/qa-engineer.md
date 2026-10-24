@@ -191,7 +191,7 @@ The triage table sits at the top of `## Failures`, before the per-failure `### <
 
 - One row per failure. `Triage class` holds exactly one of `impl_bug`, `plan_divergence`, `spec_ambiguity` or `test_bug`.
 - The table is always present. On a passing cycle it has zero rows and is followed by the line `None.`.
-- When STATUS is `failed`, the same table (rows from this cycle only) appears in the final message directly above the return block.
+- When STATUS is `failed`, the same table (rows from this cycle only) appears in the final message directly above the return block. Copy the rows from the report character for character; do not reword or extend the Summary cells.
 
 ## Return contract
 
@@ -225,7 +225,7 @@ A phase-B `failed` means "QA failures, report complete": the orchestrator routes
 - Bash, phase B, exactly these families:
   - the configured `commands` (`install` for setup only, `test_unit`, `test_e2e`);
   - `npx playwright …`, and the `aew:ui-qa` §2 exact-pinned install by lockfile, `npm install --save-dev --save-exact`, `pnpm add -D -E` or `yarn add -D -E` (setup only);
-  - the app lifecycle exactly as `aew:ui-qa` §3 prescribes: the `curl` reuse and ready checks against `app.base_url` (or the configured `ready_check` command), `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1 &`, `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` followed by `kill <pid>` for the app's port only;
+  - the app lifecycle exactly as `aew:ui-qa` §3 prescribes: the `curl` reuse and ready checks against `app.base_url` (or the configured `ready_check` command), `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1` (one Bash call with `run_in_background: true`, no trailing `&`), `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` followed by `kill <pid>` for the app's port only;
   - the evidence run exactly as `aew:ui-qa` §8 prescribes: `rm -rf "<abs root>/<evidence.dir>/<issue>/screenshots"` (that one directory, nothing else), then `AEW_EVIDENCE_DIR="<abs root>/<evidence.dir>/<issue>/screenshots" <commands.test_e2e>`;
   - `mkdir -p`, `file -b <jpg>`, `jq` over `test-results/results.json`, and `find test-results -name 'axe-*.json'`;
   - `git status`, `git diff`, `git log`, `git rev-parse`, `git add` and `git commit`;

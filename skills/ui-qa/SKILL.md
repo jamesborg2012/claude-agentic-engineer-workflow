@@ -55,8 +55,10 @@ ddev and docker) is started by `start_command`.
 
 1. Reuse: `curl -fsS -o /dev/null --max-time 5 "<base_url>"`. If it exits 0, an instance is already running:
    use it and **leave it running**.
-2. Otherwise start it from the project root in the background, logging to the run dir:
-   `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1 &`. Note that you started it.
+2. Otherwise start it from the project root in the background, logging to the run dir, with one Bash call that sets
+   `run_in_background: true` and the command `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1`. Do not add a
+   trailing `&`: a command with the `&` operator needs interactive approval and is refused when nobody can answer.
+   Note that you started it.
 3. Wait up to 120 s.
    - URL check, with no `sleep`: `curl -fsS -o /dev/null --max-time 5 --retry 60 --retry-delay 2 --retry-max-time 120 --retry-all-errors "<ready_check>"`.
    - Command check: `for i in $(seq 1 60); do <ready_check> && break; [ "$SECONDS" -ge 120 ] && break; sleep 2; done`,
