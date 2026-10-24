@@ -17,7 +17,8 @@ Reuse means an exact string match on `fingerprint`. A seed has no such header (s
 
 ## Required headings
 
-Every doc uses these level-2 headings, once each, in this order.
+Every doc uses these level-2 headings, once each, in this order, and no other level-2 headings.
+(The headings of this file itself are not part of the contract.)
 
 | Heading | What belongs in it |
 |---|---|
@@ -46,8 +47,9 @@ Form: `- **[tool]** <rule> (<tool or rule id>)` or `- **[convention]** <rule>`.
 
 ## Examples
 
-Give a concrete, stack-specific example where a rule is easy to get wrong. Each example is a label
-line, then a fenced code block, so `Do:` and `Don't:` lines appear in equal numbers.
+Give a concrete, stack-specific example where a rule is easy to get wrong. Each example is a pair:
+a `Do:` line, then a fenced code block, then a `Don't:` line, then a fenced code block. Each label
+stands alone on its line, so `Do:` and `Don't:` lines appear in equal numbers.
 
 ````
 Do:
