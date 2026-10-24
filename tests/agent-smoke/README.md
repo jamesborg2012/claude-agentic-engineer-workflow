@@ -55,6 +55,12 @@ jq -r 'select(.type=="result") | .total_cost_usd' "$O/stream.jsonl"
 | Write-denial and E-3 probes (10 haiku one-liners about 0.10 in total, one opus `aew:spec-analyser` stub 0.31) | n/a | 0.41 | 4.61 | no |
 | 901 pass (temp project moved outside the repo) | 901 | 0.60 | 5.21 | no |
 | 901 re-run after the memory-path `fix(agents)` | 901 | 0.55 | 5.76 | no |
+| 902 spec-analyser non-material | 902 | 0.49 | 6.25 | no |
+| 903 spec-analyser material | 903 | 0.58 | 6.83 | no |
+| 911 brief-compiler pipeline | 911 | 0.77 | 7.60 | no |
+| 912 brief-compiler prompt | 912 | 0.61 | 8.21 | no |
+| 921 attempt 1 standards-setter (agent fault: Bash `cat` loop denied) | 921 | 0.47 | 8.69 | no |
+| 921 attempt 2 after the Bash-guardrail `fix(agents)` | 921 | 0.47 | 9.16 | no |
 
 ## 2. Setup per case
 
@@ -379,7 +385,7 @@ Filled in by E2 (isolation probe) and E3 (seed path resolution).
 | Isolation 3: SessionStart resume hint present, `aew:spec-analyser` still dispatched, no `aew:resume` call | pass | Debug log: `Active aew run 901 at stage spec_analysis (running). Use /aew:resume.` The only main-thread tool call was `Agent aew:spec-analyser`; no Skill call. |
 | Stream shape: final-message jq filter returns the subagent's message (source used) | pass | The filter on the last assistant event with a non-null `parent_tool_use_id` and a text block returns the subagent's own message (starts with its summary, ends in the return block); the Agent `tool_result` is not needed. |
 | Preload form: `aew:run-protocol` loads (else bare `run-protocol`) | pass | Debug: `[Agent: aew:spec-analyser] Preloaded skill 'aew:run-protocol'`; no skip warning. The qualified form works, so DESIGN §3 needs no change. |
-| Seed path resolution: `${CLAUDE_SKILL_DIR}` substituted in a subagent-preloaded skill; any unexpanded `${` | pending | |
+| Seed path resolution: `${CLAUDE_SKILL_DIR}` substituted in a subagent-preloaded skill; any unexpanded `${` | pass for `${CLAUDE_PLUGIN_ROOT}`; `${CLAUDE_SKILL_DIR}` untested | standards-setter (run 921) read seeds at the absolute `$REPO/skills/stack-standards/references/seeds/<profile>.md`; the preloaded skill and the agent prompt both spell it `${CLAUDE_PLUGIN_ROOT}/...`, so substitution of that variable works in both. No skill uses `${CLAUDE_SKILL_DIR}`, so nothing shows whether it expands in a subagent-preloaded skill (E6 need not add it to F9). No unexpanded `${` in any Read input or debug line. |
 | E-3: `PreToolUse` payload in a subagent carries `agent_type` `aew:<agent>` (live line or docs citation) | pass (live) | Neither the debug log nor the `--include-hook-events` stream carries hook input. A probe session with a `--settings` PreToolUse hook (`cat >> payloads.jsonl`) recorded: `{"tool":"Glob","agent_type":"aew:spec-analyser","agent_id":"af0b9886062461f6d","hook_event_name":"PreToolUse"}`; the main thread's own `Agent` call had `agent_type` null. The agent `gh` deny can therefore key on `aew:<agent>` live. |
 
 ## 6. Results
@@ -398,47 +404,47 @@ Every row starts as `pending`. Cost goes in the notes (and the ledger in section
 | 901 `spec-final.md` exists; if `changes` is `[]`, SUMMARY has "No changes needed" and spec-final equals the analysed spec (AC-13) | pass | `diff` against `issue.json` `.body` differs only by one trailing blank line (the body ends in a newline). |
 | 901 `git -C "$REPO" status --porcelain` clean (E-2) | pass | Only this README (and the committed fix files) differ. No foreign file in `$P` (no `docs/`); `.claude/agent-memory/aew-spec-analyser/` created. Cost 0.55 for the last run; see ledger. |
 | **E3 run a 902, spec-analyser non-material** | | |
-| 902 `STATUS: ok` | pending | |
-| 902 at least one change, all `type: non-material`, `source: auto` | pending | |
-| 902 changes applied in `spec-final.md` (spot-checked) | pending | |
-| 902 Classification table has no `material` row | pending | |
-| 902 artefacts follow templates, valid return blocks | pending | |
-| 902 Preload, permission denials, final.txt return block, E-2 | pending | |
+| 902 `STATUS: ok` | pass | `STATUS: ok`; `valid_return_block` ok. |
+| 902 at least one change, all `type: non-material`, `source: auto` | pass | 4 changes, all `non-material`/`auto`: typo "retrun", reference `/api/heath`, implied AC 3 (200 + JSON), AC 4 (no DB/external). |
+| 902 changes applied in `spec-final.md` (spot-checked) | pass | Spot-check: `diff` of `issue.json` body against `spec-final.md` shows all 4 applied (2 fixes, 2 ACs added). |
+| 902 Classification table has no `material` row | pass | 4 rows, all `non-material`. |
+| 902 artefacts follow templates, valid return blocks | pass | Heading diff empty; both blocks valid. |
+| 902 Preload, permission denials, final.txt return block, E-2 | pass | `Preloaded skill 'aew:run-protocol'`; denials `[]`; E-2 clean: only the README (and the committed fix) differ. Cost 0.49. |
 | **E3 run b 903, spec-analyser material** | | |
-| 903 `STATUS: needs_input` | pending | |
-| 903 Classification has a `material` row | pending | |
-| 903 `### Q<n>` with non-empty `**Recommended answer:**` and `**Alternatives:**`, about guest vs logged-in access | pending | |
-| 903 `spec-changes.json` holds no material change (A15) | pending | |
-| 903 artefacts follow templates, valid return blocks | pending | |
-| 903 Preload, permission denials, final.txt return block, E-2 | pending | |
+| 903 `STATUS: needs_input` | pass | Final message and artefact both `needs_input`. |
+| 903 Classification has a `material` row | pass | 2 `material` rows (storage location; navigation link), 5 non-material. |
+| 903 `### Q<n>` with non-empty `**Recommended answer:**` and `**Alternatives:**`, about guest vs logged-in access | pass | Q1 localStorage vs signed-in account (guest vs logged-in), Q2 link placement; both have a non-empty Recommended answer and Alternatives. |
+| 903 `spec-changes.json` holds no material change (A15) | pass | 5 changes, all `non-material`/`auto`; the 2 material ones are only in Classification and Questions. |
+| 903 artefacts follow templates, valid return blocks | pass | Heading diff empty; both blocks valid. |
+| 903 Preload, permission denials, final.txt return block, E-2 | pass | Preload ok, denials `[]`, E-2 clean: only the README (and the committed fix) differ. Cost 0.58. |
 | **E3 run c 911, brief-compiler pipeline, UI** | | |
-| 911 `02-brief.md` follows template | pending | |
-| 911 ACs `AC-1..AC-n` contiguous, atomic, observable (per-AC judgement in notes) | pending | |
-| 911 exactly one `UI changes:` line in `02-brief.md`, value `yes` | pending | |
-| 911 artefact and final.txt end in valid return block, `STATUS: ok` | pending | |
-| 911 Preload, permission denials, E-2 | pending | |
+| 911 `02-brief.md` follows template | pass | Heading diff empty (only the H1 placeholder differs). |
+| 911 ACs `AC-1..AC-n` contiguous, atomic, observable (per-AC judgement in notes) | pass | AC-1..AC-38 contiguous (checked by extraction). Each is a Given/When/Then with a concrete observable and a tag; AC-9 (both import one module), AC-10 (value table) and AC-36 (contrast in five states) bundle several inputs under one rule, judged acceptable. Vague words: 0, none listed under Open risks. |
+| 911 exactly one `UI changes:` line in `02-brief.md`, value `yes` | pass | `## UI changes: yes`, one line. |
+| 911 artefact and final.txt end in valid return block, `STATUS: ok` | pass | `STATUS: ok`; both blocks valid. |
+| 911 Preload, permission denials, E-2 | pass | Preload ok, denials `[]`, E-2 clean: only the README (and the committed fix) differ. Cost 0.77. |
 | **E3 run d 912, brief-compiler prompt mode, non-UI** | | |
-| 912 `prompt.md` exists, no `02-brief.md` written | pending | |
-| 912 `prompt.md` `## ` headings match `templates/artefacts/prompt.md` | pending | |
-| 912 no aew words in `prompt.md` (`grep -cE 'aew\|\.aew/\|/aew:\|run-protocol\|CLAUDE_PLUGIN_ROOT'` is 0) | pending | |
-| 912 no HTML comments in `prompt.md` (`grep -c '<!--'` is 0) | pending | |
-| 912 exactly one `UI changes:` line in `prompt.md`, value `no` | pending | |
-| 912 every source requirement maps to a contiguous `AC-n` (mapping in notes) | pending | |
-| 912 `prompt.md` has no return block; final.txt passes `valid_return_block` | pending | |
-| 912 Preload, permission denials, E-2 | pending | |
+| 912 `prompt.md` exists, no `02-brief.md` written | pass | `prompt.md` written, no `02-brief.md`; `docs/` absent so the A18 inlining path ran (Standards section inlines nextjs/tailwind essentials). |
+| 912 `prompt.md` `## ` headings match `templates/artefacts/prompt.md` | pass | Heading diff against the template empty. |
+| 912 no aew words in `prompt.md` (`grep -cE 'aew\|\.aew/\|/aew:\|run-protocol\|CLAUDE_PLUGIN_ROOT'` is 0) | pass | Count 0. |
+| 912 no HTML comments in `prompt.md` (`grep -c '<!--'` is 0) | pass | Count 0. |
+| 912 exactly one `UI changes:` line in `prompt.md`, value `no` | pass | `### UI changes: no`, one line, under `## Brief`. |
+| 912 every source requirement maps to a contiguous `AC-n` (mapping in notes) | pass | Spec AC1 (body) -> AC-1 status, AC-2 body, AC-3 content type; AC2 / no-auth -> AC-4; no DB -> AC-5; no external service -> AC-6; typo `/api/heath` surfaced under Open risks. Numbering AC-1..AC-6 contiguous. |
+| 912 `prompt.md` has no return block; final.txt passes `valid_return_block` | pass | `valid_return_block prompt.md` fails as intended, no `STATUS:` line; `final.txt` valid, `STATUS: ok`. |
+| 912 Preload, permission denials, E-2 | pass | Preload ok, denials `[]`, E-2 clean: only the README (and the committed fix) differ. Cost 0.61. |
 | **E3 run e 921, standards-setter run 1** | | |
-| 921 agent fingerprint calls are `... detect-stack.sh" fingerprint <profile> .` and equal the recorded values | pending | |
-| 921 allow-rule match: `detect-stack.sh` calls in quoted form, root equals `$REPO`, none denied (one command verbatim in notes) | pending | |
-| 921 seed path resolution recorded (section 5), no unexpanded `${` | pending | |
-| 921 `docs/standards/nextjs.md`, `tailwind.md`, `README.md` exist | pending | |
-| 921 first line of each profile doc matches the `aew:standards fingerprint=... generated=...` header | pending | |
-| 921 `README.md` follows the index format and lists both docs and fingerprints | pending | |
-| 921 each doc 400 lines or fewer; `tailwind.md` opens with "Overlay on: nextjs" | pending | |
-| 921 `03-standards.md` follows template, ends in valid return block, both rows `generated`, section rows name existing sections | pending | |
-| 921 `STATUS: ok` | pending | |
-| 921 AC-18: no skip warning for `aew:stack-standards`; context7 tool names called recorded verbatim | pending | |
-| 921 Preload, permission denials, final.txt return block, E-2 | pending | |
-| 921 post-pass: `git -C $P add -A && git -C $P commit -qm standards` done | pending | |
+| 921 agent fingerprint calls are `... detect-stack.sh" fingerprint <profile> .` and equal the recorded values | pass | Attempt 2: `"$REPO/scripts/detect-stack.sh" fingerprint nextjs .` and `... tailwind .`; output equals the recorded `nextjs next@16 react@19 typescript@5 cfg:388ef4ff81b7` and `tailwind tailwindcss@4 cfg:3f0744e5bcde`. |
+| 921 allow-rule match: `detect-stack.sh` calls in quoted form, root equals `$REPO`, none denied (one command verbatim in notes) | pass | Quoted form matched `Bash($REPO/scripts/detect-stack.sh *)`, none denied. Verbatim: `"/Users/jamesborg/Documents/Development/aew-wt-E/scripts/detect-stack.sh" fingerprint nextjs .`. A compound `a; b; date ...` command (attempt 1) also matched. No `ALLOW` change needed. |
+| 921 seed path resolution recorded (section 5), no unexpanded `${` | pass | Seeds read at `$REPO/skills/stack-standards/references/seeds/<profile>.md` (absolute, substituted). The skill and prompt both use `${CLAUDE_PLUGIN_ROOT}`, no `${CLAUDE_SKILL_DIR}`, so that variable is untested. No unexpanded `${` in any Read or debug line (the only `${` is document content written to `tailwind.md`). See section 5. |
+| 921 `docs/standards/nextjs.md`, `tailwind.md`, `README.md` exist | pass | All three exist (155, 87, 8 lines). |
+| 921 first line of each profile doc matches the `aew:standards fingerprint=... generated=...` header | pass | Both match the regex with the recorded fingerprints, `generated="2026-10-24"`. |
+| 921 `README.md` follows the index format and lists both docs and fingerprints | pass | Index table with both docs, paths, overlay and fingerprints, plus the precedence line. |
+| 921 each doc 400 lines or fewer; `tailwind.md` opens with "Overlay on: nextjs" | pass | 155 and 87 lines; `tailwind.md` line 2 is `Overlay on: nextjs`. |
+| 921 `03-standards.md` follows template, ends in valid return block, both rows `generated`, section rows name existing sections | pass | Heading diff empty; both rows `generated`; all 12 section rows resolve to an existing `## ` heading in the named doc. |
+| 921 `STATUS: ok` | pass | Final message and artefact. |
+| 921 AC-18: no skip warning for `aew:stack-standards`; context7 tool names called recorded verbatim | pass (names not observable) | No skip warning; `aew:stack-standards` and `aew:run-protocol` preloaded. context7 was never called: in this headless session the server is `plugin:context7:context7` with status `needs-auth` (no `CONTEXT7_API_KEY`), so the debug log warns `Agent tools entry "mcp__plugin_context7_context7__*" takes no tool`. The agent fell back as designed ("context7 unavailable" in the docs). The server key matches the `mcp__plugin_context7_context7__` form, so no `tools:` change; the call names stay unverified for E6. |
+| 921 Preload, permission denials, final.txt return block, E-2 | pass | Attempt 1 failed here (agent fault): a `for f in ...; do cat $f; done` Bash loop was denied, and `ls` / `git ls-files` were used. Fix `dcac6f4` (Guardrails name them off limits); attempt 2 denials `[]`, E-2 clean: only the README (and the committed fix) differ. Cost 0.47 each. |
+| 921 post-pass: `git -C $P add -A && git -C $P commit -qm standards` done | pass | `git commit -qm standards` in `$P` (commit `62d5ac3`): clean tree for E4. |
 | **E4 run 922, standards-setter reuse** | | |
 | 922 fingerprint calls from the project root equal the setup values (setup values equal run 921's: the setup `diff` prints nothing) | pending | |
 | 922 `STATUS: ok`, SUMMARY contains "reused" | pending | |
@@ -477,3 +483,7 @@ are logged here, newest last.
   `frontend-design`, `--add-dir "$REPO"`), and no `Write(...)` allow rules. To capture hook payloads (E-3) add
   `"hooks":{"PreToolUse":[{"matcher":".*","hooks":[{"type":"command","command":"cat >> $O/payloads.jsonl; echo >> $O/payloads.jsonl"}]}]}`
   to `--settings`.
+- E3 batch (Claude Code 2.1.308): five runs launched concurrently from one wrapper per run, about 3 minutes wall clock; all five `result` events `success`. Runs a to d passed first time.
+- E3 agent fault (prompt fix `dcac6f4`): standards-setter attempt 1 broke its two-command Bash allowlist (a `cat` loop, denied; `ls` and `git ls-files` ran because read-only commands are auto-allowed). Guardrails now forbid `cat`, `ls`, `git`, loops and pipes. Attempt 2 clean. standards-setter had no earlier passing case to re-run; spec-analyser was untouched.
+- E3 environment facts for E6: (1) in this headless session `Glob` and `Grep` are not in the tool list (`No such tool available: Glob ... find files with find via the Bash tool`), although the agents list them in `tools:`; an agent with a restricted Bash cannot list files and must Read known paths (`git ls-files` and `ls` still run as auto-allowed read-only commands). (2) context7 is `needs-auth` here (see the AC-18 row). (3) The fingerprint and `date +%Y-%m-%d` calls were allowed under the `Bash(date *)` and quoted-path rules, including in a `;`-joined command.
+- Run 921's `$P` (`$SMOKE/smoke-standards-setter-newsletter`) is committed (`standards`) and untouched for E4 and E5; attempt 1's stream is kept as `$SMOKE/out-921-attempt1`.
