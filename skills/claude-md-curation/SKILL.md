@@ -72,7 +72,8 @@ Bad:
 Follow these steps in order. Every file is curated whole, including entries a human wrote.
 
 1. Read the whole file.
-2. Drop every item on the never-include list.
+2. Drop every item on the never-include list. An entry with a date or an expiry in it is time-bound, so drop
+   it; do not keep it with a note to delete it later.
 3. Merge duplicates and near-duplicates into one entry. Check every merged or rewritten entry against the
    never-include list again: keep only the part that the standards docs and the code do not already say,
    and drop the entry if nothing is left.
@@ -85,5 +86,5 @@ Follow these steps in order. Every file is curated whole, including entries a hu
 
 Never remove or rewrite silently. Return to the caller a list of every removed or rewritten entry: the
 original text, what happened to it (removed, merged, rewritten) and the reason. The doc-writer copies
-this list into `10-summary.md`. Quote each original entry in full, one item per entry; do not abbreviate or
-group entries.
+this list into `10-summary.md`. Quote each original entry in full, exactly as written including its leading `- `, one item per entry; do not
+abbreviate or group entries. An entry that only moved to another section is reported as rewritten.
