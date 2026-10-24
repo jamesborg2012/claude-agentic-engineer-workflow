@@ -68,6 +68,24 @@ deps() { printf '%s' "$output" | jq -c --argjson n "$1" '.[] | select(.number ==
   assert_equal "$(deps 1)" '[7]'
 }
 
+@test "the listed repository comes from each issue's url, without GH_REPO" {
+  jq -n '[{number: 1, title: "x", labels: [], state: "OPEN", body: "", url: "https://github.com/acme/widgets/issues/1",
+           blockedBy: {nodes: [{number: 7, repository: {nameWithOwner: "acme/widgets"}}, {number: 8, repository: {nameWithOwner: "acme/other"}}]}}]' \
+    | gh_mock_respond issue-list -
+  run --separate-stderr "$SCRIPTS/gh-milestone.sh" issues 3
+  assert_success
+  assert_equal "$(deps 1)" '[7]'
+}
+
+@test "a host-qualified GH_REPO still filters cross-repository blockers" {
+  jq -n '[{number: 1, title: "x", labels: [], state: "OPEN", body: "",
+           blockedBy: {nodes: [{number: 7, repository: {nameWithOwner: "acme/widgets"}}, {number: 8, repository: {nameWithOwner: "acme/other"}}]}}]' \
+    | gh_mock_respond issue-list -
+  GH_REPO=github.com/acme/widgets run --separate-stderr "$SCRIPTS/gh-milestone.sh" issues 3
+  assert_success
+  assert_equal "$(deps 1)" '[7]'
+}
+
 @test "the whole output matches the expected fixture" {
   run --separate-stderr "$SCRIPTS/gh-milestone.sh" issues 3
   assert_success
@@ -80,7 +98,7 @@ deps() { printf '%s' "$output" | jq -c --argjson n "$1" '.[] | select(.number ==
   run --separate-stderr "$SCRIPTS/gh-milestone.sh" issues 3
   assert_success
   assert_equal "$(gh_call_count)" 1
-  assert_gh_called 'issue list --milestone 3 --state all --limit 500 --json number,title,labels,state,body,blockedBy'
+  assert_gh_called 'issue list --milestone 3 --state all --limit 500 --json number,title,labels,state,body,blockedBy,url'
 }
 
 @test "a milestone title is passed verbatim" {

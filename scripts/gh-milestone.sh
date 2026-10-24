@@ -29,9 +29,10 @@ esac
 
 LIMIT=500
 
-# One jq pass: issue list in, output array out. --arg repo is the listed
-# repository ("" when unknown); native blockedBy entries that name a different
-# repository are dropped.
+# One jq pass: issue list in, output array out. Each issue's own repository
+# comes from its url (gh 2.103 nodes carry repository.nameWithOwner), falling
+# back to $GH_REPO ([HOST/]OWNER/REPO); native blockedBy entries that name a
+# different repository are dropped. With neither known, all are merged.
 JQ_FILTER='
   def nums($s): [$s | match("#([0-9]+)"; "g") | .captures[0].string | tonumber];
   def phrase($b):
@@ -41,21 +42,27 @@ JQ_FILTER='
     [$b | split("\n")[]
      | select(test("^[ \t]*[-*+][ \t]+\\[[ xX]\\][ \t]+#[0-9]+(?![0-9A-Za-z_])"))
      | match("#([0-9]+)") | .captures[0].string | tonumber];
-  def native:
+  def own_repo:
+    ((.url // "") | capture("^https?://[^/]+/(?<r>[^/]+/[^/]+)/issues/[0-9]+") | .r)
+    // ($repo | split("/") | .[-2:] | join("/"));
+  def native($r):
     (.blockedBy // [])
     | (if type == "object" then (.nodes // []) else . end)
     | map(select(type == "object")
-          | select(($repo == "") or ((.repository.nameWithOwner? // .repository? // $repo) | if type == "string" then . else $repo end) == $repo)
+          | select(($r == "")
+                   or ((.repository | if type == "object" then .nameWithOwner elif type == "string" then . else null end)
+                       | if type == "string" then ascii_downcase == ($r | ascii_downcase) else true end))
           | .number)
     | map(select(. != null));
   [.[]
    | (.body // "" | gsub("\r"; "")) as $b
    | .number as $n
+   | own_repo as $r
    | {number: .number,
       title: .title,
       labels: [.labels[]?.name],
       state: .state,
-      depends_on: ((phrase($b) + tasks($b) + native) | unique | map(select(. != $n)))}]
+      depends_on: ((phrase($b) + tasks($b) + native($r)) | unique | map(select(. != $n)))}]
   | sort_by(.number)'
 
 cmd_issues() {
@@ -66,7 +73,7 @@ cmd_issues() {
     -*) die "milestone must not start with '-': $m" ;;
   esac
   local raw out count
-  raw=$(gh issue list --milestone "$m" --state all --limit "$LIMIT" --json number,title,labels,state,body,blockedBy) || exit 1
+  raw=$(gh issue list --milestone "$m" --state all --limit "$LIMIT" --json number,title,labels,state,body,blockedBy,url) || exit 1
   out=$(printf '%s' "$raw" | jq --arg repo "${GH_REPO:-}" "$JQ_FILTER") || die "could not parse the gh issue list output"
   count=$(printf '%s' "$out" | jq 'length') || die "could not count issues"
   if [ "$count" -ge "$LIMIT" ]; then
