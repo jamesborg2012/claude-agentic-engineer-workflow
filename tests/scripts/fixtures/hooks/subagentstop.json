@@ -1,0 +1,12 @@
+{
+  "session_id": "sess-1",
+  "transcript_path": "/tmp/transcript.jsonl",
+  "cwd": "/tmp/project",
+  "permission_mode": "default",
+  "hook_event_name": "SubagentStop",
+  "stop_hook_active": false,
+  "agent_id": "agent-1",
+  "agent_type": "aew:developer",
+  "agent_transcript_path": "/tmp/agent.jsonl",
+  "last_assistant_message": "Done."
+}
