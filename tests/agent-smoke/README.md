@@ -5,9 +5,18 @@ Manual, paid verification that `aew:spec-analyser`, `aew:brief-compiler`, `aew:s
 script: this file holds copy-paste commands and the results table. Everything below runs in bash or zsh.
 
 Never commit or log transcripts. Streams, debug logs and temp projects live under `tests/tmp/`, which is
-gitignored. Only this README is committed (plus any intentional `fix(agents)` prompt fix).
+gitignored. Each run's stream, debug log, `final.txt` and recorded values go in `$O`
+(`tests/tmp/smoke-out-<run-id>/`), outside the temp project, so the agent never sees them and the temp
+project's own commits never include them. Only this README is committed (plus any intentional `fix(agents)` prompt fix).
 
 ## 1. Prerequisites
+
+In an interactive zsh, run this first: without it `#` does not start a comment, so a line such as
+`CAP=5   # …` leaves `CAP` unset. bash needs nothing.
+
+```sh
+setopt interactivecomments
+```
 
 ```sh
 claude --version                 # record it in the notes
@@ -25,7 +34,7 @@ Take the cost of every run from the stream's final `result` event and add a row 
 and re-run:
 
 ```sh
-jq -r 'select(.type=="result") | .total_cost_usd' "$P/stream.jsonl"
+jq -r 'select(.type=="result") | .total_cost_usd' "$O/stream.jsonl"
 ```
 
 - Default cap per run: `--max-budget-usd 5`. Standards-setter run 1 (921): `10`.
@@ -56,7 +65,7 @@ cd "$REPO"
 | non-material, non-UI | `tests/fixtures/issues/non-material-no-ui.md` | #102 | Add a health-check endpoint for the uptime monitor |
 | material | `tests/fixtures/issues/material-guest-access.md` | #103 | Let readers save favourite articles |
 | brief | `tests/fixtures/briefs/newsletter-signup.md` | #101 | (the compiled brief of `clean-ui.md`) |
-| stack | `tests/fixtures/stacks/nextjs-tailwind/` (`app/layout.tsx`, `app/page.tsx`, `app/articles.ts`, `app/globals.css`, `package.json`) | | |
+| stack | `tests/fixtures/stacks/nextjs-tailwind/` (`app/layout.tsx`, `app/page.tsx`, `app/articles.ts`, `app/globals.css`, `package.json`, plus the tool configs `eslint.config.mjs`, `next.config.ts`, `postcss.config.mjs`, `tsconfig.json`) | | |
 
 Run ids are numeric because the state schema requires it:
 
@@ -69,22 +78,30 @@ Run ids are numeric because the state schema requires it:
 
 ### Helpers
 
-`smoke_project` creates the temp project, makes it a git repo, enables the hooks (config), and
-initialises script-owned state. State is never hand-written. If `state.sh` insists that the run id equals
-the issue number, that is a harness fault: record it and adjust this command, keeping the run ids above.
+`smoke_project` creates the temp project, makes it a git repo with `.aew/` gitignored (as in a real
+target project), enables the hooks (config), and initialises script-owned state. State is never
+hand-written. If `state.sh` insists that the run id equals the issue number, that is a harness fault:
+record it and adjust this command, keeping the run ids above. `smoke_use` re-points `P`, `RUN` and `O` at
+a case that is already set up; call it before each invocation.
 
 ```sh
 # smoke_project <agent> <case> <run-id> <issue-number> <title> <stage>
 smoke_project() {
   P="$REPO/tests/tmp/smoke-$1-$2"
   rm -rf "$P" && mkdir -p "$P" || return 1
-  cp -R "$REPO/tests/fixtures/stacks/nextjs-tailwind/." "$P" || return 1
+  cp -R "$REPO/tests/fixtures/stacks/nextjs-tailwind/." "$P" && printf '.aew/\n' > "$P/.gitignore" || return 1
   git -C "$P" init -q && git -C "$P" add -A && git -C "$P" commit -qm fixture || return 1
   mkdir -p "$P/.aew" && cp "$REPO/templates/config.example.json" "$P/.aew/config.json" || return 1
   (cd "$P" && "$REPO/scripts/state.sh" init "$3" --issues "$4" --mode single --title "$5" \
      && "$REPO/scripts/state.sh" stage "$6") || return 1
-  RUN="$P/.aew/runs/$3"
-  echo "P=$P"; echo "RUN=$RUN"
+  smoke_use "$1" "$2" "$3"
+}
+
+# smoke_use <agent> <case> <run-id>   (sets P, RUN and O for that run; creates O)
+smoke_use() {
+  P="$REPO/tests/tmp/smoke-$1-$2"; RUN="$P/.aew/runs/$3"; O="$REPO/tests/tmp/smoke-out-$3"
+  mkdir -p "$O"
+  echo "P=$P"; echo "RUN=$RUN"; echo "O=$O"
 }
 
 # smoke_render <fixture-file> <issue-number> <title>
@@ -97,9 +114,10 @@ smoke_render() {
    awk 'p && /^## Comments \(/{exit} p{print} /^## Body$/{p=1}' "tests/fixtures/issues/$file" | sed '1d;$d' > "$t/body.md"
    jq -n --rawfile body "$t/body.md" --argjson n "$n" --arg t "$title" '{number:$n,title:$t,state:"OPEN",url:"https://github.com/acme/web/issues/\($n)",author:{login:"octo"},body:$body,labels:[],comments:[],milestone:null,assignees:[],blockedBy:{nodes:[]},blocking:{nodes:[]},parent:null,subIssues:{nodes:[]},closedByPullRequestsReferences:[]}' > "$t/gh/responses/issue-view.out"
    printf 0 > "$t/gh/responses/issue-view.code"
-   PATH="$PWD/tests/scripts/helpers/bin:$PATH" GH_MOCK_DIR="$PWD/$t/gh" scripts/gh-issue.sh fetch "$n" "$t/run" >/dev/null
-   cmp "$t/run/00-issue-original.md" "tests/fixtures/issues/$file"
-   test "$(jq -r '.referenced_issues | length' "$t/run/issue.json")" = 0)
+   PATH="$PWD/tests/scripts/helpers/bin:$PATH" GH_MOCK_DIR="$PWD/$t/gh" scripts/gh-issue.sh fetch "$n" "$t/run" >/dev/null \
+     && cmp "$t/run/00-issue-original.md" "tests/fixtures/issues/$file" \
+     && test "$(jq -r '.referenced_issues | length' "$t/run/issue.json")" = 0) \
+    || { echo "smoke_render $1: render failed or is not byte-identical to the fixture" >&2; return 1; }
 }
 
 # smoke_seed_issue <issue-number>   (copies the rendered issue into $RUN; one render per fixture is enough)
@@ -140,27 +158,33 @@ smoke_project standards-setter newsletter 921 101 "Newsletter sign-up in the sit
 Standards-setter run 2 (E4) and the senior-engineer plan run (E5) reuse run 921's `$P`; they do not call
 `smoke_project`:
 
-```sh
-# E4: standards-setter run 2 (reuse check), same $P as run 921
-(cd "$P" && "$REPO/scripts/state.sh" init 922 --issues 101 --mode single --title "Newsletter sign-up in the site footer" \
-   && "$REPO/scripts/state.sh" stage standards)
-RUN="$P/.aew/runs/922"; cp "$REPO/tests/fixtures/briefs/newsletter-signup.md" "$RUN/02-brief.md"
-(cd "$P" && shasum -a 256 docs/standards/*) > "$P/standards.sha.before"
-for pr in nextjs tailwind; do (cd "$P" && "$REPO/scripts/detect-stack.sh" fingerprint "$pr" .); done > "$P/fingerprints.before"
-
-# E5: senior-engineer plan run, same $P
-(cd "$P" && "$REPO/scripts/state.sh" init 931 --issues 101 --mode single --title "Newsletter sign-up in the site footer" \
-   && "$REPO/scripts/state.sh" stage plan)
-RUN="$P/.aew/runs/931"
-cp "$REPO/tests/fixtures/briefs/newsletter-signup.md" "$RUN/02-brief.md"
-cp "$P/.aew/runs/922/03-standards.md" "$RUN/03-standards.md"
-```
-
 For run 921, record the fingerprints before the run (the call standards-setter itself makes; the `[path]` is
 the project root, `.`, never an entry's `path`):
 
 ```sh
-for pr in nextjs tailwind; do (cd "$P" && "$REPO/scripts/detect-stack.sh" fingerprint "$pr" .); done | tee "$P/fingerprints.before"
+smoke_use standards-setter newsletter 921
+for pr in nextjs tailwind; do (cd "$P" && "$REPO/scripts/detect-stack.sh" fingerprint "$pr" .); done | tee "$O/fingerprints.before"
+```
+
+```sh
+# E4: standards-setter run 2 (reuse check), same $P as run 921
+smoke_use standards-setter newsletter 922
+(cd "$P" && "$REPO/scripts/state.sh" init 922 --issues 101 --mode single --title "Newsletter sign-up in the site footer" \
+   && "$REPO/scripts/state.sh" stage standards)
+cp "$REPO/tests/fixtures/briefs/newsletter-signup.md" "$RUN/02-brief.md"
+(cd "$P" && shasum -a 256 docs/standards/*) > "$O/standards.sha.before"
+for pr in nextjs tailwind; do (cd "$P" && "$REPO/scripts/detect-stack.sh" fingerprint "$pr" .); done > "$O/fingerprints.before"
+diff "$REPO/tests/tmp/smoke-out-921/fingerprints.before" "$O/fingerprints.before"   # must print nothing, else a harness fault
+# after run 922: both must print nothing
+(cd "$P" && shasum -a 256 docs/standards/*) | diff "$O/standards.sha.before" -
+git -C "$P" status --porcelain docs/standards
+
+# E5: senior-engineer plan run, same $P
+smoke_use standards-setter newsletter 931
+(cd "$P" && "$REPO/scripts/state.sh" init 931 --issues 101 --mode single --title "Newsletter sign-up in the site footer" \
+   && "$REPO/scripts/state.sh" stage plan)
+cp "$REPO/tests/fixtures/briefs/newsletter-signup.md" "$RUN/02-brief.md"
+cp "$P/.aew/runs/922/03-standards.md" "$RUN/03-standards.md"
 ```
 
 ## 3. Invocation
@@ -198,19 +222,32 @@ smoke_dispatch() {
 | standards-setter | `run_dir: $RUN` |
 | senior-engineer | `run_dir: $RUN` and `mode: plan` |
 
+Before each launch, point the shell at the case and set its `ALLOW` line from the block above and its cap
+(setup leaves `P` and `RUN` on the last case set up, so never launch without `smoke_use`):
+
 ```sh
-CAP=5   # 10 for standards-setter run 921
+smoke_use spec-analyser clean 901;         smoke_dispatch spec-analyser "run_dir: $RUN";                  CAP=5
+smoke_use spec-analyser nonmaterial 902;   smoke_dispatch spec-analyser "run_dir: $RUN";                  CAP=5
+smoke_use spec-analyser material 903;      smoke_dispatch spec-analyser "run_dir: $RUN";                  CAP=5
+smoke_use brief-compiler pipeline 911;     smoke_dispatch brief-compiler "run_dir: $RUN, mode: pipeline"; CAP=5
+smoke_use brief-compiler prompt 912;       smoke_dispatch brief-compiler "run_dir: $RUN, mode: prompt";   CAP=5
+smoke_use standards-setter newsletter 921; smoke_dispatch standards-setter "run_dir: $RUN";               CAP=10
+smoke_use standards-setter newsletter 922; smoke_dispatch standards-setter "run_dir: $RUN";               CAP=5
+smoke_use standards-setter newsletter 931; smoke_dispatch senior-engineer "run_dir: $RUN, mode: plan";    CAP=5
+```
+
+```sh
 cd "$P" && claude --plugin-dir "$REPO" -p "$DISPATCH" \
   --output-format stream-json --verbose --forward-subagent-text --include-hook-events \
-  --max-budget-usd "$CAP" --debug-file "$P/debug.log" \
+  --max-budget-usd "$CAP" --debug-file "$O/debug.log" \
   --settings "{\"claudeMdExcludes\":[\"$REPO/CLAUDE.md\"]}" \
   --permission-mode acceptEdits \
   ${ALLOW[@]+"${ALLOW[@]}"} \
-  > "$P/stream.jsonl"
+  > "$O/stream.jsonl"
 ```
 
-Several runs may be launched concurrently as background processes (each has its own `$P`, so set `P`,
-`RUN` and `DISPATCH` per launch, for example inside a subshell). Prompt-fix loops are per agent.
+Several runs may be launched concurrently as background processes (each has its own `$P` and `$O`, so
+set `P`, `RUN`, `O`, `DISPATCH`, `ALLOW` and `CAP` per launch, for example inside a subshell). Prompt-fix loops are per agent.
 
 ### After every run (CTO condition E-2, mandatory)
 
@@ -233,18 +270,19 @@ record which source was used.
 jq -rs '[.[] | select(.type=="assistant" and .parent_tool_use_id != null)
          | select(any(.message.content[]?; .type=="text"))] | last
         | [.message.content[] | select(.type=="text") | .text] | join("\n")' \
-  "$P/stream.jsonl" > "$P/final.txt"
+  "$O/stream.jsonl" > "$O/final.txt"
 ```
 
 **Return block.** Load the canonical function without running the hook. Use `eval`, not `source <(...)`:
 macOS `/bin/bash` 3.2 sources an empty process substitution silently, so the function would never be
-defined. The guard makes a reformatted hook fail loudly. Run it on `final.txt` and on every artefact whose
+defined. The guard makes a reformatted hook fail loudly. It uses `command -v`, not `declare -F`: in zsh
+`declare -F` declares a float variable and always succeeds, so the guard would never fire. Run it on `final.txt` and on every artefact whose
 template ends in a return block; it prints the STATUS value.
 
 ```sh
 eval "$(sed -n '/^valid_return_block() {/,/^}/p' "$REPO/scripts/hooks/gate-subagent.sh")"
-declare -F valid_return_block >/dev/null || echo 'valid_return_block: extraction failed'
-valid_return_block "$P/final.txt" && grep -E '^STATUS:' "$P/final.txt" | tail -1
+command -v valid_return_block >/dev/null || echo 'valid_return_block: extraction failed'
+valid_return_block "$O/final.txt" && grep -E '^STATUS:' "$O/final.txt" | tail -1
 valid_return_block "$RUN/01-spec-analysis.md"   # and each other artefact that ends in a return block
 ```
 
@@ -266,33 +304,34 @@ diff <(grep -E '^##+ ' "$REPO/templates/artefacts/spec-analysis.md" | grep -vE '
 positive load line too.
 
 ```sh
-grep -inE 'skill' "$P/debug.log" | grep -iE 'skip|not found|missing|unknown'
-grep -inE 'skill' "$P/debug.log" | grep -iE 'run-protocol|stack-standards|systematic-debugging'   # positive loads
+grep -inE 'skill' "$O/debug.log" | grep -iE 'skip|not found|missing|unknown'
+grep -inE 'skill' "$O/debug.log" | grep -iE 'run-protocol|stack-standards|systematic-debugging'   # positive loads
 ```
 
 **Permission denials.** Must print `[]`.
 
 ```sh
-jq -c 'select(.type=="result") | .permission_denials' "$P/stream.jsonl"
+jq -c 'select(.type=="result") | .permission_denials' "$O/stream.jsonl"
 ```
 
 **Tool calls in the stream** (Bash commands, Read paths, MCP tool names):
 
 ```sh
 jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use")
-       | [.name, (.input.command // .input.file_path // .input.path // "")] | @tsv' "$P/stream.jsonl"
-jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use") | .name' "$P/stream.jsonl" \
+       | [.name, (.input.command // .input.file_path // .input.path // "")] | @tsv' "$O/stream.jsonl"
+jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use") | .name' "$O/stream.jsonl" \
   | grep '^mcp__' | sort -u
 ```
 
 **Subagent identity (CTO condition E-3).** Live evidence that a `PreToolUse` payload inside a subagent
 carries `agent_type` as `aew:<agent>`. Look for a hook line in the debug log or in the `--include-hook-events`
-stream. Record one such line verbatim, or failing that the docs citation. If there is no live evidence, the
+stream. The hook events in the stream may carry only the hook's output, not its input payload, so the
+debug log is the first place to look. Record one such line verbatim, or failing that the docs citation. If there is no live evidence, the
 final report says the agent `gh` deny is tested in bats only, not live.
 
 ```sh
-grep -n 'agent_type' "$P/debug.log" | head
-jq -c 'select(.type=="system" and (.subtype // "" | test("hook"))) | select(tostring | test("agent_type"))' "$P/stream.jsonl" | head -3
+grep -n 'agent_type' "$O/debug.log" | head
+jq -c 'select(.type=="system" and (.subtype // "" | test("hook"))) | select(tostring | test("agent_type"))' "$O/stream.jsonl" | head -3
 ```
 
 **Cleanup.** `rm -rf "$REPO/tests/tmp/smoke-"* "$REPO/tests/tmp/issue-render-"*` once the results are recorded.
@@ -379,13 +418,13 @@ Every row starts as `pending`. Cost goes in the notes (and the ledger in section
 | 921 first line of each profile doc matches the `aew:standards fingerprint=... generated=...` header | pending | |
 | 921 `README.md` follows the index format and lists both docs and fingerprints | pending | |
 | 921 each doc 400 lines or fewer; `tailwind.md` opens with "Overlay on: nextjs" | pending | |
-| 921 `03-standards.md` follows template, both rows `generated`, section rows name existing sections | pending | |
+| 921 `03-standards.md` follows template, ends in valid return block, both rows `generated`, section rows name existing sections | pending | |
 | 921 `STATUS: ok` | pending | |
 | 921 AC-18: no skip warning for `aew:stack-standards`; context7 tool names called recorded verbatim | pending | |
 | 921 Preload, permission denials, final.txt return block, E-2 | pending | |
 | 921 post-pass: `git -C $P add -A && git -C $P commit -qm standards` done | pending | |
 | **E4 run 922, standards-setter reuse** | | |
-| 922 fingerprint calls from the project root equal the setup values (setup values equal run 921's) | pending | |
+| 922 fingerprint calls from the project root equal the setup values (setup values equal run 921's: the setup `diff` prints nothing) | pending | |
 | 922 `STATUS: ok`, SUMMARY contains "reused" | pending | |
 | 922 `03-standards.md` Status `reused` on both rows | pending | |
 | 922 checksums after the run byte-identical to before | pending | |
