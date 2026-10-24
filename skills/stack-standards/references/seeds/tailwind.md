@@ -50,9 +50,9 @@ Don't:
 - **[convention]** Use `:root` for plain CSS variables that should not generate utilities. `@theme` must be top-level, never nested in a selector or media query.
 - **[convention]** Use `@theme inline` when a token references another variable, such as a font loaded by a framework. Use `@theme static` when a token must be emitted even if unused.
 - **[convention]** To replace a whole default scale, reset the namespace first (`--color-*: initial;`) and then define the tokens. Reset everything with `--*: initial;` only for a full custom system.
-- **[convention]** Use a theme-backed utility whenever a token exists. Arbitrary values (`[#1da1f2]`, `[13px]`) are for genuine one-offs. Add a token when a value appears twice.
+- **[convention]** Use a theme-backed utility whenever a token exists. Arbitrary values (`[#1da1f2]`, `[13px]`) are for genuine one-offs. By project default, add a token when a value appears twice.
 - **[convention]** Class soup rule 1: first try a loop or one multi-cursor edit. A list rendered in a loop is written once.
-- **[convention]** Class soup rule 2: extract a component or partial when the same class list appears three times across files, or when one element carries more than 12 utilities. Variants, states and responsive prefixes count as separate utilities.
+- **[convention]** Class soup rule 2 (a project default, not a Tailwind rule; a threshold the repo states wins): extract a component or partial when the same class list appears three times across files, or when one element carries more than 12 utilities. Variants, states and responsive prefixes count as separate utilities.
 - **[convention]** Class soup rule 3: for a single small element such as a button, a rule in `@layer components` that uses theme variables is acceptable. Anything more complex than one element becomes a component or partial (Tailwind docs).
 - **[convention]** Use `@apply` only to restyle markup you cannot edit, such as a third-party widget, or inside `<style>` blocks via `@reference`. Do not use it to rebuild a CSS framework from utilities.
 - **[convention]** Define reusable single-purpose styles with `@utility`, not `@layer utilities`. In v4 a plain `@layer utilities` rule no longer creates a utility with variants.
@@ -104,7 +104,7 @@ Don't:
 - **[convention]** Never let user input or CMS content decide class names, and never put it into a class attribute unescaped. Whitelist values and map them to complete classes. The framework's output escaping still applies.
 - **[convention]** Pass runtime values through inline CSS variables set by the framework's style binding, not by concatenating strings into `style` or `<style>`.
 - **[convention]** Do not paste user-supplied CSS into `@theme`, `@source` or `@plugin`. `@plugin` and `@config` execute JavaScript at build time, so load only reviewed local files or pinned packages.
-- **[tool]** Pin `tailwindcss`, `@tailwindcss/*` and `prettier-plugin-tailwindcss` in the lockfile and audit them with the package manager's audit command (`npm audit`, `pnpm audit`, `composer audit` for PHP-side tooling).
+- **[convention]** Pin `tailwindcss`, `@tailwindcss/*` and `prettier-plugin-tailwindcss` in the lockfile and audit them with the package manager's audit command (`npm audit`, `pnpm audit`, `composer audit` for PHP-side tooling).
 - **[convention]** Do not load Tailwind from a CDN script in production. Build the CSS and serve it from your own origin so a strict Content Security Policy needs no extra sources.
 
 ## Accessibility
