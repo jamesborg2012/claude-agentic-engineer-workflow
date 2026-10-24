@@ -1,0 +1,4 @@
+node_modules/
+.aew/runs/
+test-results/
+playwright-report/
