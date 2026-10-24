@@ -151,7 +151,7 @@
           "default": true
         },
         "axe_standard": {
-          "description": "axe-core rule tag to scan against.",
+          "description": "WCAG conformance target for the axe-core scan. A WCAG level (wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa) expands to the cumulative axe tags up to and including it, so wcag22aa scans wcag2a, wcag2aa, wcag21a, wcag21aa and wcag22aa. Any other value is used as a single axe tag.",
           "type": "string",
           "default": "wcag22aa"
         },
