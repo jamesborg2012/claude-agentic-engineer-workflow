@@ -41,7 +41,6 @@ var price = 12.5;
 ## Error handling
 
 - **[convention]** Do not swallow errors. Let unexpected errors reach the console rather than catching and ignoring them.
-- **[convention]** Validate a product id before use and throw a clear `Error` for an unknown one.
 
 ## Security
 
