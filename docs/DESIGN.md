@@ -26,7 +26,7 @@ A personal Claude Code (CLI) plugin that delivers GitHub issues end to end throu
 Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before relying on it. If the docs now differ, follow the docs and update this section.
 
 - **Plugin layout.** `.claude-plugin/` holds only `plugin.json` (and `marketplace.json` for a marketplace). Components live at the plugin root: `skills/`, `agents/`, `hooks/hooks.json`, `.mcp.json`, `scripts/`. Commands have merged into skills, so use `skills/`. A `CLAUDE.md` at the plugin root is **not** loaded.
-- **Plugin name.** The plugin is named `aew`. Names starting with `claude-`, `anthropic-`, `anthropics-` or `cc-plugin-` are reserved, so the original `claude-aew` fails `claude plugin validate`. (Changed while building prompt 01.)
+- **Plugin name.** The plugin is named `aew`. Names starting with `claude-`, `anthropic-`, `anthropics-` or `cc-plugin-` are reserved and fail `claude plugin validate`.
 - **Namespacing.** Skills are invoked as `/aew:<skill>`. Agents are named `aew:<agent>`. Plugin MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`, so `mcp__plugin_aew_<server>__<tool>`.
 - **Agent frontmatter.** Plugin agents honour `name`, `description`, `model`, `effort`, `maxTurns`, `autoCompactWindow`, `tools`, `disallowedTools`, `skills`, `memory`, `background`, `omitClaudeMd`, `isolation` (only `worktree`), `color` and `experimental.cacheTtl`.
   - They **ignore** `hooks`, `mcpServers`, `permissionMode` and `initialPrompt`.

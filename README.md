@@ -58,7 +58,9 @@ claude plugin install frontend-design@claude-plugins-official
 ```
 
 A copy of superpowers from another marketplace, such as `anthropic-plugin-directory`, doesn't
-satisfy `superpowers@claude-plugins-official`.
+satisfy `superpowers@claude-plugins-official`. The CLI treats it as the same plugin and installs
+nothing, so switch it over with
+`claude plugin install superpowers@claude-plugins-official --replace`.
 
 ## Commands
 

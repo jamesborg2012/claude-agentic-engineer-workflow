@@ -28,7 +28,7 @@ Create the plugin skeleton so it loads in Claude Code and declares its dependenc
    - `README.md` skeleton (purpose, "status: in development", headings to fill in later);
    - `CHANGELOG.md` in Keep a Changelog format, with an Unreleased section.
 2. **`.claude-plugin/plugin.json`:**
-   - name `claude-aew`, version `0.1.0`, a description, author James Borg;
+   - name `aew`, version `0.1.0`, a description, author James Borg;
    - `dependencies` per DESIGN §4. Pin superpowers to a semver range on its *current* major (look up the current version). Add context7 and frontend-design. Confirm the exact plugin names in `claude-plugins-official`.
 3. **`.claude-plugin/marketplace.json`:** a personal local marketplace named `jamesborg-plugins` that lists this plugin with source `./`. Add whatever config the docs require to allow dependencies from `claude-plugins-official`.
 4. **`templates/`:**
