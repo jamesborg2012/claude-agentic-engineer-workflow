@@ -5,7 +5,8 @@
 # commands aew must never run: pushes to the default branch, force pushes,
 # `gh pr merge`, `gh repo delete`, `git reset --hard` on the default branch,
 # `git clean -fdx`, recursive `rm` outside the project (or of a `.git` path),
-# and any `gh` command from an aew agent. Active only in repos with .aew/config.json; every failure allows.
+# and any `gh` command from an aew agent.
+# Active only in repos with .aew/config.json; every failure allows.
 # A deny is `hookSpecificOutput.permissionDecision: "deny"` on exit 0.
 #
 # Rules, in the order the parser applies them:
