@@ -1,0 +1,116 @@
+[
+  {
+    "number": 107,
+    "title": "Union",
+    "labels": [
+      {
+        "name": "bug",
+        "color": "f00"
+      },
+      {
+        "name": "p1"
+      }
+    ],
+    "state": "OPEN",
+    "body": "Blocked by #5\n- [ ] #3\n",
+    "blockedBy": [
+      {
+        "number": 5
+      }
+    ]
+  },
+  {
+    "number": 101,
+    "title": "Single phrase",
+    "labels": [],
+    "state": "OPEN",
+    "body": "Blocked by #3",
+    "blockedBy": []
+  },
+  {
+    "number": 102,
+    "title": "List phrase",
+    "labels": [
+      {
+        "name": "feature"
+      }
+    ],
+    "state": "CLOSED",
+    "body": "depends on #3, #4 and #5",
+    "blockedBy": []
+  },
+  {
+    "number": 103,
+    "title": "Upper colon ampersand",
+    "labels": [],
+    "state": "OPEN",
+    "body": "DEPENDS ON: #6 & #7",
+    "blockedBy": []
+  },
+  {
+    "number": 104,
+    "title": "Task lists",
+    "labels": [],
+    "state": "OPEN",
+    "body": "- [ ] #8\n- [x] #9\n* [X] #10\n- [ ] Fix login (#11)\nsee #12\n",
+    "blockedBy": []
+  },
+  {
+    "number": 105,
+    "title": "Native array",
+    "labels": [],
+    "state": "OPEN",
+    "body": "",
+    "blockedBy": [
+      {
+        "number": 13
+      }
+    ]
+  },
+  {
+    "number": 106,
+    "title": "Native connection",
+    "labels": [],
+    "state": "OPEN",
+    "body": "",
+    "blockedBy": {
+      "nodes": [
+        {
+          "number": 14
+        }
+      ],
+      "totalCount": 1
+    }
+  },
+  {
+    "number": 20,
+    "title": "Self reference",
+    "labels": [],
+    "state": "OPEN",
+    "body": "Depends on #20, #2",
+    "blockedBy": []
+  },
+  {
+    "number": 108,
+    "title": "CRLF",
+    "labels": [],
+    "state": "OPEN",
+    "body": "Intro\r\nBlocked by #4\r\n",
+    "blockedBy": []
+  },
+  {
+    "number": 109,
+    "title": "Null body",
+    "labels": [],
+    "state": "OPEN",
+    "body": null
+  },
+  {
+    "number": 110,
+    "title": "Qualified",
+    "labels": [],
+    "state": "OPEN",
+    "body": "Blocked by acme/other#3\nSee acme/other#3 and https://github.com/acme/widgets/issues/3\n",
+    "blockedBy": []
+  }
+]
