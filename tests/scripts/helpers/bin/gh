@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# Usage: gh <args…>
+#
+# Stateful mock of the GitHub CLI for the bats tests. It must never reach the
+# real gh: without GH_MOCK_DIR it exits 99. State lives under $GH_MOCK_DIR
+# (calls.log, files/, issues/<n>/, responses/, counters/); see
+# tests/scripts/helpers/common.bash for the helpers that seed and read it.
+set -euo pipefail
+
+if [ -z "${GH_MOCK_DIR:-}" ]; then
+  echo "gh mock: GH_MOCK_DIR not set" >&2
+  exit 99
+fi
+
+mkdir -p "$GH_MOCK_DIR/files" "$GH_MOCK_DIR/responses" "$GH_MOCK_DIR/counters" "$GH_MOCK_DIR/issues"
+
+# 1. Log the call: args joined by spaces, newlines written as the characters \n.
+line=""
+for a in "$@"; do
+  a=${a//$'\n'/\\n}
+  if [ -z "$line" ]; then line=$a; else line="$line $a"; fi
+done
+printf '%s\n' "$line" >> "$GH_MOCK_DIR/calls.log"
+idx=$(wc -l < "$GH_MOCK_DIR/calls.log" | tr -d ' ') || exit 1
+nnn=$(printf '%03d' "$idx") || exit 1
+
+# Capture body files: only "-" (stdin) or an existing regular file after a file flag.
+stdin_saved=""
+prev=""
+for a in "$@"; do
+  case "$prev" in
+    --body-file|-F|--input)
+      if [ "$a" = "-" ]; then
+        cat > "$GH_MOCK_DIR/files/$nnn-stdin"
+        stdin_saved="$GH_MOCK_DIR/files/$nnn-stdin"
+      elif [ -f "$a" ]; then
+        cp "$a" "$GH_MOCK_DIR/files/$nnn-${a##*/}"
+      fi
+      ;;
+  esac
+  prev=$a
+done
+
+# Route = first two args with unsafe characters replaced.
+route="${1:-}-${2:-}"
+route=$(printf '%s' "$route" | tr -c 'A-Za-z0-9._-' '_') || exit 1
+
+n=0
+if [ -f "$GH_MOCK_DIR/counters/$route" ]; then n=$(cat "$GH_MOCK_DIR/counters/$route"); fi
+n=$((n + 1))
+printf '%s' "$n" > "$GH_MOCK_DIR/counters/$route"
+
+# 2. Canned response (call-specific first).
+for cand in "$route.$n" "$route"; do
+  if [ -f "$GH_MOCK_DIR/responses/$cand.out" ]; then
+    code=0
+    if [ -f "$GH_MOCK_DIR/responses/$cand.code" ]; then code=$(cat "$GH_MOCK_DIR/responses/$cand.code"); fi
+    if [ "$code" -ne 0 ]; then
+      cat "$GH_MOCK_DIR/responses/$cand.out" >&2
+    else
+      cat "$GH_MOCK_DIR/responses/$cand.out"
+    fi
+    exit "$code"
+  fi
+done
+
+# 3. Stateful routes.
+unseeded() {
+  echo "GraphQL: Could not resolve to an issue or pull request with the number of $1." >&2
+  exit 1
+}
+
+case "$route" in
+  issue-view)
+    shift 2
+    num="" fields="" jqexpr=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --json) fields=$2; shift 2 ;;
+        --jq|-q) jqexpr=$2; shift 2 ;;
+        -R|--repo) shift 2 ;;
+        -*) shift ;;
+        *) if [ -z "$num" ]; then num=$1; fi; shift ;;
+      esac
+    done
+    d="$GH_MOCK_DIR/issues/$num"
+    [ -f "$d/base.json" ] || unseeded "$num"
+    labels=$(jq -Rn '[inputs | {name: .}]' "$d/labels") || exit 1
+    merged=$(jq --rawfile body "$d/body" --argjson labels "$labels" '. + {body: $body, labels: $labels}' "$d/base.json") || exit 1
+    if [ -n "$fields" ]; then
+      merged=$(printf '%s' "$merged" | jq --arg f "$fields" '($f | split(",")) as $k | with_entries(select(.key as $x | $k | index($x)))') || exit 1
+    fi
+    if [ -n "$jqexpr" ]; then
+      printf '%s' "$merged" | jq -r "$jqexpr"
+    else
+      printf '%s\n' "$merged"
+    fi
+    exit 0
+    ;;
+  issue-edit)
+    shift 2
+    num="" adds="" removes="" body_src="" body_str="" have_str=0
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --body-file|-F)
+          if [ "$2" = "-" ]; then body_src=$stdin_saved; else body_src=$2; fi
+          shift 2 ;;
+        --body) body_str=$2; have_str=1; shift 2 ;;
+        --add-label) adds="$adds,$2"; shift 2 ;;
+        --remove-label) removes="$removes,$2"; shift 2 ;;
+        -R|--repo|--title|-t) shift 2 ;;
+        -*) shift ;;
+        *) if [ -z "$num" ]; then num=$1; fi; shift ;;
+      esac
+    done
+    d="$GH_MOCK_DIR/issues/$num"
+    [ -f "$d/base.json" ] || unseeded "$num"
+    if [ -n "$body_src" ]; then cp "$body_src" "$d/body"; fi
+    if [ "$have_str" -eq 1 ]; then printf '%s' "$body_str" > "$d/body"; fi
+    cur=$(cat "$d/labels") || exit 1
+    new=$(
+      { printf '%s\n' "$cur"; printf '%s' "$adds" | tr ',' '\n'; } | grep -v '^$' | sort -u || true
+    )
+    if [ -n "$removes" ]; then
+      rm_list=$(printf '%s' "$removes" | tr ',' '\n' | grep -v '^$' || true)
+      if [ -n "$rm_list" ] && [ -n "$new" ]; then
+        new=$(printf '%s\n' "$new" | grep -vxF "$rm_list" || true)
+      fi
+    fi
+    if [ -n "$new" ]; then printf '%s\n' "$new" > "$d/labels"; else : > "$d/labels"; fi
+    exit 0
+    ;;
+esac
+
+# 4. Anything else: succeed silently.
+exit 0
