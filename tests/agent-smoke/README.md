@@ -613,3 +613,148 @@ mcp__plugin_aew_playwright__browser_console_messages
 mcp__plugin_aew_playwright__browser_wait_for
 mcp__plugin_aew_playwright__browser_close
 ```
+
+### 8.3 Static-shop harness (941, 951)
+
+The harness for the qa-engineer runs (941, 951), reused by the fan-out run (961, D2) and the later runs on 951's
+project (E3 to E5). Run section 2's `REPO`/`SMOKE` lines and section 3's `smoke_dispatch` first. Everything
+below runs in bash or zsh.
+
+**Prerequisites delta.** Node 20 or later, `npx`, Google Chrome (probe 940: the Playwright MCP uses the installed
+Chrome, so it needs no browser install of its own) and a free port 4173. The helper installs the fixture's
+dependencies and `@playwright/test`'s chromium itself.
+
+```sh
+node --version                         # 20 or later
+lsof -nP -iTCP:4173 -sTCP:LISTEN       # must print nothing
+```
+
+`smoke_shop` builds a project from the static-shop fixture. It installs dependencies **before** the fixture commit,
+so the lock file is committed and `node_modules/` stays ignored (the fixture `.gitignore` covers `node_modules/`,
+`.aew/runs/`, `test-results/`, `playwright-report/` and `.playwright-mcp/`). The fixture's `run/` and `run-fanout/`
+are removed from the copy; they are the seeds, read from `$SHOP_RUN` and `$SHOP/run-fanout`.
+
+```sh
+SHOP="$REPO/tests/fixtures/apps/static-shop"; SHOP_RUN="$SHOP/run"
+# smoke_shop <agent> <case> <run-id> <issue> <title> <branch> <stage>   (sets P, RUN, O and P_REAL; leaves $P on <branch>)
+smoke_shop() {
+  P="$SMOKE/smoke-$1-$2"
+  rm -rf "$P" && mkdir -p "$P" || return 1
+  cp -R "$SHOP/." "$P" && rm -rf "$P/run" "$P/run-fanout" "$P/node_modules" || return 1   # keep the fixture .gitignore
+  (cd "$P" && npm install --no-audit --no-fund --silent && npx playwright install chromium) || return 1
+  git -C "$P" init -q -b main && git -C "$P" add -A && git -C "$P" commit -qm fixture || return 1
+  git -C "$P" switch -q -c "$6" || return 1
+  (cd "$P" && "$REPO/scripts/state.sh" init "$3" --issues "$4" --mode single --title "$5" \
+     && "$REPO/scripts/state.sh" set branch "$6" && "$REPO/scripts/state.sh" stage "$7") || return 1
+  smoke_use "$1" "$2" "$3" && P_REAL=$(cd "$P" && pwd -P)   # /var symlink
+}
+TITLE_201=$(jq -r .title "$SHOP_RUN/issue.json")
+```
+
+After it runs, `git -C "$P" status --porcelain` must print nothing: that proves the fixture `.gitignore` covers
+`node_modules/` and `.aew/runs/`, and that the lock file is committed.
+
+**Fixture ids and table helpers.** TCs are always resolved from the plan at check time, never hard-coded.
+
+```sh
+AC_COUNT=AC-1; AC_A11Y=AC-2; AC_EMAIL=AC-4   # confirm against: grep -n 'AC-' "$SHOP_RUN/02-brief.md"; correcting these is a harness fix
+# table_col <file> <section title> <column>: cells of that column on TC rows of that section
+table_col() { awk -F'|' -v h="## $2" -v c="$3" '/^## /{f=($0==h)} f && $2 ~ /TC-[0-9]+/ {x=$(c+1); gsub(/^[[:space:]]+|[[:space:]]+$/,"",x); print x}' "$1"; }
+# tc_for <AC-id> <plan>: TCs in "Test cases" mapped to that AC
+tc_for() { awk -F'|' -v ac="$1" '/^## /{f=($0=="## Test cases")} f && $2 ~ /TC-[0-9]+/ && $3 ~ (ac "([^0-9]|$)") {x=$2; gsub(/[[:space:]]/,"",x); print x}' "$2"; }
+# qa_failures_complete <report>: exit 0 = QA failures, report complete (as in skills/run-protocol/references/state-machine.md;
+# needs valid_return_block, loaded with the eval line in section 4)
+qa_failures_complete() {
+  [ -f "$1" ] && [ "$(valid_return_block "$1")" = failed ] &&
+    awk '/^## /{f=($0=="## Failures")} f && /^\|[[:space:]]*TC-[0-9]+[[:space:]]*\|/{n++} END{exit !(n>0)}' "$1"
+}
+```
+
+**qa-engineer invocation.** The `ALLOW` line follows `agents/qa-engineer.md` Guardrails (the prompt is the source).
+Set it after `smoke_shop`, so `$P` and `$P_REAL` are this project's. `ls`, `find`, `grep`, `head`, `wc` and the
+`find test-results ...` read are auto-allowed read-only commands, so they have no rule. The port and issue are the
+fixture's 4173 and 201. The `ready_check` is a URL, so the `for i in $(seq 1 60)` loop form is not allowed. The
+`--disallowedTools` rules stop `git add *` reaching `-A` and `.`, and block `reset`, `checkout`, pushes and `gh`
+(the plugin hook denies `gh` too).
+
+```sh
+# phase A (run 941): ls and find are auto-allowed read-only commands, and phase A has no browser, so no rule at all
+ALLOW=()
+# phase B (run 951 and later); set after smoke_shop
+T=mcp__plugin_aew_playwright__browser
+ALLOW=(--allowedTools
+  "Bash(npm install *)" "Bash(node --test *)" "Bash(npx playwright *)" "Bash(pnpm add -D -E *)" "Bash(yarn add -D -E *)"
+  "Bash(curl *)" "Bash(nohup sh -c *)" "Bash(tail -n 20 *)" "Bash(lsof -ti tcp:4173 -sTCP:LISTEN)" "Bash(kill *)"
+  "Bash(rm -rf $P/docs/qa/201/screenshots)" "Bash(rm -rf $P_REAL/docs/qa/201/screenshots)"
+  "Bash(AEW_EVIDENCE_DIR=* npx playwright test *)"
+  "Bash(mkdir -p *)" "Bash(file -b *)" "Bash(jq *)"
+  "Bash(git status *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git rev-parse *)" "Bash(git add *)" "Bash(git commit *)"
+  "${T}_navigate" "${T}_snapshot" "${T}_click" "${T}_type" "${T}_press_key" "${T}_select_option"
+  "${T}_hover" "${T}_resize" "${T}_console_messages" "${T}_wait_for" "${T}_close"
+  --disallowedTools "Bash(gh *)" "Bash(git add -A*)" "Bash(git add .)" "Bash(git reset *)" "Bash(git checkout *)" "Bash(git push *)")
+```
+
+The `AEW_EVIDENCE_DIR=` env-prefixed rule is **unverified**: Claude Code strips only a fixed set of env vars before
+matching, so the prefix may need its own pattern. A denial of the evidence run or of the `kill` stop in C6 is a
+harness fault: add the narrowest matching rule and record the denied command verbatim in the Notes. Dispatch fields:
+
+```sh
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: A"        # run 941, CAP=5
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: B, n: 1"  # run 951 cycle 1, CAP=8
+```
+
+Both use the section 3 invocation block unchanged (`cd "$P" && claude --plugin-dir "$REPO" -p "$DISPATCH" ...`), then
+the section 4 checks. Add the CAP to the 8.1 ledger total before starting; if it would pass $60, do not start.
+
+**Per-case setup.**
+
+```sh
+# run 941: qa-engineer phase A blindness (cap 5). 05-plan.md, 06-dev-report.md and spec-final.md are traps.
+smoke_shop shop phase-a 941 201 "$TITLE_201" feat/201-add-to-basket plan
+cp "$SHOP_RUN"/{issue.json,spec-final.md,02-brief.md,03-standards.md,05-plan.md,06-dev-report.md} "$RUN/"   # no 04-qa-test-plan.md
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: A"; CAP=5; ALLOW=()
+
+# run 951 cycle 1: qa-engineer phase B (cap 8). Never run another phase-B run at the same time (port 4173).
+lsof -nP -iTCP:4173 -sTCP:LISTEN        # must print nothing before the run
+smoke_shop shop loop 951 201 "$TITLE_201" feat/201-add-to-basket qa   # fix_cycle 0, so the gate expects 08-qa-report-1.md
+cp "$SHOP_RUN"/{issue.json,spec-final.md,02-brief.md,03-standards.md,04-qa-test-plan.md,05-plan.md,06-dev-report.md} "$RUN/"
+O="$SMOKE/out-951-qa1"; mkdir -p "$O"
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: B, n: 1"; CAP=8      # then set the phase B ALLOW line above
+PLAN="$RUN/04-qa-test-plan.md"; R="$RUN/08-qa-report-1.md"; S="$P/docs/qa/201/screenshots"
+```
+
+Run 951's project (`$SMOKE/smoke-shop-loop`) is left as the run leaves it for E3 to E5; the cleanup line in section 4
+is not run until E7. The fan-out run (D2) calls `smoke_shop` the same way, sets its own `T`/`BR`, and copies
+`$SHOP_RUN/03-standards.md` plus `$SHOP/run-fanout/{02-brief,05-plan}.md`.
+
+### 8.4 Results (prompt 04)
+
+Rows are listed `pending` and updated by the task that runs them (C5 941, C6 951 cycle 1). D and E append their own
+rows below.
+
+| run | check | result | notes |
+|---|---|---|---|
+| 940 | MCP tool names, focus marker, files written | pass | See 8.2. |
+| 941 | 1 return blocks and template headings | pending | |
+| 941 | 2 AC coverage equals the brief's | pending | |
+| 941 | 3 test levels valid | pending | |
+| 941 | 4 UI tests cover desktop and mobile | pending | |
+| 941 | 5 manual-only is exactly `AC-4`, with reasons | pending | |
+| 941 | 6 accessibility section names axe and the tags | pending | |
+| 941 | 7 blindness: reads (allowlist, traps) | pending | |
+| 941 | 8 blindness: Bash and browser | pending | |
+| 941 | 9 `## Files read` equals the successful reads | pending | |
+| 941 | 10 shared rows (preload, denials, gate, status, cost) | pending | |
+| 951 c1 | 1 `failed`, report complete, headings, SUMMARY | pending | |
+| 951 c1 | 2 basket bug is `impl_bug` | pending | |
+| 951 c1 | 3 accessibility defect, email TC untriaged | pending | |
+| 951 c1 | 4 triage table in the final message | pending | |
+| 951 c1 | 5 `manual-tests.md` format and TC set | pending | |
+| 951 c1 | 6 screenshots (names, JPEG) | pending | |
+| 951 c1 | 7 specs (titles, no skip/only, evidence env, axe tags) | pending | |
+| 951 c1 | 8 no `report.md` yet | pending | |
+| 951 c1 | 9 QA commit (A14) | pending | |
+| 951 c1 | 10 app lifecycle (port freed) | pending | |
+| 951 c1 | 11 exploratory MCP checks | pending | |
+| 951 c1 | 12 commands recorded | pending | |
+| 951 c1 | 13 shared rows (preload, denials, gate 08-qa-report-1, status, cost) | pending | |
