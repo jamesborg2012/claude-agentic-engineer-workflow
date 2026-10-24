@@ -64,11 +64,16 @@ run_hook() {
 }
 
 elapsed_ms() {
-  perl -MTime::HiRes=time -e '
+  # The command's stdin, stdout and stderr are discarded; only the integer is printed.
+  ELAPSED_OUT="$BATS_TEST_TMPDIR/.elapsed" perl -MTime::HiRes=time -e '
     my $t = time;
+    open(my $o, ">", $ENV{ELAPSED_OUT}) or die;
+    open(STDIN, "<", "/dev/null");
+    open(STDOUT, ">", "/dev/null");
+    open(STDERR, ">", "/dev/null");
     system { $ARGV[0] } @ARGV;
-    printf "%d\n", (time - $t) * 1000;
-  ' "$@" < /dev/null > "$BATS_TEST_TMPDIR/.elapsed" 2> /dev/null
+    printf $o "%d\n", (time - $t) * 1000;
+  ' "$@" < /dev/null > /dev/null 2>&1
   cat "$BATS_TEST_TMPDIR/.elapsed"
 }
 

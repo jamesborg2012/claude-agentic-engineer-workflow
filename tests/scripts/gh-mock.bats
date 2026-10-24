@@ -123,7 +123,7 @@ b"
 }
 
 @test "elapsed_ms prints a small integer" {
-  run elapsed_ms true
+  run elapsed_ms echo noisy
   [[ "$output" =~ ^[0-9]+$ ]]
   [ "$output" -lt 1000 ]
 }
