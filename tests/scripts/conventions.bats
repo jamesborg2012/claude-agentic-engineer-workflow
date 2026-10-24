@@ -16,7 +16,16 @@ script_files() {
   case "$kind" in
     executables) for f in "$SCRIPTS"/*.sh "$SCRIPTS"/hooks/*.sh; do printf '%s\n' "$f"; done ;;
     libs) for f in "$SCRIPTS"/lib/*.sh; do printf '%s\n' "$f"; done ;;
-    subcommand) for f in "$SCRIPTS"/*.sh; do printf '%s\n' "$f"; done ;;
+    # A script whose Usage line names only optional arguments ("name [x]") may
+    # succeed with none, so only scripts naming a required argument are kept.
+    subcommand)
+      for f in "$SCRIPTS"/*.sh; do
+        case "$(sed -n '2s/^# Usage: [^ ]* *//p' "$f")" in
+          '['*) ;;
+          *) printf '%s\n' "$f" ;;
+        esac
+      done
+      ;;
     all) for f in "$SCRIPTS"/*.sh "$SCRIPTS"/hooks/*.sh "$SCRIPTS"/lib/*.sh; do printf '%s\n' "$f"; done ;;
   esac
   shopt -u nullglob
@@ -124,7 +133,7 @@ finish_check() {
   finish_check "bad option" "$n" "$bad"
 }
 
-@test "subcommand scripts with no arguments exit 1 with error: on stderr" {
+@test "scripts whose Usage names a required argument exit 1 with no arguments, with error: on stderr" {
   local f bad=""
   # Vacuous until a subcommand script exists, so there is no non-empty guard.
   while IFS= read -r f; do

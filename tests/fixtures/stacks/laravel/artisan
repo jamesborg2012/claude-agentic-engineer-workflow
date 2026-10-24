@@ -1,0 +1,5 @@
+#!/usr/bin/env php
+<?php
+
+// Fixture stub: not a runnable Laravel entry point.
+exit(0);
