@@ -12,9 +12,10 @@
 |---|---|---|
 | docs/standards/web.md | Accessibility | AC-2: the icon-only basket button needs an accessible name, and the page targets WCAG 2.2 AA |
 | docs/standards/web.md | Framework conventions | AC-1: how the page script updates the status text |
+| docs/standards/web.md | Language idioms | All ACs: ES modules with `const`/`let` (never `var`), prices as integer pence |
 | docs/standards/web.md | Testing conventions | All ACs: unit test and Playwright spec naming and locations |
 
 STATUS: ok
 ARTEFACTS: .aew/runs/951/03-standards.md, docs/standards/README.md, docs/standards/web.md
-SUMMARY: Reused the existing web standards (fingerprint unchanged). Accessibility applies to AC-2, Framework conventions to AC-1, Testing conventions to every AC.
+SUMMARY: Reused the existing web standards (fingerprint unchanged). Accessibility applies to AC-2, Framework conventions to AC-1, Language idioms and Testing conventions to every AC.
 NEXT: qa_test_plan and plan
