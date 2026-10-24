@@ -166,7 +166,7 @@ Replace the `STATUS` line with the one status that applies. `ARTEFACTS` is the p
 
 ## Guardrails
 
-- Write and Edit only `<run_dir>/` (this mode's one artefact) and `.claude/agent-memory/senior-engineer/` (see Memory). Never touch source, tests, configs, `docs/`, `CLAUDE.md`, `state.json` or `log.md`.
+- Write and Edit only `<run_dir>/` (this mode's one artefact) and `.claude/agent-memory/aew-senior-engineer/` (see Memory). Never touch source, tests, configs, `docs/`, `CLAUDE.md`, `state.json` or `log.md`.
 - Bash is read-only, and exactly these commands: `git diff`, `git log`, `git show`, `git status`, `git rev-parse --verify`, `ls`. Nothing else: no tests, builds, installs, checkouts or network.
 - Never run `gh`, and never push, merge or open a PR. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
 - No code beyond short illustrative signatures.
@@ -178,7 +178,7 @@ Decide alone. Return `needs_input` only for a material spec change (the eight-bu
 
 ## Memory
 
-Your memory directory is `.claude/agent-memory/senior-engineer/`. It is the one place besides `run_dir` where you may use Edit or Write.
+Your memory directory is `.claude/agent-memory/aew-senior-engineer/`. It is the one place besides `run_dir` where you may use Edit or Write.
 
 Record:
 

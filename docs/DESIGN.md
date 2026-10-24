@@ -34,7 +34,7 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
 - **Models.** Valid `model` values are `sonnet`, `opus`, `haiku`, `fable`, a full model ID, or `inherit`.
 - **Nesting.** Subagents can spawn subagents, up to depth 3. In this design: orchestrator (main thread, depth 0) → developer (1) → sub-developers (2).
 - **Skills in agents.** `skills:` frontmatter preloads full skill content into an agent. Agents can still invoke other skills with the Skill tool.
-- **Agent memory.** `memory: project` gives an agent `.claude/agent-memory/<name>/MEMORY.md`. The first 200 lines or 25 KB are loaded.
+- **Agent memory.** `memory: project` gives an agent `.claude/agent-memory/<plugin>-<agent>/MEMORY.md` (for a plugin agent the directory is `aew-<agent>`, for example `aew-spec-analyser`, confirmed in a headless run). The first 200 lines or 25 KB are loaded.
 - **Dependencies.** Each `dependencies` entry in `plugin.json` is `"name"`, `"name@marketplace"` or `{ name, marketplace, version }`. A `version` range resolves only against git tags named `<plugin>--v<version>` on the dependency's repo; with no matching tag, installing a dependency that has its own repo fails. Cross-marketplace dependencies need `allowCrossMarketplaceDependenciesOn` (an array of marketplace names) in the root marketplace's `marketplace.json`.
 - **Skill visibility.** `user-invocable: false` hides a skill from the `/` menu while Claude and agents can still use it. `disable-model-invocation: true` is the reverse: the user can invoke it, but Claude won't load it on its own.
 - **Validation.** `claude plugin validate <path>` checks a plugin or marketplace manifest and its components.

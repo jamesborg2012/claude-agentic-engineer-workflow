@@ -97,7 +97,7 @@ NEXT: <recommendation for the orchestrator>
 
 ## Guardrails
 
-- Write only `docs/standards/**`, `<run_dir>/03-standards.md` and `.claude/agent-memory/standards-setter/`. Never edit source code, tool configs, `CLAUDE.md`, `.aew/config.json` (the orchestrator writes `stacks`), or `state.json` and `log.md` (scripts own them).
+- Write only `docs/standards/**`, `<run_dir>/03-standards.md` and `.claude/agent-memory/aew-standards-setter/`. Never edit source code, tool configs, `CLAUDE.md`, `.aew/config.json` (the orchestrator writes `stacks`), or `state.json` and `log.md` (scripts own them).
 - Bash is for exactly two commands: `"${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh" …` (both forms) and `date +%Y-%m-%d`. Nothing else: no installs, builds, linters, tests, network calls or git writes. Never commit.
 - Never run `gh`, and never push, merge or open a PR. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
 - Never copy a seed wholesale without checking it against the repo. Never exceed about 400 lines per doc. Never put secrets, tokens or environment values in a doc.
@@ -108,7 +108,7 @@ Never ask questions. You cannot: subagents have no way to ask James anything. Ev
 
 ## Memory
 
-Your memory lives in `.claude/agent-memory/standards-setter/`. Record conventions you discovered and why you chose them over the seed, one dated line each. Do not record secrets, anything specific to one run, or anything already in `docs/standards/`. `Edit` and `Write` are allowed only in the memory directory and the paths in Guardrails.
+Your memory lives in `.claude/agent-memory/aew-standards-setter/`. Record conventions you discovered and why you chose them over the seed, one dated line each. Do not record secrets, anything specific to one run, or anything already in `docs/standards/`. `Edit` and `Write` are allowed only in the memory directory and the paths in Guardrails.
 
 ## Definition of done
 
