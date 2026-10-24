@@ -84,7 +84,7 @@ A plan step that is impossible or clearly wrong stops the WP with `STATUS: block
 ### Mode: full
 
 1. Read the WP graph from `05-plan.md`. If `depends_on` has a cycle, return `blocked`.
-2. Clear leftovers. If a worktree or branch `aew/<run-id>/wp-<n>` exists from an earlier attempt, remove it (`git worktree remove --force <path>`, then `git branch -D <branch>`) and record it under Deviations only if `06-dev-report-WP<n>.md` exists with `STATUS: blocked` or `STATUS: failed`: the revised plan supersedes that recorded attempt. Any other leftover (no WP report, or one saying `ok`) is a `blocked` return naming its path and branch.
+2. Clear leftovers. If a worktree or branch `aew/<run-id>/wp-<n>` exists from an earlier attempt, check its report first. Only if `06-dev-report-WP<n>.md` exists with `STATUS: blocked` or `STATUS: failed`, remove it (`git worktree remove --force <path>`, then `git branch -D <branch>`) and record it under Deviations: the revised plan supersedes that recorded attempt. Never remove any other leftover (no WP report, or one saying `ok`): return `blocked` naming its path and branch.
 3. Skip the work packages that are already integrated. If `06-dev-report.md` exists with `Mode: full`, each WP it lists whose sha appears in the output of `git log --format=%H <default_branch>..HEAD` counts as integrated. It keeps its row for your report and is never re-implemented. If the revised plan's block for such a WP lists different files from `git show --name-only --format= <sha>`, return `blocked` and name the WP. No other report marks a WP as done.
 4. Repeat the following until every WP is done or one is blocked.
    1. R is the set of unfinished WPs whose `depends_on` are all integrated.
@@ -102,9 +102,9 @@ A plan step that is impossible or clearly wrong stops the WP with `STATUS: block
    5. Confirm the pick: `git diff <sha> HEAD -- <WP files>` must be empty.
    6. Only then remove the worktree with `git worktree remove <path>`. Use `--force` only after step 5 succeeded and only if the plain remove refused. Then `git branch -D <branch>`.
 
-   A failed check in 1 to 3, or a pick conflict, returns `blocked`. After a conflict, run `git cherry-pick --abort` first and name the conflicting files from `git diff --name-only --diff-filter=U`. After the last integration, `git worktree list` must show only the main worktree. Then read each `06-dev-report-WP<n>.md` and carry its rows and deviations into your report. An extra commit to make a check pass is never allowed.
+   A failed check in 1 to 3, or a pick conflict, returns `blocked`. After a conflict, run `git cherry-pick --abort` first and name the conflicting files from `git diff --name-only --diff-filter=U`. After the last integration, `git worktree list` must show only the main worktree. Then read each `06-dev-report-WP<n>.md` and carry its rows and deviations into your report. Unless a WP of this wave blocked (step 8), run the checks (Every work package, step 6) on the feature branch before the next round; a failing post-integration check returns `blocked` with its output. An extra commit to make a check pass is never allowed.
 8. On a block, schedule no new WP. Integrate the other WPs of that wave that finished `ok` (step 7). Leave the blocked WP's worktree and branch untouched (no `--force`), name its path and branch in Deviations and NEXT, and record the post-integration checks as "not run: worktree WP-<n> left for inspection", because a test runner scanning from the root would also scan the leftover copy.
-9. After the last WP, run the checks (Every work package, step 6) on the feature branch. These rows fill `## Commands run`. A failing check returns `blocked` with its output.
+9. After the last WP, run the checks (Every work package, step 6) on the feature branch, unless step 7 has just run them for a final wave. These rows fill `## Commands run`. A failing check returns `blocked` with its output.
 10. Write `06-dev-report.md` last, after every WP report exists. The gate hook reads the newest `06-dev-report*.md`.
 
 ### Mode: package
@@ -112,7 +112,7 @@ A plan step that is impossible or clearly wrong stops the WP with `STATUS: block
 You are a sub-developer for one work package.
 
 1. Check `wp`, `worktree`, `branch` and an absolute `run_dir`, and that the worktree is on `branch` and clean (Step 0).
-2. Prefix every Bash command, git included, with `cd <worktree> && ` followed by one allowed command. Read, Edit and Write by absolute path inside the worktree only. Never touch the main checkout, except to write your report into `run_dir`.
+2. Prefix every Bash command, git included, with `cd <worktree> && ` followed by one allowed command. Read, Edit and Write code by absolute path inside the worktree only. Read your run inputs (`05-plan.md`, `02-brief.md`, `03-standards.md`) from `run_dir`. Never change the main checkout, except to write your report into `run_dir`.
 3. Apply "Every work package" to your WP only.
 4. Make exactly one commit on `branch`.
 5. Write `<run_dir>/06-dev-report-WP<n>.md` with `Mode: package` and your WP-branch sha (`wp: WP-1` writes `06-dev-report-WP1.md`).
@@ -167,7 +167,7 @@ SUMMARY says which WPs ran sequentially and which fanned out, the commits, and t
   - `git` with `status`, `diff`, `log`, `show`, `add`, `commit`, `worktree`, `cherry-pick`, `branch` and `rev-parse`;
   - in a worktree, `cd <absolute worktree path> && <one allowed command>`. Never use `git -C`;
   - the configured `commands.*` (`install`, `lint`, `format`, `typecheck`, `test_unit`; `test_e2e` narrowed, fix mode only), with `node`, `npm` and `npx` only as those commands need them;
-  - in fix mode with e2e only: `app.start_command`, `curl` for the ready check, and `lsof -ti tcp:<port>` then `kill <pid>` for the instance you started;
+  - in fix mode with e2e only: `app.start_command`, `curl` for the ready check, and `lsof -ti tcp:<port> -sTCP:LISTEN` then `kill <pid>` for the instance you started;
   - read-only `ls`, `find`, `grep`, `head` and `wc` for search (no `-exec`, `-delete` or `-fprint` on `find`). You have no Glob or Grep tool.
 - One plain command per call: no loops, `$(…)`, heredocs or `cat` chains. Read file contents with Read.
 - Never run `gh`, and never push, merge or open a PR. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
