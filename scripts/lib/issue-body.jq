@@ -1,8 +1,8 @@
-# Issue-body format for gh-issue.sh (revise, and manual-tests in a later task).
+# Issue-body format for gh-issue.sh (revise and manual-tests).
 #
 # Run as:
 #   jq -n -j --slurpfile view view.json --rawfile content FILE \
-#      --arg op revise --argjson version N --argjson limit 65536 \
+#      --arg op revise|manual --argjson version N --argjson limit 65536 \
 #      --argjson issue N -f issue-body.jq
 #
 # Reads the body from $view[0].body, writes the new body to stdout (no trailing
@@ -112,13 +112,17 @@ def serialise_unmanaged($v; $m):
   end
 | (if $mts | length == 1 then inner($L; $mts[0]) | join("\n") else null end) as $m
 | (if $managed then $specs[0].k else 1 end) as $cur
-| if $version < 2 then refuse("version must be >= 2 (v1 is the author's original)")
+| if $op != "revise" then .
+  elif $version < 2 then refuse("version must be >= 2 (v1 is the author's original)")
   elif $version < $cur then refuse("spec v\($version) is older than the recorded v\($cur) (regression); not editing")
   elif $version > $cur + 1 then refuse("spec v\($version) would skip v\($cur + 1) (gap); not editing")
   else . end
 | ([$prevs[] | {k, c: prev_content($L; .)}]) as $prev_c
 | (if $managed then inner($L; $specs[0]) | join("\n") else null end) as $s_cur
-| (if $version == $cur
+# manual: the block is set or replaced; the spec version, spec and history stay.
+| ($op == "manual") as $manual
+| (if $manual then $s_cur
+   elif $version == $cur
    then (if $content == $s_cur or $content == ($s_cur | split("\n") | map(rtrimstr("\r")) | join("\n"))
          then $s_cur
          else refuse("spec v\($version) already recorded with different content; use version \($version + 1)") end)
@@ -130,8 +134,9 @@ def serialise_unmanaged($v; $m):
        | $L[(if . == 0 then 0 else $blocks[. - 1].close + 1 end)
             : (if . == ($blocks | length) then ($L | length) else $blocks[.].open end)]
        | trim_blank | select(length > 0) | join("\n")] | if length == 0 then null else join("\n\n") end) as $o
-     | serialise_managed($version; $spec; $m;
-         (if $version == $cur then $prev_c else [{k: $cur, c: $s_cur}] + $prev_c end); $o)
+     | serialise_managed(if $manual then $cur else $version end; $spec;
+         (if $manual then $content else $m end);
+         (if $manual or $version == $cur then $prev_c else [{k: $cur, c: $s_cur}] + $prev_c end); $o)
    else
      # Unmanaged: V is the author's whole body (minus a manual block we wrote).
      (if ($mts | length) == 0 then $body
@@ -145,7 +150,8 @@ def serialise_unmanaged($v; $m):
           elif $before == "" then $tail
           else $before + "\n\n" + $tail end
       end) as $v
-     | serialise_managed($version; $spec; $m; [{k: 1, c: $v}]; null)
+     | if $manual then serialise_unmanaged($v; $content)
+       else serialise_managed($version; $spec; $m; [{k: 1, c: $v}]; null) end
    end) as $new
 | if ($new | length) > $limit
   then refuse("new body would be \($new | length) characters (GitHub limit \($limit)); not editing")

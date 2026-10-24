@@ -469,3 +469,159 @@ v3_check() {
   b="$W/r-unclosed-v1"; { cat "$I/body-v1.md"; printf '<!-- aew:manual-tests -->\n- [ ] x'; } > "$b"
   expect_refusal "$b" "$I/spec-v2.md" 2 "malformed aew blocks"
 }
+
+# --- manual-tests (B3) ----------------------------------------------------------
+
+mt() { run --separate-stderr "$SCRIPTS/gh-issue.sh" manual-tests "$@"; }
+
+@test "M1. an unmanaged body gets the golden manual block and keeps the author's bytes as a prefix" {
+  gh_mock_issue 7 --body-file "$I/body-v1.md"
+  mt 7 "$I/manual-tests.md"
+  assert_success
+  gh_mock_body 7 > "$W/after"
+  cmp "$W/after" "$I/body-v1-manual.md"
+  head -c "$(wc -c < "$I/body-v1.md" | tr -d ' ')" "$W/after" | cmp - "$I/body-v1.md"
+  manual_of "$W/after" | cmp - "$I/manual-tests.md"
+  assert_no_line_lost "$I/body-v1.md" "$W/after"
+  assert_equal "$(edits)" 1
+  [ -z "$output" ]
+}
+
+@test "M2. running it again is idempotent: same body, no second edit" {
+  gh_mock_issue 7 --body-file "$I/body-v1.md"
+  mt 7 "$I/manual-tests.md"
+  assert_success
+  gh_mock_body 7 > "$W/after1"
+  mt 7 "$I/manual-tests.md"
+  assert_success
+  assert_contains "$stderr" "unchanged"
+  gh_mock_body 7 | cmp - "$W/after1"
+  assert_equal "$(edits)" 1
+}
+
+@test "M3. a different file replaces the block, leaving one block and the author's prefix" {
+  gh_mock_issue 7 --body-file "$I/body-v1.md"
+  mt 7 "$I/manual-tests.md"
+  assert_success
+  mt 7 "$I/manual-tests-2.md"
+  assert_success
+  gh_mock_body 7 > "$W/after"
+  assert_equal "$(grep -c '^<!-- aew:manual-tests -->' "$W/after")" 1
+  manual_of "$W/after" | cmp - "$I/manual-tests-2.md"
+  head -c "$(wc -c < "$I/body-v1.md" | tr -d ' ')" "$W/after" | cmp - "$I/body-v1.md"
+  ! grep -qF 'Export an empty list' "$W/after"
+  assert_no_line_lost "$I/body-v1.md" "$W/after"
+  assert_no_line_lost "$I/body-v1-manual.md" "$W/after" --except-manual
+}
+
+@test "M4. a managed body: block between spec and history, spec and history byte-identical, O kept" {
+  gh_mock_issue 7 --body-file "$I/expected-v2.md"
+  revise 7 "$I/spec-v3.md" 3
+  assert_success
+  gh_mock_body 7 > "$W/b3"
+  printf '\nAuthor paragraph O\n' >> "$W/b3"
+  gh_mock_issue 7 --body-file "$W/b3"
+  mt 7 "$I/manual-tests.md"
+  assert_success
+  gh_mock_body 7 > "$W/m1"
+  local s m p
+  s=$(grep -n '^<!-- aew:spec v3 -->' "$W/m1" | cut -d: -f1)
+  m=$(grep -n '^<!-- aew:manual-tests -->' "$W/m1" | cut -d: -f1)
+  p=$(grep -n '^<!-- aew:spec-prev v2 -->' "$W/m1" | cut -d: -f1)
+  [ "$s" -lt "$m" ]
+  [ "$m" -lt "$p" ]
+  spec_of "$W/m1" | cmp - <(spec_of "$W/b3")
+  prev_of "$W/m1" 2 | cmp - <(prev_of "$W/b3" 2)
+  prev_of "$W/m1" 1 | cmp - <(prev_of "$W/b3" 1)
+  manual_of "$W/m1" | cmp - "$I/manual-tests.md"
+  grep -qxF 'Author paragraph O' "$W/m1"
+  assert_no_line_lost "$W/b3" "$W/m1"
+  mt 7 "$I/manual-tests-2.md"
+  assert_success
+  gh_mock_body 7 > "$W/m2"
+  manual_of "$W/m2" | cmp - "$I/manual-tests-2.md"
+  spec_of "$W/m2" | cmp - <(spec_of "$W/b3")
+  prev_of "$W/m2" 2 | cmp - <(prev_of "$W/b3" 2)
+  prev_of "$W/m2" 1 | cmp - <(prev_of "$W/b3" 1)
+  grep -qxF 'Author paragraph O' "$W/m2"
+  assert_no_line_lost "$W/m1" "$W/m2" --except-manual
+  assert_equal "$(grep -c '^<!-- aew:manual-tests -->' "$W/m2")" 1
+}
+
+@test "M5. end to end on a CRLF v1 without a final newline: v1 survives both revisions" {
+  crlf_nonl "$I/body-v1.md" > "$W/crlf"
+  gh_mock_issue 7 --body-file "$W/crlf"
+  mt 7 "$I/manual-tests.md"
+  assert_success
+  gh_mock_body 7 > "$W/a0"
+  head -c "$(wc -c < "$W/crlf" | tr -d ' ')" "$W/a0" | cmp - "$W/crlf"
+  assert_no_line_lost "$W/crlf" "$W/a0"
+  revise 7 "$I/spec-v2.md" 2
+  assert_success
+  revise 7 "$I/spec-v3.md" 3
+  assert_success
+  gh_mock_body 7 > "$W/a3"
+  prev_of "$W/a3" 1 | cmp - "$W/crlf"
+  manual_of "$W/a3" | cmp - "$I/manual-tests.md"
+  assert_no_line_lost "$W/crlf" "$W/a3"
+}
+
+@test "M6. refusals leave the body alone and make no edit" {
+  gh_mock_issue 7 --body-file "$I/body-v1.md"
+  local n
+  n=$(edits)
+  : > "$W/empty.md"
+  printf 'x\n<!-- /aew:manual-tests -->\n' > "$W/marker.md"
+  printf 'a\377b\n' > "$W/bad.md"
+  mt 7 "$W/empty.md"
+  assert_failure 1
+  mt 7 "$W/missing.md"
+  assert_failure 1
+  mt 7 "$W/marker.md"
+  assert_failure 1
+  assert_contains "$stderr" "marker"
+  mt 7 "$W/bad.md"
+  assert_failure 1
+  assert_contains "$stderr" "not valid UTF-8"
+  mt 0 "$I/manual-tests.md"
+  assert_failure 1
+  assert_contains "$stderr" "invalid issue number"
+  mt abc "$I/manual-tests.md"
+  assert_failure 1
+  mt 7
+  assert_failure 1
+  assert_equal "$(edits)" "$n"
+  gh_mock_body 7 | cmp - "$I/body-v1.md"
+  # malformed body: two manual blocks
+  { cat "$I/body-v1-manual.md"; printf '<!-- aew:manual-tests -->\nx\n<!-- /aew:manual-tests -->\n'; } > "$W/two"
+  gh_mock_issue 8 --body-file "$W/two"
+  mt 8 "$I/manual-tests.md"
+  assert_failure 1
+  assert_contains "$stderr" "malformed aew blocks"
+  gh_mock_body 8 | cmp - "$W/two"
+  # a body pushed over the limit
+  perl -CS -e 'print "\x{e9}" x 65530' > "$W/big"
+  gh_mock_issue 9 --body-file "$W/big"
+  mt 9 "$I/manual-tests.md"
+  assert_failure 1
+  assert_contains "$stderr" "GitHub limit 65536"
+  gh_mock_body 9 | cmp - "$W/big"
+  assert_equal "$(edits)" "$n"
+}
+
+@test "M7. labels are untouched" {
+  gh_mock_issue 7 --body-file "$I/body-v1.md" --labels "aew:building,bug"
+  local before
+  before=$(gh_mock_labels 7)
+  mt 7 "$I/manual-tests.md"
+  assert_success
+  assert_equal "$(gh_mock_labels 7)" "$before"
+  ! gh_calls | grep -q -e '--add-label'
+  ! gh_calls | grep -q -e '--remove-label'
+}
+
+@test "M8. dispatch: --help lists manual-tests" {
+  run --separate-stderr "$SCRIPTS/gh-issue.sh" --help
+  assert_success
+  assert_contains "$output" "manual-tests <n> <file>"
+}

@@ -22,6 +22,13 @@
 #                            version, malformed aew blocks, a file containing an
 #                            aew marker line or invalid UTF-8, or a body over
 #                            65,536 characters.
+#   manual-tests <n> <file>  Set or replace the manual-tests block (the file is
+#                            inserted verbatim) in the body of issue <n>. The
+#                            spec and history blocks and all author content are
+#                            kept byte for byte; author text outside aew blocks
+#                            in a managed body moves to the end on the first
+#                            rewrite and is stable after that. Never touches
+#                            labels. Same refusals as revise.
 #
 # Exit 1 on any invalid input or gh failure; nothing is written on failure.
 # Options: -h, --help
@@ -119,6 +126,7 @@ cmd_comment() {
 
 # check_content_file <file>: die unless it is a non-empty, valid UTF-8 file.
 check_content_file() {
+  require_cmd jq cmp
   [ -f "$1" ] || die "file not found: $1"
   [ -s "$1" ] || die "file is empty: $1"
   jq -n -j --rawfile c "$1" '$c' | cmp -s - "$1" || die "$1 is not valid UTF-8; refusing to edit"
@@ -166,6 +174,20 @@ cmd_revise() {
   fi
 }
 
+cmd_manual_tests() {
+  [ $# -eq 2 ] || die "manual-tests: expected <n> <file>"
+  local n=$1 file=$2
+  check_issue_number "$n"
+  check_content_file "$file"
+  rewrite_changed=0
+  rewrite_body "$n" manual "$file" 0 || exit 1
+  if [ "$rewrite_changed" -eq 1 ]; then
+    info "issue #$n body updated with the manual-tests block"
+  else
+    info "issue #$n body unchanged (manual-tests)"
+  fi
+}
+
 [ $# -gt 0 ] || die "missing subcommand (see --help)"
 sub=$1
 shift
@@ -173,5 +195,6 @@ case "$sub" in
   fetch) cmd_fetch "$@" ;;
   comment) cmd_comment "$@" ;;
   revise) cmd_revise "$@" ;;
+  manual-tests) cmd_manual_tests "$@" ;;
   *) die "unknown subcommand: $sub (see --help)" ;;
 esac
