@@ -512,6 +512,7 @@ not start the run (record its checks as `open`). Apply the same test before any 
 | run | id | cost (USD) | running total | cap raised? |
 |---|---|---|---|---|
 | 940 Playwright MCP probe (haiku) | 940 | 0.01 | 0.01 | no |
+| 941 qa-engineer phase A blindness (cap 5; 0.01 + 5 = 5.01, under 60) | 941 | 0.37 | 0.38 | no |
 
 ### 8.2 Playwright MCP tool names (AC-2, probe 940)
 
@@ -738,16 +739,16 @@ rows below.
 | run | check | result | notes |
 |---|---|---|---|
 | 940 | MCP tool names, focus marker, files written | pass | See 8.2. |
-| 941 | 1 return blocks and template headings | pending | |
-| 941 | 2 AC coverage equals the brief's | pending | |
-| 941 | 3 test levels valid | pending | |
-| 941 | 4 UI tests cover desktop and mobile | pending | |
-| 941 | 5 manual-only is exactly `AC-4`, with reasons | pending | |
-| 941 | 6 accessibility section names axe and the tags | pending | |
-| 941 | 7 blindness: reads (allowlist, traps) | pending | |
-| 941 | 8 blindness: Bash and browser | pending | |
-| 941 | 9 `## Files read` equals the successful reads | pending | |
-| 941 | 10 shared rows (preload, denials, gate, status, cost) | pending | |
+| 941 | 1 return blocks and template headings | pass | `valid_return_block` prints `ok` for `final.txt` and for `04-qa-test-plan.md`; the `^## ` heading diff against `templates/artefacts/qa-test-plan.md` (ending in `## Files read`) is empty. |
+| 941 | 2 AC coverage equals the brief's | pass | The brief's AC set equals the Test cases AC set (diff empty). |
+| 941 | 3 test levels valid | pass | No level outside `unit|integration|e2e|UI|manual`. |
+| 941 | 4 UI tests cover desktop and mobile | pass | Every UI/e2e TC is in the UI table; every viewport cell names desktop and mobile. |
+| 941 | 5 manual-only is exactly `AC-4`, with reasons | pass | Manual-only is exactly `AC-4`; the reason cell is non-empty (order service outside the repo, no email test hook). |
+| 941 | 6 accessibility section names axe and the tags | pass | Section names axe at `wcag22aa` expanded to the cumulative tags (`wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa`). |
+| 941 | 7 blindness: reads (allowlist, traps) | pass | Read attempts (`reads.all`): `.aew/config.json`, `.aew/runs/941/02-brief.md`, `03-standards.md`, `docs/standards/web.md`, `tests/unit/basket.test.js`, plus the plugin template (absolute, under `$REPO`). Outside-project, allowlist and trap greps all empty; no `site/`, `05-plan`, `06-dev-report` or `spec-final` read attempt. |
+| 941 | 8 blindness: Bash and browser | pass | Two Bash calls: `find <P>/tests <P>/docs -type f` and `ls <P>`. Neither matches the non-ls/find or forbidden-word greps. No `mcp__plugin_aew_playwright__` tool_use (tools used: Bash 2, Read 6, Write 1). |
+| 941 | 9 `## Files read` equals the successful reads | pass | Declared list equals `reads.ok` (diff empty). |
+| 941 | 10 shared rows (preload, denials, gate, status, cost) | pass | Preloaded skill lines for `aew:run-protocol`, `aew:ui-qa` and `superpowers:verification-before-completion`; no skip/missing line for them (the only skip lines are unrelated `synced` dir entries). `permission_denials` `[]`. SubagentStop hook: exit 0, outcome success, no `"decision":"block"`. `git -C $REPO status --porcelain` shows only this README; `$P` status clean (apart from `.claude/`). Cost 0.37 (ledger row 941). |
 | 951 c1 | 1 `failed`, report complete, headings, SUMMARY | pending | |
 | 951 c1 | 2 basket bug is `impl_bug` | pending | |
 | 951 c1 | 3 accessibility defect, email TC untriaged | pending | |
