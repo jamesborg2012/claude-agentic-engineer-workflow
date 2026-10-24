@@ -15,7 +15,7 @@ Visitors can leave their email address to hear about new articles. Add a sign-up
 
 ### Who can use it
 
-Anyone, signed in or not. There is no login.
+Open to anyone, signed in or not. There is no login.
 
 ### Behaviour
 
@@ -47,12 +47,12 @@ Anyone, signed in or not. There is no login.
 
 ### Out of scope
 
-- Storing or forwarding addresses. The route validates and responds only, and logs nothing.
-- Any mailing provider.
-- Double opt-in.
-- Rate limiting.
-- Analytics.
-- Translations (English copy only).
+- storing or forwarding addresses (the route validates and responds only, and logs nothing);
+- any mailing provider;
+- double opt-in;
+- rate limiting;
+- analytics;
+- translations (English copy only).
 
 ### Acceptance criteria
 
@@ -60,10 +60,9 @@ Anyone, signed in or not. There is no login.
 2. A valid address (after trimming) is accepted by `POST /api/newsletter`, which returns `201 { "status": "subscribed" }`, including for an address that was already submitted.
 3. A missing or invalid email returns `400 { "error": "invalid_email" }`, a body over 1 KB returns `413`, any method other than POST returns `405`, and nothing is stored.
 4. Invalid input shows "Enter a valid email address" below the field, linked with `aria-describedby`, with `aria-invalid="true"` set and focus kept on the input.
-5. While the request is pending, the button is disabled and reads "Subscribing…".
-6. After a 201, the form is replaced by "Thanks, you're subscribed."; after a network error or a 5xx, "Something went wrong. Please try again." appears and the input keeps its value.
-7. Messages are announced through a polite live region, and the form is keyboard operable with a visible focus indicator and 4.5:1 text contrast.
-8. An axe scan shows no serious or critical violations at the 1440×900 and 390×844 viewports.
+5. While the request is pending, the button is disabled and reads "Subscribing…"; after a 201, the form is replaced by "Thanks, you're subscribed.", announced through a polite live region.
+6. After a network error or a 5xx, "Something went wrong. Please try again." is announced through the polite live region and the input keeps its value.
+7. The form is keyboard operable with a visible focus indicator and 4.5:1 text contrast, and an axe scan shows no serious or critical violations at the 1440×900 and 390×844 viewports.
 
 ## Comments (0)
 
