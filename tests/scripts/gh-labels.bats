@@ -28,6 +28,19 @@ edit_count() { gh_call_count "issue edit"; }
   done
 }
 
+@test "ensure creates exactly the DESIGN 7.4 label set, each call well formed" {
+  run --separate-stderr "$SCRIPTS/gh-labels.sh" ensure
+  assert_success
+  local design created bad
+  design=$(awk '/^### 7\.4 Labels/ { f = 1; next } f && /^###/ { exit } f' "$REPO_ROOT/docs/DESIGN.md" |
+    grep -oE 'aew:[a-z-]+' | sort -u)
+  [ -n "$design" ]
+  created=$(gh_calls | awk '$1 == "label" && $2 == "create" { print $3 }' | sort)
+  assert_equal "$created" "$design"
+  bad=$(gh_calls | grep -vE '^label create aew:[a-z-]+ --color [0-9A-Fa-f]{6} --description .+ --force$' || true)
+  assert_equal "$bad" ""
+}
+
 @test "ensure fails fast on a gh error and rejects extra arguments" {
   gh_mock_respond label-create - 1 3 <<< "boom"
   run --separate-stderr "$SCRIPTS/gh-labels.sh" ensure
