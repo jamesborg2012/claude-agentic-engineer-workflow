@@ -42,7 +42,7 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
   - `PreToolUse` denies with `hookSpecificOutput.permissionDecision: "deny"` and `permissionDecisionReason` on exit 0. Top-level `decision`/`reason` are deprecated for `PreToolUse`.
   - `Stop` and `SubagentStop` block with `{"decision":"block","reason":…}` on exit 0. Exit 2 also blocks, but aew never uses it.
   - `stop_hook_active` is true when a stop hook has already continued the agent.
-  - Documented cap: after 8 consecutive stop-hook continuations, the next block is overridden. The count resets on each tool call, and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` raises it. It is stated for `Stop`; the same protections apply to `SubagentStop`.
+  - Documented cap: after 8 consecutive stop-hook continuations, the next block is overridden. The count resets on each tool call, and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` raises it. It is stated for `Stop`; the docs do not say it applies to `SubagentStop`, though the same protections are presumed to.
 - **Hook matching and environment.**
   - `SubagentStop` matchers match `agent_type`, which for plugin agents is `aew:<agent>`.
   - A matcher of only letters, digits, `_`, `-`, space, `,` and `|` is an exact list. Anything else is an unanchored regex, so anchor it (`^aew:developer$`).
