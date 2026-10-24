@@ -57,6 +57,7 @@ only ever appended to / corrected.
 ### Per-feature learnings
 
 - 2026-10-24 scripts/hooks brainstorm (prompt 02): greenfield — no in-repo script analog; contracts above are the inputs. Spec: `docs/superpowers/specs/2026-10-24-scripts-github-io-and-hooks.md`.
+- 2026-10-24 scripts/hooks built (prompt 02): new scripts follow `scripts/state.sh` (Usage header = `--help`, `lib_main`, `die`) and test with `tests/scripts/helpers/common.bash` + the `gh` shim; new hooks call `hook_init "$@"` from `scripts/lib/hooks.sh` and add a row to `tests/scripts/hooks-json.bats`'s fail-open matrix automatically (it globs `scripts/hooks/*.sh`). Reviews found most defects in bash 3.2 strict-mode edges and guard bypasses — table-driven tests (`fixtures/hooks/bash-cases.tsv`) were the cheapest way to pin them.
 
 ### Gotchas
 
