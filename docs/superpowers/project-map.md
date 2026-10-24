@@ -23,7 +23,7 @@ changes meaningfully: `${CLAUDE_PLUGIN_ROOT}/lib/project-map.sh .`_
 | Source of truth | `docs/DESIGN.md` | Wins over any build prompt; flag conflicts |
 | Build prompts | `docs/build-prompts/0N-*.md` | 01 scaffold (done) → 07 e2e; each builds on the last |
 | Manifests | `.claude-plugin/plugin.json`, `marketplace.json` | plugin `aew`, marketplace `jamesborg-plugins` |
-| Internal skills | `skills/<name>/SKILL.md` (+ `references/`) | `run-protocol` exists; `user-invocable: false` frontmatter |
+| Internal skills | `skills/<name>/SKILL.md` (+ `references/`) | `run-protocol`, `github-ops`; `user-invocable: false` frontmatter |
 | Schemas | `templates/config.schema.json`, `templates/state.schema.json` | JSON Schema draft 2020-12 |
 | Artefact templates | `templates/artefacts/*.md` | one per run artefact; header HTML comment = writer/reader |
 | Scripts (prompt 02+) | `scripts/`, `scripts/lib/`, `scripts/hooks/` | bash, shellcheck-clean, `--help` |
@@ -47,7 +47,12 @@ only ever appended to / corrected.
 - **Labels** — stage labels (exactly one): `aew:analysing`, `aew:awaiting-input`, `aew:planning`, `aew:awaiting-approval`, `aew:building`, `aew:testing`, `aew:documenting`, `aew:ready-for-review`, `aew:blocked`; flags `aew:spec-revised`, `aew:manual-test-required`. Stage/status→label mapping table: `skills/run-protocol/SKILL.md` "Labels". Set only via `gh-labels.sh`.
 - **GitHub I/O** — agents never call `gh`; only the orchestrator, only via `scripts/gh-*.sh` and `git-branch.sh push` (DESIGN §2.4).
 - **Internal skill frontmatter** — `name`, `description`, `user-invocable: false` (see `skills/run-protocol/SKILL.md`).
-- **Schema validation command** — `npx ajv-cli validate --spec=draft2020 -s <schema> -d <file>` (CLAUDE.md).
+- **Schema validation command** — `npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s <schema> -d <file>` (CLAUDE.md).
+
+- **Scripts (prompt 02)** — `scripts/lib/common.sh` (shared: run-dir and main-worktree-root resolution via `git rev-parse --path-format=absolute --git-common-dir`, config reader with schema defaults, die/usage helpers), `scripts/lib/hooks.sh` (hook preamble: sources common.sh, EXIT-trap fail-open, inert without `.aew/config.json`), `scripts/lib/issue-body.jq` (marker-block transform). Each script prints its contract via `--help`; the `github-ops` skill lists them and their stdout.
+- **Test harness** — `tests/run-script-tests.sh` runs bats plus shellcheck (PATH or `npx --yes shellcheck`). A `gh` shim is placed first on PATH from `tests/tmp/`; `gh_mock_respond <route> <body|->` registers a canned reply (`-` reads stdin) and calls are logged for assertions. `tests/tmp/` is gitignored.
+- **Issue-body format** — marker-delimited aew blocks: current spec on top, earlier versions newest-first in collapsed history blocks (v1 = author original, byte for byte), optional manual-tests block. Author text outside aew blocks moves to the end on first rewrite, stable after. Malformed markers, marker lines in content, invalid UTF-8 and bodies over 65,536 chars are refused, never repaired. `revise N` refuses same-version-different-content, except CRLF-only difference (no-op).
+- **Hooks** — `hooks/hooks.json` uses anchored matchers, explicit timeouts, `Edit|Write` only; gate matches `aew:developer` / `aew:qa-engineer`; one corrective block per stop. Rollback: disable the plugin or delete `hooks/hooks.json`.
 
 ### Per-feature learnings
 
@@ -60,3 +65,11 @@ only ever appended to / corrected.
 - gh ≥ 2.103 exposes `blockedBy`, `blocking`, `parent`, `subIssues`, `closedByPullRequestsReferences` as `--json` fields on `gh issue view|list`; `gh issue list --milestone` accepts a number or title.
 - Plugin hooks fire in EVERY project where the plugin is enabled, so hooks must be cheap and inert outside an aew project.
 - In zsh, `echo =====` fails (`=word` expansion) — quote separators in shell one-liners.
+- bash 3.2: `set -e` does not apply inside `$(...)` assignments or `if`/`&&` conditions; check status explicitly. Empty arrays expand as unbound under `set -u` (use `${a[@]+"${a[@]}"}`).
+- `-nt` file freshness is whole-second on macOS, so gates compare at that resolution; write state before dispatching a developer.
+- `IFS=$'\t' read` collapses a leading empty field; use a non-whitespace delimiter or a sentinel.
+- macOS `/var` is a symlink to `/private/var`; compare resolved paths, and do not rely on `realpath` for paths that do not exist.
+- `claude plugin validate` only warns on unknown hook events; it will not catch a mistyped one. Plugin agent types are `aew:<agent>`. `grep -P` is unavailable on macOS.
+- jq 1.7.1: `jq -Rs` corrupts multi-byte characters at 4096-byte read boundaries; use `--rawfile`.
+- bats: a bare `! cmd` that is not the last line of a test never fails it; use the refute helpers.
+- bats helper `elapsed_ms` discards the command's exit status and stdin; time with `bash -c '"$0" < "$1"'` and assert the real run separately.
