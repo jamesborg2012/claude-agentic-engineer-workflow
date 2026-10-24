@@ -282,8 +282,9 @@ server writes page snapshots to `.playwright-mcp/` in the project cwd, which §2
 
 ## 11. Manual-test handoff
 
-Write `<run_dir>/manual-tests.md` from `${CLAUDE_PLUGIN_ROOT}/templates/artefacts/manual-tests.md` (keep its
-heading and comment). There is one checkbox line per manual-only TC, in the template's format:
+Write `<run_dir>/manual-tests.md` from `${CLAUDE_PLUGIN_ROOT}/templates/artefacts/manual-tests.md`. Keep its
+heading and drop every HTML comment, the leading one included: the orchestrator inserts the file verbatim into the
+issue body. There is one checkbox line per manual-only TC, in the template's format:
 `- [ ] **TC-<n> (AC-<n>):** <steps> → <expected>. _Why manual:_ <reason>.` Only the cases phase A classed
 manual-only, with the reason it gave, go here. An automatable case is never moved here: that breaks the UI-done
 rule. If there are no manual cases, don't write the file. The orchestrator posts it, and the doc-writer lists it
