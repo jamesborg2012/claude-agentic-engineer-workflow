@@ -207,3 +207,13 @@ gh_captured_file() {
   nnn=$(printf '%03d' "$idx") || return 1
   find "$GH_MOCK_DIR/files" -name "$nnn-*" 2> /dev/null | head -n 1
 }
+
+# seed_run <run-id> [state.sh init option…]
+# Calls the real state.sh init with defaults (--issues <id, or 1 for m-*>,
+# --mode single, --title "Test run"); later options override the defaults.
+seed_run() {
+  local id=$1 issues
+  shift
+  case "$id" in m-*) issues=1 ;; *) issues=$id ;; esac
+  "$SCRIPTS/state.sh" init "$id" --issues "$issues" --mode single --title "Test run" "$@"
+}
