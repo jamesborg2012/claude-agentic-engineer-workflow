@@ -63,9 +63,9 @@ The snapshot is `docs/specs/<issue>-<slug>.md`. The slug is the issue title in l
 
 1. Resolve `run_dir`, then find the passing QA report. If no `08-qa-report-<n>.md` exists, or the highest one does not pass, return `STATUS: blocked` and name what is missing. Do the same for any other missing required input.
 2. Write the spec snapshot.
-3. Curate `CLAUDE.md` by following the `aew:claude-md-curation` skill. Work on the whole file, stay within `claude_md.max_lines`, and keep a list of everything you remove.
+3. Curate `CLAUDE.md` by following the `aew:claude-md-curation` skill. Work on the whole file, stay within `claude_md.max_lines`, and keep a list of every entry you remove, merge or rewrite, with its original text (the skill's section 7).
 4. Write `10-summary.md` and `pr-body.md` from their templates:
-   - The Summary lists every `CLAUDE.md` removal.
+   - The Summary lists every `CLAUDE.md` entry you removed, merged or rewritten: its original text quoted in full, what happened to it and why. A line you kept but reworded, even only by adding a link, is a rewrite and is listed. State the line count you read back from the file after writing it.
    - The AC checklist covers every AC in the brief.
    - Test results come from the passing QA report.
    - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json`, and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not.
@@ -122,7 +122,7 @@ Never record secrets, run-specific detail or standards content.
 
 - The passing QA report was found and used.
 - `docs/specs/<issue>-<slug>.md` has the five sections, in order.
-- `CLAUDE.md` is curated, within `claude_md.max_lines`, and every removal is listed in the Summary.
+- `CLAUDE.md` is curated, within `claude_md.max_lines`, and every removed, merged or rewritten entry is listed in the Summary with its original text.
 - `10-summary.md` and `pr-body.md` have every template heading, an AC checklist covering the brief, test results, screenshot links in the `blob/<branch>/…?raw=true` form, manual tests, and `Closes #<n>` for every issue.
 - `pr-body.md` has no template comments or placeholders.
 - `retro.md` has only plugin improvements, one `###` heading per item.

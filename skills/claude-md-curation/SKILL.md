@@ -73,7 +73,9 @@ Follow these steps in order. Every file is curated whole, including entries a hu
 
 1. Read the whole file.
 2. Drop every item on the never-include list.
-3. Merge duplicates and near-duplicates into one entry.
+3. Merge duplicates and near-duplicates into one entry. Check every merged or rewritten entry against the
+   never-include list again: keep only the part that the standards docs and the code do not already say,
+   and drop the entry if nothing is left.
 4. Rewrite stale entries against the code. If an entry is wrong and cannot be corrected, remove it.
 5. Only then append the new learnings from this run, in the entry format.
 6. Recount against the cap. While it is over, drop the least durable entries (time-sensitive first,
@@ -83,4 +85,5 @@ Follow these steps in order. Every file is curated whole, including entries a hu
 
 Never remove or rewrite silently. Return to the caller a list of every removed or rewritten entry: the
 original text, what happened to it (removed, merged, rewritten) and the reason. The doc-writer copies
-this list into `10-summary.md`.
+this list into `10-summary.md`. Quote each original entry in full, one item per entry; do not abbreviate or
+group entries.
