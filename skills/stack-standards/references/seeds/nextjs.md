@@ -1,15 +1,16 @@
 # Next.js (React, TypeScript) standards seed
 
-Versions covered: Next.js 16.x (App Router; 16.3 is the latest seen), React 19.2 (19.3 released 2026-09-09; Next.js ships a React canary that includes 19.2 features), TypeScript 6.0 (researched 2026-10-24; sources: context7 unavailable; https://nextjs.org/docs/app/guides/upgrading/version-16, https://nextjs.org/docs/app/getting-started/caching, https://nextjs.org/docs/app/guides/data-security, https://nextjs.org/docs/app/api-reference/config/eslint, https://nextjs.org/docs/app/guides/testing, https://nextjs.org/docs/app/api-reference/functions/generate-metadata, https://react.dev/blog, https://www.typescriptlang.org/docs/handbook/release-notes/typescript-6-0.html)
+Versions covered: Next.js 16.x (App Router; 16.4 is the latest seen), React 19.2 (19.3 released 2026-09-09; Next.js ships a React canary that includes 19.2 features), TypeScript 5.1 to 7.0 (7.0 is the current major; `create-next-app` still installs `typescript@^5`) (researched 2026-10-24; sources: context7 unavailable; https://nextjs.org/docs/app/guides/upgrading/version-16, https://nextjs.org/docs/app/api-reference/config/typescript, https://nextjs.org/docs/app/api-reference/components/image, https://nextjs.org/docs/app/api-reference/file-conventions/error, https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/, eslint-config-next@16.4.3 source, https://nextjs.org/docs/app/getting-started/caching, https://nextjs.org/docs/app/guides/data-security, https://nextjs.org/docs/app/api-reference/config/eslint, https://nextjs.org/docs/app/guides/testing, https://nextjs.org/docs/app/api-reference/functions/generate-metadata, https://react.dev/blog, https://www.typescriptlang.org/docs/handbook/release-notes/typescript-6-0.html)
 
 This seed assumes the App Router. Pages Router projects (`pages/`) follow the base React and TypeScript rules only; check the repo before applying the routing sections.
 
 ## Tooling and commands
 
-- **[tool]** Next.js 16 needs Node.js 20.9 or later and TypeScript 5.1 or later; browsers are Chrome, Edge and Firefox 111+ and Safari 16.4+ (`next` engines check).
+- **[tool]** Next.js 16 needs Node.js 20.9 or later (`engines` in `next`) and TypeScript 5.1 or later. Supported browsers are Chrome, Edge and Firefox 111+ and Safari 16.4+.
 - **[tool]** `next dev` and `next build` use Turbopack by default. A custom `webpack` config fails `next build`; migrate it to `turbopack` options or opt out with `--webpack` (`next build`).
 - **[tool]** Lint with the ESLint CLI and a flat config (`eslint.config.mjs`) that spreads `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`. `next lint` and the `eslint` option in `next.config` were removed in 16 (`eslint-config-next`).
 - **[tool]** Type-check with `tsc --noEmit`. Run `npx next typegen` first to generate the global `PageProps`, `LayoutProps` and `RouteContext` helpers (`next typegen`).
+- **[convention]** TypeScript 7 ships no compiler API yet. `next build` type-checks it through the project-local `tsc` CLI, but `typescript-eslint` (inside `eslint-config-next/typescript`) supports only TypeScript below 6.1. Stay on 6.0, or install 7.0 side by side with the `@typescript/typescript6` npm alias from the TypeScript 7 release notes.
 - **[convention]** Keep these scripts in `package.json`: `dev` (`next dev`), `build` (`next build`), `start` (`next start`), `lint` (`eslint .`), `typecheck` (`tsc --noEmit`), `test` (unit and component) and `test:e2e`. CI runs lint, typecheck, test, build, then e2e.
 - **[convention]** Commit the lockfile for the package manager in use and never mix package managers.
 - **[convention]** Configure with `next.config.ts` typed as `NextConfig`. `turbopack` is a top-level option, no longer `experimental.turbopack`.
@@ -36,10 +37,11 @@ This seed assumes the App Router. Pages Router projects (`pages/`) follow the ba
 
 ## Language idioms
 
-- **[tool]** Enable `strict` in `tsconfig.json` (TypeScript 6.0 defaults it to true, but state it explicitly) so `next build` and `tsc` fail on implicit `any` and unchecked nulls (`strict`).
-- **[tool]** Declare `types` explicitly (for example `["node", "vitest/globals"]`); TypeScript 6.0 defaults `types` to `[]` and no longer loads every `@types/*` package (`types`).
-- **[tool]** Use `moduleResolution: "bundler"` and `paths` without `baseUrl` (deprecated in 6.0); Next.js writes the base config on `next dev` (`moduleResolution`, `paths`).
-- **[tool]** No `any`, no unused variables, no non-null assertions without a comment (`@typescript-eslint/no-explicit-any`, `@typescript-eslint/no-unused-vars`).
+- **[tool]** Keep `strict: true` in `tsconfig.json` (the `create-next-app` tsconfig sets it; it is the compiler default only from TypeScript 6.0) so `next build` and `tsc` fail on implicit `any` and unchecked nulls (`strict`).
+- **[tool]** On TypeScript 6.0 and later, declare `types` explicitly (for example `["node", "vitest/globals"]`): `types` defaults to `[]` and no longer loads every `@types/*` package (`types`).
+- **[tool]** Use `moduleResolution: "bundler"` and `paths` without `baseUrl` (deprecated in 6.0, removed in 7.0); Next.js writes the base config on `next dev` (`moduleResolution`, `paths`).
+- **[tool]** No `any` and no unused variables (`@typescript-eslint/no-explicit-any`, `@typescript-eslint/no-unused-vars`, both in `eslint-config-next/typescript`).
+- **[convention]** No non-null assertions (`!`) without a comment saying why the value cannot be null.
 - **[convention]** Prefer `type` imports for types (`import type { Metadata } from 'next'`) and `unknown` over `any` at boundaries, narrowing with a validator.
 - **[convention]** Model state with discriminated unions rather than several optional booleans; use `satisfies` to check a literal without widening it.
 - **[convention]** Derive types from a validator schema (`z.infer<typeof schema>`) so runtime and static types cannot drift.
@@ -65,15 +67,15 @@ enum Status { Draft, Live }
 - **[tool]** Hooks follow the Rules of Hooks: top level only, never in conditions or loops, and dependency arrays complete (`react-hooks/rules-of-hooks`, `react-hooks/exhaustive-deps`).
 - **[convention]** `params` and `searchParams` are Promises; `cookies()`, `headers()` and `draftMode()` are async. Await them, typing props with `PageProps<'/route'>` and `LayoutProps<'/route'>`. Synchronous access was removed in 16.
 - **[convention]** Fetch data in Server Components, ideally through a data access layer, and stream slow parts with `<Suspense>`. Use `React.cache` to share a lookup across one request.
-- **[convention]** With `cacheComponents: true` (the `create-next-app` default for new apps), nothing is cached implicitly. Mark cacheable work with `'use cache'` plus `cacheLife(...)`, tag it with `cacheTag(...)`, and wrap request-time reads (`cookies()`, `headers()`, uncached fetches) in `<Suspense>`.
+- **[convention]** With `cacheComponents: true` (on in the `create-next-app` defaults, with `partialPrefetching: true`; set both explicitly), nothing is cached implicitly. Mark cacheable work with `'use cache'` plus `cacheLife(...)`, tag it with `cacheTag(...)`, and wrap request-time reads (`cookies()`, `headers()`, uncached fetches) in `<Suspense>`.
 - **[convention]** After a mutation call `updateTag(tag)` inside a Server Action for read-your-writes, or `revalidateTag(tag, 'max')` for stale-while-revalidate. The single-argument `revalidateTag` is deprecated. `revalidatePath` is still valid for path-level invalidation.
 - **[convention]** Do not call `Math.random()`, `Date.now()` or `crypto.randomUUID()` in prerendered code; call `await connection()` inside `<Suspense>`, or cache the value.
 - **[convention]** Mutations use Server Actions (`'use server'`) and `<form action={...}>`. Use `useActionState` for validation errors and `useFormStatus` or `useTransition` for pending state. Do not mutate inside render.
 - **[convention]** Use Route Handlers (`route.ts`) for webhooks and public HTTP APIs, not for your own pages to read data.
-- **[tool]** Use `next/link` for internal navigation and `next/image` for images (`@next/next/no-html-link-for-pages`, `@next/next/no-img-element`). Give every image `width` and `height` (or `fill` with `sizes`), `priority` only for the LCP image, and remote hosts through `images.remotePatterns` (not the deprecated `domains`).
+- **[tool]** Use `next/link` for internal navigation and `next/image` for images (`@next/next/no-html-link-for-pages`, `@next/next/no-img-element`). Give every image `width` and `height` (or `fill` with `sizes`), and the LCP image `loading="eager"` or `fetchPriority="high"` (`priority` is deprecated in 16; use `preload` only when one image is the LCP at every viewport). Allow remote hosts through `images.remotePatterns` (not the deprecated `domains`).
 - **[convention]** Image defaults changed in 16: `qualities` allows only `[75]`, `minimumCacheTTL` is four hours, and local sources with query strings need `images.localPatterns`.
 - **[convention]** Use `next/font` for fonts and `next/script` for third-party scripts (`@next/next/no-sync-scripts`).
-- **[convention]** Export a static `metadata` object or an async `generateMetadata` from Server Component layouts and pages (not both from one segment). Set `metadataBase` and a `title.template` in the root layout. `viewport`, `themeColor` and `colorScheme` belong in `generateViewport`, not `metadata`.
+- **[convention]** Export a static `metadata` object or an async `generateMetadata` from Server Component layouts and pages (not both from one segment). Set `metadataBase` and a `title.template` in the root layout. `themeColor`, `colorScheme` and viewport settings belong in a `viewport` export (or `generateViewport`), not `metadata`.
 - **[convention]** Add `loading.tsx`, `error.tsx` (a Client Component) and `not-found.tsx` at meaningful segment levels; call `notFound()` rather than rendering an ad hoc 404.
 - **[convention]** Enable the React Compiler (`reactCompiler: true`) only after measuring; until then use `useMemo`/`useCallback` sparingly and only for measured cost or stable identity.
 - **[convention]** Derive values during render rather than syncing props into state with an effect; use `useEffectEvent` for non-reactive logic inside effects.
@@ -112,7 +114,7 @@ export default function Page({ params }: { params: { slug: string } }) {
 ## Error handling
 
 - **[convention]** Expected failures (validation, not found, conflict) are returned values: a Server Action returns `{ ok: false, errors }` that `useActionState` renders. Do not throw for them.
-- **[convention]** Unexpected failures throw and are caught by `error.tsx`, which must be a Client Component with a `reset` button; use `global-error.tsx` for the root layout. Use `catchError` for component-level boundaries.
+- **[convention]** Unexpected failures throw and are caught by `error.tsx`, which must be a Client Component with a button that calls `retry()` (stable since 16.3; `reset()` re-renders without re-fetching); narrow `error` (typed `unknown`) before reading it. Use `global-error.tsx` for the root layout. Use `catchError` for component-level boundaries.
 - **[convention]** Use `notFound()` and `redirect()` from `next/navigation`. They work by throwing, so never wrap them in a `try`/`catch` that swallows the error.
 - **[convention]** Log errors on the server with context and a request id; show the user a generic message and, in production, the `digest` rather than the stack.
 - **[convention]** Never return raw database errors, stack traces or full records from Server Actions or Route Handlers.
@@ -127,7 +129,7 @@ export default function Page({ params }: { params: { slug: string } }) {
 - **[tool]** Mark server-only modules with `import 'server-only'`; importing one from a Client Component fails the build (`server-only`).
 - **[convention]** Only `NEXT_PUBLIC_`-prefixed variables reach the browser and are inlined at build time. Never put a secret behind that prefix. Commit `.env.example` and gitignore `.env*.local`.
 - **[convention]** Do not pass whole records into Client Component props; pass only the fields the UI renders. Optionally enable `experimental.taint` as a second layer.
-- **[convention]** Server Actions compare `Origin` with `Host`; set `serverActions.allowedOrigins` only for known proxies, and a shared `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` when self-hosting several instances.
+- **[convention]** Server Actions compare `Origin` with `Host`; set `experimental.serverActions.allowedOrigins` only for known proxies, and a shared `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` when self-hosting several instances.
 - **[convention]** Return from actions only what the client needs, and rate limit expensive or abusable actions.
 - **[convention]** Set security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy`, frame protection) in `next.config` `headers()` or `proxy.ts`. Treat `proxy.ts` and `route.ts` as high-risk code and review them closely.
 - **[convention]** Never render untrusted HTML with `dangerouslySetInnerHTML` without sanitising it. Do not build URLs or redirects from unvalidated input (open redirect).
@@ -166,7 +168,8 @@ const email = formData.get('email') as string // unvalidated cast
 
 Target: WCAG 2.2 AA.
 
-- **[tool]** `eslint-config-next` includes the `react` and `@next/next` rules but not `jsx-a11y` rules by default; add `eslint-plugin-jsx-a11y` to the flat config to enforce alt text, labels and valid ARIA (`jsx-a11y/alt-text`).
+- **[tool]** `eslint-config-next` registers the `jsx-a11y` plugin and enables only six of its rules, as warnings: `jsx-a11y/alt-text` (for `img` and `Image`), `aria-props`, `aria-proptypes`, `aria-unsupported-elements`, `role-has-required-aria-props` and `role-supports-aria-props`.
+- **[convention]** For labels, interactive roles and keyboard handlers, add the rules of `eslint-plugin-jsx-a11y`'s recommended preset to a `rules` block. Do not register the plugin a second time, because `eslint-config-next` already does.
 - **[convention]** Use semantic elements (`button`, `a`, `nav`, `main`, headings in order) before ARIA. A clickable `div` is a defect.
 - **[convention]** Set `lang` on `<html>` in the root layout, give each route a unique `<title>` via metadata, and have one `<h1>` per page.
 - **[convention]** Every image has meaningful `alt` text, or `alt=""` when decorative, including `next/image`.
