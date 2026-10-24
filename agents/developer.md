@@ -167,7 +167,7 @@ SUMMARY says which WPs ran sequentially and which fanned out, the commits, and t
   - `git` with `status`, `diff`, `log`, `show`, `add`, `commit`, `worktree`, `cherry-pick`, `branch` and `rev-parse`;
   - in a worktree, `cd <absolute worktree path> && <one allowed command>`. Never use `git -C`;
   - the configured `commands.*` (`install`, `lint`, `format`, `typecheck`, `test_unit`; `test_e2e` narrowed, fix mode only), with `node`, `npm` and `npx` only as those commands need them;
-  - in fix mode with e2e only: `app.start_command`, `curl` for the ready check, and `lsof -ti tcp:<port> -sTCP:LISTEN` then `kill <pid>` for the instance you started;
+  - in fix mode with e2e only, the app lifecycle exactly as `aew:ui-qa` §3 prescribes: `curl` for the reuse and ready checks, `app.start_command` as `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1` (one Bash call with `run_in_background: true`, no trailing `&`), `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` then `kill <pid>` for the instance you started;
   - read-only `ls`, `find`, `grep`, `head` and `wc` for search (no `-exec`, `-delete` or `-fprint` on `find`). You have no Glob or Grep tool.
 - One plain command per call: no loops, `$(…)`, heredocs or `cat` chains. Read file contents with Read.
 - Never run `gh`, and never push, merge or open a PR. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
