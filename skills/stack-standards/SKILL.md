@@ -55,16 +55,21 @@ Line 1 of `docs/standards/<profile>.md` is the header:
 | Status | When | What you write |
 |---|---|---|
 | `reused` | Doc exists and the fingerprint matches | Nothing in the doc. |
-| `updated` | Doc exists and the fingerprint differs | Re-derive [tool] rules from the configs. Keep [convention] rules and hand edits unless a new config or major contradicts them. Refresh the header. |
-| `generated` | No doc for the profile | A new doc from the sources in section 5, with the header. |
+| `updated` | Doc exists and the fingerprint differs, or its header is missing or malformed | Re-derive [tool] rules from the configs. Keep [convention] rules and hand edits unless a new config or major contradicts them, and record each replacement on the `Changes` line. Refresh the header and the `Sources` line. |
+| `generated` | No doc for the profile | A new doc from the sources in section 5, with the header and the `Sources` line. |
 
-The setter never commits; the orchestrator or init commits the docs. Always keep
-`docs/standards/README.md` current: one row per doc with its profile, fingerprint and status.
+The plain lines below the header (`Overlay on:`, `Sources:`, `Changes (YYYY-MM-DD):`) are defined in
+the document-structure reference.
+
+The setter never commits; the orchestrator or init commits the docs. Keep `docs/standards/README.md`
+current in the index format of the document-structure reference: refresh it when a doc is generated
+or updated, or the README is missing or omits a profile. When every doc is reused and the README is
+complete, write nothing under `docs/standards/`.
 
 ## 4. Merging a base with overlays
 
-- An overlay (`tailwind`, `woocommerce`) has its own doc, opening with `Overlay on: <base>`, holding
-  only additions and overrides.
+- An overlay (`tailwind`, `woocommerce`) has its own doc, with `Overlay on: <base>` below the header,
+  holding only additions and overrides.
 - Precedence: the overlay beats the base, and the repo's own conventions beat both.
 - Merge section by section using the headings in the document-structure reference.
 - `03-standards.md` lists the base and overlay docs together, with the sections that apply to the brief.
@@ -79,11 +84,13 @@ Use these four sources, in this order (DESIGN §8.3). Earlier sources win.
 4. context7 for version-specific guidance
 
 A seed rule keeps its **[tool]** marker only if the repo's configs enforce it; otherwise re-mark it
-**[convention]**. Repo patterns beat seeds. If context7 is unavailable, say so in `03-standards.md`.
+**[convention]**. Repo patterns beat seeds. If context7 is unavailable, say so on the doc's `Sources`
+line and in the SUMMARY of `03-standards.md`.
 
 ## 6. Seeds
 
-Give the path in full; `${CLAUDE_SKILL_DIR}` is equivalent to `${CLAUDE_PLUGIN_ROOT}/skills/stack-standards`.
+Read a seed by its full path. These paths match the ones in the agent prompts, so if one still shows
+an unexpanded `${…}`, use the agent prompt's path.
 
 | Profile | Seed |
 |---|---|
@@ -97,7 +104,7 @@ Give the path in full; `${CLAUDE_SKILL_DIR}` is equivalent to `${CLAUDE_PLUGIN_R
 `dotnet` has no seed. Generate its doc from sources 1, 2 and 4 only (DESIGN §8.3, §13).
 
 A seed has a `Versions covered:` line instead of the fingerprint header. Copy its rules into the
-generated doc, never the line.
+generated doc, never that line; the doc's `Sources` line names the seed instead.
 
 ## 7. References
 

@@ -15,6 +15,15 @@ A generated doc starts with this comment on line 1. It is not a heading.
 
 Reuse means an exact string match on `fingerprint`. A seed has no such header (see Seeds).
 
+Directly below line 1, before the first `##` heading, come these plain lines (none of them is a
+heading), in this order:
+
+- `Overlay on: <base>`, for an overlay only;
+- `Sources: <the configs read>; sampled <the files sampled>; seed <profile> (or "no seed"); context7 <libraries queried> (or "not used" or "unavailable")`;
+- `Changes (YYYY-MM-DD): <old rule> → <new rule>, because <config or major>; …`, for an updated doc
+  only. It replaces any earlier `Changes` line, and reads `Changes (YYYY-MM-DD): none` when nothing
+  was replaced.
+
 ## Required headings
 
 Every doc uses these level-2 headings, once each, in this order, and no other level-2 headings.
@@ -81,7 +90,7 @@ mark **[tool]** only where the stack's default or official tooling enforces the 
 
 ## Overlays in generated docs
 
-An overlay has its own doc, opening (after the header) with `Overlay on: <base>`. All 11 headings
+An overlay has its own doc, with `Overlay on: <base>` directly below the header. All 11 headings
 stay, with "No overlay additions" where empty. Precedence: repo conventions > overlay > base.
 
 ## Index: `docs/standards/README.md`
