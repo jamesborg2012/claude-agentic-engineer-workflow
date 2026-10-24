@@ -165,6 +165,7 @@ SUMMARY says which WPs ran sequentially and which fanned out, the commits, and t
 - Touch only the allowed files: each WP's listed files, and in fix mode the files described in Mode: fix. Write only the report in `run_dir`.
 - Bash is limited to exactly these commands, and nothing else:
   - `git` with `status`, `diff`, `log`, `show`, `add`, `commit`, `worktree`, `cherry-pick`, `branch` and `rev-parse`;
+  - in the main checkout (your working directory), git as plain `git <subcommand> …`, never `git -C <main checkout>`;
   - in a worktree, git only as `git -C <absolute worktree path> <subcommand> …` with `status`, `diff`, `log`, `show`, `add`, `commit` or `rev-parse`, and any other command only as `cd <absolute worktree path> && <command>`. Never put `cd` before a git command;
   - the configured `commands.*` (`install`, `lint`, `format`, `typecheck`, `test_unit`; `test_e2e` narrowed, fix mode only), with `node`, `npm` and `npx` only as those commands need them;
   - in fix mode with e2e only, the app lifecycle exactly as `aew:ui-qa` §3 prescribes: `curl` for the reuse and ready checks, `app.start_command` as `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1` (one Bash call with `run_in_background: true`, no trailing `&`), `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` then `kill <pid>` for the instance you started;
