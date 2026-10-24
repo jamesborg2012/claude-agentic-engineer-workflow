@@ -702,8 +702,10 @@ The `AEW_EVIDENCE_DIR=` env-prefixed rules are **unverified**: Claude Code strip
 matching, so the prefix may need its own pattern. There are two because a trailing ` *` matches the bare command only
 when it is the rule's only wildcard, and the §8 evidence run is the bare `commands.test_e2e` (`npx playwright test`).
 `nohup` is a wrapper Claude Code strips before matching, so `Bash(sh -c *)` is the documented match for the app start
-(the app is started by one Bash call with `run_in_background: true` and no trailing `&`: a command with the `&` operator needs interactive approval and is refused headless, run 951 attempt 1; the `app.log` redirect is checked as a write inside the project). A denial of the evidence run or of the `kill` stop in C6 is a
-harness fault: add the narrowest matching rule and record the denied command verbatim in the Notes. Dispatch fields:
+(the `app.log` redirect is checked as a write inside the project). The app is started by one Bash call with
+`run_in_background: true` and no trailing `&`: a command with the `&` operator needs interactive approval and is
+refused headless (run 951 attempt 1). A denial of the evidence run or of the `kill` stop in C6 is a harness fault: add
+the narrowest matching rule and record the denied command verbatim in the Notes. Dispatch fields:
 
 ```sh
 smoke_dispatch qa-engineer "run_dir: $RUN, phase: A"        # run 941, CAP=5
@@ -773,4 +775,5 @@ Notes for run 951 cycle 1 (kept state for Phase E):
 - TCs per AC: AC-1 TC-1; AC-2 TC-2, TC-3; AC-4 TC-5 (manual); TC-4 passes.
 - Triage rows: TC-1 AC-1 `impl_bug`; TC-2 AC-2 `impl_bug`; TC-3 AC-2 `impl_bug`.
 - `screens.cycle1` mtimes (epoch seconds): TC-1 1792875850, TC-2 1792875855, TC-3 and TC-4 1792875856, desktop and mobile alike.
-- Attempt 1 final message came from a run that lost nothing else: its `out-951-qa1` is not kept (attempt 2 overwrote it).
+- Attempt 1's outputs are not kept: attempt 2 wrote to the same `out-951-qa1`. Its two failures are recorded in rows 4
+  and 13. Likewise `out-941` now holds the 941 re-run, not the run recorded in the first 941 rows.
