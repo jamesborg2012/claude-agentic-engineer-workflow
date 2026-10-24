@@ -41,8 +41,10 @@ None. Both ACs are fully specified with worked examples.
 
 | WP | Standards doc and section |
 |---|---|
-| WP-1 | docs/standards/web.md#language-idioms, docs/standards/web.md#testing-conventions |
-| WP-2 | docs/standards/web.md#language-idioms, docs/standards/web.md#testing-conventions |
+| WP-1 | docs/standards/web.md#language-idioms |
+| WP-1 | docs/standards/web.md#testing-conventions |
+| WP-2 | docs/standards/web.md#language-idioms |
+| WP-2 | docs/standards/web.md#testing-conventions |
 
 ## Guardrails
 
