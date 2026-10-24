@@ -4,9 +4,10 @@ Manual, paid verification that `aew:spec-analyser`, `aew:brief-compiler`, `aew:s
 `aew:senior-engineer` (plan mode) behave in a real headless Claude Code session. There is no runner
 script: this file holds copy-paste commands and the results table. Everything below runs in bash or zsh.
 
-Never commit or log transcripts. Streams, debug logs and temp projects live under `tests/tmp/`, which is
-gitignored. Each run's stream, debug log, `final.txt` and recorded values go in `$O`
-(`tests/tmp/smoke-out-<run-id>/`), outside the temp project, so the agent never sees them and the temp
+Never commit or log transcripts. Streams, debug logs and temp projects live under `$SMOKE`
+(`${TMPDIR%/}/aew-smoke`), **outside the repo** (see section 5: a temp project inside the plugin tree makes every
+subagent Write denied). Each run's stream, debug log, `final.txt` and recorded values go in `$O`
+(`$SMOKE/out-<run-id>/`), outside the temp project, so the agent never sees them and the temp
 project's own commits never include them. Only this README is committed (plus any intentional `fix(agents)` prompt fix).
 
 ## 1. Prerequisites
@@ -40,12 +41,20 @@ jq -r 'select(.type=="result") | .total_cost_usd' "$O/stream.jsonl"
 - Default cap per run: `--max-budget-usd 5`. Standards-setter run 1 (921): `10`.
 - A run that hits its cap is a run failure, not a check failure. Raise the cap **once**, to **exactly 2x**
   the default cap for that run (10, or 20 for run 921), and log the raise in the table below.
+- The two accidental runs have no recorded cost: ~116k Opus tokens each, estimated at about $1.50 each
+  (mostly cached input at Opus rates; an upper bound is about $1.75 if all of it was uncached input).
 - **Stop at $75 total spend.** As soon as the running total passes $75, stop and report
   `DONE_WITH_CONCERNS`.
 
 | run | id | cost (USD) | running total | cap raised? |
 |---|---|---|---|---|
-| (none yet) | | | 0 | |
+| accidental x2 (E1 review, senior-engineer, blocked, no cap) | n/a | 3.00 (estimate) | 3.00 | no |
+| 901 attempt 1 (harness fault: `frontend-design` disabled, `aew` plugin did not load) | 901 | 0.17 | 3.17 | no |
+| 901 attempt 2 (harness fault: reads outside cwd denied; `.aew` Writes denied inside the plugin tree) | 901 | 0.58 | 3.75 | no |
+| 901 attempt 3 (harness fault: `--add-dir` added, Writes still denied) | 901 | 0.45 | 4.20 | no |
+| Write-denial and E-3 probes (10 haiku one-liners about 0.10 in total, one opus `aew:spec-analyser` stub 0.31) | n/a | 0.41 | 4.61 | no |
+| 901 pass (temp project moved outside the repo) | 901 | 0.60 | 5.21 | no |
+| 901 re-run after the memory-path `fix(agents)` | 901 | 0.55 | 5.76 | no |
 
 ## 2. Setup per case
 
@@ -54,6 +63,7 @@ calls them.
 
 ```sh
 REPO=$(git rev-parse --show-toplevel)
+SMOKE="${TMPDIR:-/tmp}"; SMOKE="${SMOKE%/}/aew-smoke"; mkdir -p "$SMOKE"   # NOT under $REPO
 cd "$REPO"
 ```
 
@@ -87,7 +97,7 @@ a case that is already set up; call it before each invocation.
 ```sh
 # smoke_project <agent> <case> <run-id> <issue-number> <title> <stage>
 smoke_project() {
-  P="$REPO/tests/tmp/smoke-$1-$2"
+  P="$SMOKE/smoke-$1-$2"
   rm -rf "$P" && mkdir -p "$P" || return 1
   cp -R "$REPO/tests/fixtures/stacks/nextjs-tailwind/." "$P" && printf '.aew/\n' > "$P/.gitignore" || return 1
   git -C "$P" init -q && git -C "$P" add -A && git -C "$P" commit -qm fixture || return 1
@@ -99,7 +109,7 @@ smoke_project() {
 
 # smoke_use <agent> <case> <run-id>   (sets P, RUN and O for that run; creates O)
 smoke_use() {
-  P="$REPO/tests/tmp/smoke-$1-$2"; RUN="$P/.aew/runs/$3"; O="$REPO/tests/tmp/smoke-out-$3"
+  P="$SMOKE/smoke-$1-$2"; RUN="$P/.aew/runs/$3"; O="$SMOKE/out-$3"
   mkdir -p "$O"
   echo "P=$P"; echo "RUN=$RUN"; echo "O=$O"
 }
@@ -174,7 +184,7 @@ smoke_use standards-setter newsletter 922
 cp "$REPO/tests/fixtures/briefs/newsletter-signup.md" "$RUN/02-brief.md"
 (cd "$P" && shasum -a 256 docs/standards/*) > "$O/standards.sha.before"
 for pr in nextjs tailwind; do (cd "$P" && "$REPO/scripts/detect-stack.sh" fingerprint "$pr" .); done > "$O/fingerprints.before"
-diff "$REPO/tests/tmp/smoke-out-921/fingerprints.before" "$O/fingerprints.before"   # must print nothing, else a harness fault
+diff "$SMOKE/out-921/fingerprints.before" "$O/fingerprints.before"   # must print nothing, else a harness fault
 # after run 922: both must print nothing
 (cd "$P" && shasum -a 256 docs/standards/*) | diff "$O/standards.sha.before" -
 git -C "$P" status --porcelain docs/standards
@@ -240,11 +250,17 @@ smoke_use standards-setter newsletter 931; smoke_dispatch senior-engineer "run_d
 cd "$P" && claude --plugin-dir "$REPO" -p "$DISPATCH" \
   --output-format stream-json --verbose --forward-subagent-text --include-hook-events \
   --max-budget-usd "$CAP" --debug-file "$O/debug.log" \
-  --settings "{\"claudeMdExcludes\":[\"$REPO/CLAUDE.md\"]}" \
-  --permission-mode acceptEdits \
+  --settings "{\"claudeMdExcludes\":[\"$REPO/CLAUDE.md\"],\"enabledPlugins\":{\"dev-workflow@jamesborg\":false,\"figma@claude-plugins-official\":false}}" \
+  --add-dir "$REPO" --permission-mode acceptEdits \
   ${ALLOW[@]+"${ALLOW[@]}"} \
   > "$O/stream.jsonl"
 ```
+
+`enabledPlugins` switches off user-level plugins that would otherwise run in the headless session (the
+`dev-workflow` SessionStart hook writes `docs/superpowers/project-map.md` into the temp project). Do **not**
+disable `frontend-design`: aew depends on it, and a disabled dependency stops the whole `aew` plugin loading
+(`Agent type 'aew:spec-analyser' not found`). `--add-dir "$REPO"` is needed so subagents may Read the plugin's
+templates and `skills/run-protocol/references/`. The temp project must live outside `$REPO` (`$SMOKE`).
 
 Several runs may be launched concurrently as background processes (each has its own `$P` and `$O`, so
 set `P`, `RUN`, `O`, `DISPATCH`, `ALLOW` and `CAP` per launch, for example inside a subshell). Prompt-fix loops are per agent.
@@ -334,7 +350,7 @@ grep -n 'agent_type' "$O/debug.log" | head
 jq -c 'select(.type=="system" and (.subtype // "" | test("hook"))) | select(tostring | test("agent_type"))' "$O/stream.jsonl" | head -3
 ```
 
-**Cleanup.** `rm -rf "$REPO/tests/tmp/smoke-"* "$REPO/tests/tmp/issue-render-"*` once the results are recorded.
+**Cleanup.** `rm -rf "$SMOKE" "$REPO/tests/tmp/issue-render-"*` once the results are recorded.
 
 ### Loop on failure
 
@@ -358,13 +374,13 @@ Filled in by E2 (isolation probe) and E3 (seed path resolution).
 
 | finding | result | notes |
 |---|---|---|
-| Isolation 1: `$REPO/CLAUDE.md` not loaded (debug log) | pending | |
-| Isolation 2: agent read `$REPO/templates/artefacts/spec-analysis.md`, no denial (else add `--add-dir "$REPO"`) | pending | |
-| Isolation 3: SessionStart resume hint present, `aew:spec-analyser` still dispatched, no `aew:resume` call | pending | |
-| Stream shape: final-message jq filter returns the subagent's message (source used) | pending | |
-| Preload form: `aew:run-protocol` loads (else bare `run-protocol`) | pending | |
+| Isolation 1: `$REPO/CLAUDE.md` not loaded (debug log) | pass (by relocation) | Deviation from A22: temp projects now live in `$SMOKE` (`${TMPDIR%/}/aew-smoke`), outside the repo, so no repo `CLAUDE.md` is an ancestor (debug: `found 0 of 8 directories`, no `aew-wt-E/CLAUDE.md` line). Reason: a project inside the plugin tree makes every subagent Write denied ("sensitive file"). `claudeMdExcludes` is kept as belt and braces. |
+| Isolation 2: agent read `$REPO/templates/artefacts/spec-analysis.md`, no denial (else add `--add-dir "$REPO"`) | pass with `--add-dir` | Without it: Read denied for `templates/artefacts/*` and `skills/run-protocol/references/artefacts.md`. With `--add-dir "$REPO"`: reads allowed, `permission_denials` is `[]`. E-2 is therefore mandatory for every run. |
+| Isolation 3: SessionStart resume hint present, `aew:spec-analyser` still dispatched, no `aew:resume` call | pass | Debug log: `Active aew run 901 at stage spec_analysis (running). Use /aew:resume.` The only main-thread tool call was `Agent aew:spec-analyser`; no Skill call. |
+| Stream shape: final-message jq filter returns the subagent's message (source used) | pass | The filter on the last assistant event with a non-null `parent_tool_use_id` and a text block returns the subagent's own message (starts with its summary, ends in the return block); the Agent `tool_result` is not needed. |
+| Preload form: `aew:run-protocol` loads (else bare `run-protocol`) | pass | Debug: `[Agent: aew:spec-analyser] Preloaded skill 'aew:run-protocol'`; no skip warning. The qualified form works, so DESIGN §3 needs no change. |
 | Seed path resolution: `${CLAUDE_SKILL_DIR}` substituted in a subagent-preloaded skill; any unexpanded `${` | pending | |
-| E-3: `PreToolUse` payload in a subagent carries `agent_type` `aew:<agent>` (live line or docs citation) | pending | |
+| E-3: `PreToolUse` payload in a subagent carries `agent_type` `aew:<agent>` (live line or docs citation) | pass (live) | Neither the debug log nor the `--include-hook-events` stream carries hook input. A probe session with a `--settings` PreToolUse hook (`cat >> payloads.jsonl`) recorded: `{"tool":"Glob","agent_type":"aew:spec-analyser","agent_id":"af0b9886062461f6d","hook_event_name":"PreToolUse"}`; the main thread's own `Agent` call had `agent_type` null. The agent `gh` deny can therefore key on `aew:<agent>` live. |
 
 ## 6. Results
 
@@ -373,14 +389,14 @@ Every row starts as `pending`. Cost goes in the notes (and the ledger in section
 | check | result | notes |
 |---|---|---|
 | **E2 run 901, spec-analyser clean** | | |
-| 901 Isolation 1 to 3, stream shape | pending | |
-| 901 Preload (no skip warning for `aew:run-protocol`) | pending | |
-| 901 Permission denials empty | pending | |
-| 901 final.txt valid return block, `STATUS: ok`, SUMMARY says no material changes | pending | |
-| 901 `spec-changes.json` has 0 material changes | pending | |
-| 901 `01-spec-analysis.md` follows template, ends in valid return block | pending | |
-| 901 `spec-final.md` exists; if `changes` is `[]`, SUMMARY has "No changes needed" and spec-final equals the analysed spec (AC-13) | pending | |
-| 901 `git -C "$REPO" status --porcelain` clean (E-2) | pending | |
+| 901 Isolation 1 to 3, stream shape | pass | See section 5. |
+| 901 Preload (no skip warning for `aew:run-protocol`) | pass | `Preloaded skill 'aew:run-protocol'`; no skip line. |
+| 901 Permission denials empty | pass | `[]` with `--add-dir "$REPO"` and the project outside the repo. |
+| 901 final.txt valid return block, `STATUS: ok`, SUMMARY says no material changes | pass | `valid_return_block` ok; SUMMARY starts "No changes needed." |
+| 901 `spec-changes.json` has 0 material changes | pass | `changes: []`. |
+| 901 `01-spec-analysis.md` follows template, ends in valid return block | pass | Heading diff empty; `valid_return_block` ok. |
+| 901 `spec-final.md` exists; if `changes` is `[]`, SUMMARY has "No changes needed" and spec-final equals the analysed spec (AC-13) | pass | `diff` against `issue.json` `.body` differs only by one trailing blank line (the body ends in a newline). |
+| 901 `git -C "$REPO" status --porcelain` clean (E-2) | pass | Only this README (and the committed fix files) differ. No foreign file in `$P` (no `docs/`); `.claude/agent-memory/aew-spec-analyser/` created. Cost 0.55 for the last run; see ledger. |
 | **E3 run a 902, spec-analyser non-material** | | |
 | 902 `STATUS: ok` | pending | |
 | 902 at least one change, all `type: non-material`, `source: auto` | pending | |
@@ -445,4 +461,19 @@ Every row starts as `pending`. Cost goes in the notes (and the ledger in section
 Cap raises (exactly 2x, once per run), prompt fixes, flaky checks and deviations from the commands above
 are logged here, newest last.
 
-- (none yet)
+- E2 harness faults, all fixed in this README: (1) `enabledPlugins` must not disable `frontend-design`, which
+  `aew` depends on: the plugin then fails to load and `aew:spec-analyser` is "not found". (2) Reads outside
+  the temp project were denied until `--add-dir "$REPO"` was added. (3) With the temp project under
+  `$REPO/tests/tmp`, every Write by a subagent into `.aew/` was denied as a "sensitive file" (the plugin
+  hook allowed it; a plugin-less session or a project outside the plugin tree writes fine, bisected with
+  haiku probes), so projects and outputs moved to `$SMOKE` outside the repo. A scoped `Write(...)` allow rule
+  did not help.
+- E2 agent fault (prompt fix `48c1a8d`): plugin agents with `memory: project` use
+  `.claude/agent-memory/aew-<agent>/`, not `<agent>/`. Fixed in `spec-analyser`, `standards-setter`,
+  `senior-engineer` and DESIGN §3 line 37 (E6: already present). Run 901 re-run afterwards and passed.
+- macOS note: `$TMPDIR` is a symlink (`/var/...` to `/private/var/...`); agents may report either form.
+  The user-level `dev-workflow` SessionStart hook is switched off in `--settings` and wrote nothing into `$P`.
+- E3 command shapes: use `$SMOKE`, the invocation block above verbatim (`enabledPlugins` without
+  `frontend-design`, `--add-dir "$REPO"`), and no `Write(...)` allow rules. To capture hook payloads (E-3) add
+  `"hooks":{"PreToolUse":[{"matcher":".*","hooks":[{"type":"command","command":"cat >> $O/payloads.jsonl; echo >> $O/payloads.jsonl"}]}]}`
+  to `--settings`.
