@@ -11,29 +11,35 @@
 # Rules, in the order the parser applies them:
 # - Backslash-newline continuations are joined. The command is split into
 #   segments on &&, ||, |, ; and newlines, then into tokens. Quotes,
-#   redirections and leading ( { and trailing ) } are stripped, and a lone &
-#   ends a command. Prefix words (VAR=x, sudo, env, command, nohup, time, if,
-#   then, ...) are skipped. The command is the basename of the first token.
-# - `cd <dir>` moves the working directory for later segments.
-# - git: global options (-C, -c, ...) are skipped. push: force flags (--force*,
-#   --force-if-includes, a short cluster containing f, a +refspec) are denied,
-#   as is --all/--mirror, any refspec whose destination is the default branch,
-#   and a bare push while on it. reset --hard is denied on the default branch.
-#   clean is denied when the flags give f, d and lower-case x.
+#   backslashes, redirections (also when glued to a word, as in main>log) and
+#   leading ( { and trailing ) } are stripped, and a & (lone or glued) ends a
+#   command. Prefix words (VAR=x, sudo, env, command, nohup, time, nice,
+#   timeout and its duration, if, then, ...) are skipped. The command is the
+#   basename of the first token.
+# - `cd <dir>` (or pushd) moves the working directory for later segments; a
+#   dir holding $ or a backtick makes later relative rm targets unknown.
+# - git: global options (-C, -c, --git-dir, ...) are skipped. push: force flags
+#   (--forc* abbreviations, --force-if-includes, a short cluster containing f,
+#   a +refspec) are denied, as is --all/--mirror, any refspec whose destination
+#   is the default branch, and a bare push while on it. reset --hard (or --ha,
+#   --har) is denied on the default branch. clean is denied when the flags give
+#   f, d and lower-case x.
 # - The branch used by those rules is the target of the latest `git switch` or
 #   `git checkout` in the same command (the new name for -c/-C/-b/-B), else the
 #   branch checked out at hook time.
 # - gh: `pr merge` and `repo delete` are denied.
 # - rm: a recursive rm is denied when a target has a .git path component
-#   ("rm of git internals"), holds an unexpanded variable or substitution, or
-#   is not strictly inside the repo's top level (so `/`, `~`, `..` and the
-#   repo root are denied).
+#   or a dot-glob matching .git (.*, .g*) ("rm of git internals"), holds an
+#   unexpanded variable or substitution, or is not strictly inside the repo's
+#   top level (so `/`, `~`, `..`, `*` at the root and the repo root are
+#   denied). One comma brace group ({a,b}) is expanded; more are denied.
 #
 # Limits: a heuristic safety net, not a sandbox. It does not look inside
 # `bash -c`, `sh -c`, `eval`, $(...) or backticks, aliases, functions or
-# xargs, and does not parse `sudo` options that take a value. Quoted text
-# containing ; | or && is split too, and heredoc lines are scanned as
-# commands, so false positives are possible.
+# xargs, does not parse `sudo`/`env`/`exec` options that take a value, and
+# does not resolve `git -C "$dir"` or `gh api` calls. Quoted text containing
+# ; | & or && is split too, and heredoc lines are scanned as commands, so
+# false positives are possible.
 
 # shellcheck source=../lib/common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
@@ -47,6 +53,7 @@ CT=()
 A=()
 AN=0
 CANON=""
+CWD_UNKNOWN=0
 ecwd=""
 
 # An unbound variable or a syntax error fails open silently (bash 3.2), so
@@ -135,6 +142,75 @@ canon_path() {
   return 0
 }
 
+# rm_glob_git: deny when a component of CANON is a glob that matches .git
+# (.*, .g*, .[g]it). Without a leading dot a glob never matches a dotfile.
+rm_glob_git() {
+  local c comps g=.git
+  comps=()
+  IFS=/ read -r -a comps <<< "$CANON" || true
+  for c in ${comps[@]+"${comps[@]}"}; do
+    case "$c" in
+      .*['*?[']*)
+        # shellcheck disable=SC2254  # $c is matched as a glob on purpose
+        case "$g" in
+          $c) deny "rm of git internals" ;;
+        esac
+        ;;
+    esac
+  done
+  return 0
+}
+
+# rm_expand_braces: expands one comma brace group per target in guard_rm's
+# targets ({a,b}, .{git,x}). The tokeniser has already dropped a trailing }.
+# A target with a second or nested group is denied.
+rm_expand_braces() {
+  local k=0 t pre rest body suf a alts ex ne=0
+  ex=()
+  while [ "$k" -lt "$nt" ]; do
+    t=${targets[$k]}
+    k=$((k + 1))
+    case "$t" in
+      *\{*,*)
+        pre=${t%%\{*}
+        rest=${t#*\{}
+        case "$rest" in
+          *\}*)
+            body=${rest%%\}*}
+            suf=${rest#*\}}
+            ;;
+          *)
+            body=$rest
+            suf=""
+            ;;
+        esac
+        case "$body$suf" in
+          *\{*) deny "rm with more than one brace expansion" ;;
+        esac
+        alts=()
+        IFS=, read -r -a alts <<< "$body" || true
+        for a in ${alts[@]+"${alts[@]}"}; do
+          ex[ne]=$pre$a$suf
+          ne=$((ne + 1))
+        done
+        case "$body" in
+          *,)
+            ex[ne]=$pre$suf
+            ne=$((ne + 1))
+            ;;
+        esac
+        ;;
+      *)
+        ex[ne]=$t
+        ne=$((ne + 1))
+        ;;
+    esac
+  done
+  targets=(${ex[@]+"${ex[@]}"})
+  nt=$ne
+  return 0
+}
+
 guard_rm() {
   local j=0 t rec=0 endopt=0 targets nt=0 k top hp
   targets=()
@@ -148,7 +224,8 @@ guard_rm() {
     fi
     case "$t" in
       --) endopt=1 ;;
-      --recursive) rec=1 ;;
+      # GNU rm accepts abbreviations (--rec); it has no other --r option.
+      --r*) rec=1 ;;
       --*) ;;
       -[!-]*)
         case "$t" in
@@ -162,6 +239,7 @@ guard_rm() {
     esac
   done
   if [ "$rec" -eq 0 ]; then return 0; fi
+  rm_expand_braces
   k=0
   while [ "$k" -lt "$nt" ]; do
     t=${targets[$k]}
@@ -175,20 +253,26 @@ guard_rm() {
       '~/'*) t=${HOME:-/nonexistent}/${t:2} ;;
       '~'*) deny "rm of a ~user path" ;;
     esac
-    if [ "$t" = '*' ]; then
-      t=.
-    else
-      case "$t" in
-        */'*')
-          t=${t%/*}
-          if [ -z "$t" ]; then t=/; fi
-          ;;
-      esac
-    fi
+    case "$t" in
+      /*) ;;
+      *) if [ "$CWD_UNKNOWN" -eq 1 ]; then deny "recursive rm after cd to an unexpanded path"; fi ;;
+    esac
+    # A last component of only * (*, **) means everything in its directory.
+    case "${t##*/}" in
+      '' | *[!*]*) ;;
+      *)
+        case "$t" in
+          */*) t=${t%/*} ;;
+          *) t=. ;;
+        esac
+        if [ -z "$t" ]; then t=/; fi
+        ;;
+    esac
     canon_path "$t" "$ecwd"
     case "/$CANON/" in
       */.git/*) deny "rm of git internals" ;;
     esac
+    rm_glob_git
     top=$(toplevel_of "$ecwd")
     if [ -z "$top" ]; then deny "recursive rm outside a git repository"; fi
     hp=$(cd "${HOME:-/nonexistent}" 2> /dev/null && pwd -P) || hp=${HOME:-/nonexistent}
@@ -221,7 +305,7 @@ guard_gh() {
 
 # git_push <first-arg-index> <git dir>
 git_push() {
-  local j=$1 gdir=$2 t endopt=0 force=0 all=0 np=0 k r dest br pos
+  local j=$1 gdir=$2 t endopt=0 force=0 all=0 np=0 k r dest br pos first=1
   pos=()
   while [ "$j" -lt "$AN" ]; do
     t=${A[$j]}
@@ -233,8 +317,15 @@ git_push() {
     fi
     case "$t" in
       --) endopt=1 ;;
-      -o | --push-option | --receive-pack | --exec | --repo) j=$((j + 1)) ;;
-      --force | --force-with-lease* | --force-if-includes) force=1 ;;
+      -o | --push-option | --receive-pack | --exec) j=$((j + 1)) ;;
+      # With --repo every positional is a refspec.
+      --repo)
+        j=$((j + 1))
+        first=0
+        ;;
+      --repo=*) first=0 ;;
+      # git accepts unambiguous abbreviations (--force-w is --force-with-lease).
+      --forc*) force=1 ;;
       --all | --mirror) all=1 ;;
       --*) ;;
       -[!-]*)
@@ -249,7 +340,7 @@ git_push() {
     esac
   done
   if [ "$force" -eq 1 ]; then deny "force push"; fi
-  k=1
+  k=$first
   while [ "$k" -lt "$np" ]; do
     case "${pos[$k]}" in
       +*) deny "force push" ;;
@@ -258,12 +349,12 @@ git_push() {
   done
   need_default
   if [ "$all" -eq 1 ]; then deny "push of every branch includes '$DEFAULT_BRANCH'"; fi
-  if [ "$np" -le 1 ]; then
+  if [ "$np" -le "$first" ]; then
     br=$(eff_branch "$gdir")
     if [ "$br" = "$DEFAULT_BRANCH" ]; then deny "push to the default branch ($DEFAULT_BRANCH)"; fi
     return 0
   fi
-  k=1
+  k=$first
   while [ "$k" -lt "$np" ]; do
     r=${pos[$k]}
     k=$((k + 1))
@@ -280,7 +371,9 @@ git_push() {
 git_reset() {
   local j=$1 gdir=$2 hard=0 br
   while [ "$j" -lt "$AN" ]; do
-    if [ "${A[$j]}" = "--hard" ]; then hard=1; fi
+    case "${A[$j]}" in
+      --ha | --har | --hard) hard=1 ;;
+    esac
     j=$((j + 1))
   done
   if [ "$hard" -eq 0 ]; then return 0; fi
@@ -296,7 +389,7 @@ git_clean() {
     t=${A[$j]}
     j=$((j + 1))
     case "$t" in
-      --force) letters="${letters}f" ;;
+      --f | --fo | --for | --forc | --force) letters="${letters}f" ;;
       --*) ;;
       -[!-]*) letters="$letters${t#-}" ;;
     esac
@@ -324,7 +417,7 @@ git_switch() {
     j=$((j + 1))
     case "$t" in
       --) dd=1 ;;
-      -c | -C | -b | -B)
+      -c | -C | -b | -B | --create | --force-create | --orphan)
         if [ "$j" -lt "$AN" ]; then newb=${A[$j]}; fi
         j=$((j + 1))
         ;;
@@ -360,7 +453,7 @@ guard_git() {
         if [ "$j" -lt "$AN" ]; then gdir=$(resolve_dir "$gdir" "${A[$j]}"); fi
         j=$((j + 1))
         ;;
-      -c) j=$((j + 2)) ;;
+      -c | --git-dir | --work-tree | --namespace | --config-env) j=$((j + 2)) ;;
       -*) j=$((j + 1)) ;;
       *) break ;;
     esac
@@ -392,21 +485,30 @@ do_cd() {
     esac
   done
   # shellcheck disable=SC2088  # a literal ~ is matched on purpose
-  # shellcheck disable=SC2088  # a literal ~ is matched on purpose
   case "$target" in
+    *'$'* | *'`'*)
+      # Unknown directory: later relative rm targets are denied.
+      CWD_UNKNOWN=1
+      return 0
+      ;;
     -) return 0 ;;
     '') target=${HOME:-} ;;
     '~') target=${HOME:-} ;;
     '~/'*) target=${HOME:-}/${target:2} ;;
   esac
   if [ -z "$target" ]; then return 0; fi
-  if d=$(cd "$ecwd" 2> /dev/null && cd "$target" 2> /dev/null && pwd -P); then ecwd=$d; fi
+  if d=$(cd "$ecwd" 2> /dev/null && cd "$target" 2> /dev/null && pwd -P); then
+    ecwd=$d
+    case "$target" in
+      /*) CWD_UNKNOWN=0 ;;
+    esac
+  fi
   return 0
 }
 
 # check_cmd: CT holds one command's tokens.
 check_cmd() {
-  local n=${#CT[@]} i=0 t optskip=0 base
+  local n=${#CT[@]} i=0 t optskip=0 pfx="" dur=0 base
   if [ "$n" -eq 0 ]; then return 0; fi
   while [ "$i" -lt "$n" ]; do
     t=${CT[$i]}
@@ -415,19 +517,31 @@ check_cmd() {
       continue
     fi
     if [ "$optskip" -eq 1 ]; then
-      case "$t" in
-        -*)
+      case "$pfx:$t" in
+        timeout:-s | timeout:-k | nice:-n)
+          i=$((i + 2))
+          continue
+          ;;
+        *:-*)
           i=$((i + 1))
           continue
           ;;
       esac
     fi
+    # timeout's DURATION operand comes before the command.
+    if [ "$dur" -eq 1 ]; then
+      dur=0
+      i=$((i + 1))
+      continue
+    fi
     case "$t" in
-      sudo | env)
+      sudo | env | command | time | nice | timeout)
         optskip=1
+        pfx=$t
+        if [ "$t" = timeout ]; then dur=1; fi
         i=$((i + 1))
         ;;
-      command | builtin | exec | nohup | time | '!' | if | then | elif | else | do | while | until) i=$((i + 1)) ;;
+      builtin | exec | nohup | '!' | if | then | elif | else | do | while | until) i=$((i + 1)) ;;
       *) break ;;
     esac
   done
@@ -442,7 +556,7 @@ check_cmd() {
     i=$((i + 1))
   done
   case "$base" in
-    cd) do_cd ;;
+    cd | pushd) do_cd ;;
     git) guard_git ;;
     gh) guard_gh ;;
     rm) guard_rm ;;
@@ -452,7 +566,7 @@ check_cmd() {
 
 # process_segment <text>: tokenise, normalise, split on a lone &, check each command.
 process_segment() {
-  local toks t skip=0 first=1 n idx=0
+  local toks t r skip=0 first=1 n idx=0
   toks=()
   CT=()
   read -r -a toks <<< "$1" || true
@@ -462,6 +576,7 @@ process_segment() {
     idx=$((idx + 1))
     t=${t//\'/}
     t=${t//\"/}
+    t=${t//\\/}
     if [ "$skip" -eq 1 ]; then
       skip=0
       continue
@@ -495,6 +610,36 @@ process_segment() {
         continue
         ;;
     esac
+    # A redirection glued to a word (main>/dev/null, main&>log): keep the word.
+    case "$t" in
+      *'>'* | *'<'*)
+        r=${t%%[<>]*}
+        case "$t" in
+          *'>' | *'<') skip=1 ;;
+        esac
+        t=${r%&}
+        case "$t" in
+          *[!0-9]*) ;;
+          *) continue ;;
+        esac
+        ;;
+    esac
+    # A & glued to a word (main&, sleep 1&git) ends the command there.
+    while :; do
+      case "$t" in
+        *'&'*) ;;
+        *) break ;;
+      esac
+      r=${t%%&*}
+      t=${t#*&}
+      if [ -n "$r" ]; then CT[${#CT[@]}]=$r; fi
+      check_cmd
+      CT=()
+    done
+    if [ -z "$t" ]; then
+      first=1
+      continue
+    fi
     first=0
     CT[${#CT[@]}]=$t
   done

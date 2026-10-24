@@ -68,7 +68,7 @@ is_deny() {
 @test "the case table keeps every prompt-listed and CTO-mandated row" {
   local n pins=0 expect branch command
   n=$(grep -vc '^#' "$TABLE")
-  [ "$n" -ge 87 ]
+  [ "$n" -ge 122 ]
   while IFS=$'\t' read -r expect branch command; do
     if ! E="$expect" B="$branch" C="$command" awk -F'\t' '$1 == ENVIRON["E"] && $2 == ENVIRON["B"] && $4 == ENVIRON["C"] { f = 1 } END { exit !f }' "$TABLE"; then
       printf 'missing table row: %s %s %s\n' "$expect" "$branch" "$command" >&2

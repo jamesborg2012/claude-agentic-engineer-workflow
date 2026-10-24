@@ -88,3 +88,38 @@ block	feat	.	rm -rf sub/.git
 allow	feat	.	rm -f .git/index.lock
 allow	feat	.	rm -rf .github/old
 allow	feat	.	git checkout main && git checkout -b feat/y && git push -u origin HEAD
+block	feat	.	git push origin main>/dev/null
+block	feat	.	git push origin main&
+block	feat	.	true&git push -f
+block	feat	.	rm -rf .*
+block	feat	.	rm -rf .g*
+block	feat	.	rm -rf {.git,dist}
+block	feat	.	rm -rf .{git,x}
+block	feat	.	rm -rf **
+block	feat	.	\\git push -f
+block	feat	.	\\rm -rf /
+block	feat	.	command -p git push -f
+block	feat	.	time -p git push -f
+block	feat	.	timeout 60 git push origin main
+block	feat	.	timeout -s KILL 60 git push -f
+block	feat	.	nice -n 5 git push -f
+block	feat	.	git --git-dir .git push -f
+block	feat	.	git push --repo origin main
+block	feat	.	git push --force-w origin feat/x
+block	main	.	git reset --har
+block	feat	.	git clean --forc -dx
+block	feat	.	rm --rec -f /
+block	feat	.	cd $HOME && rm -rf Documents
+block	feat	.	pushd ~ && rm -rf Documents
+allow	feat	.	git checkout main && git switch --create feat/y && git push -u origin HEAD
+allow	feat	.	cd $HOME && ls
+allow	feat	.	timeout 60 npm test
+allow	feat	.	rm -rf *.egg-info
+allow	feat	.	rm -rf {build,dist}
+allow	feat	.	rm -rf build dist
+allow	feat	.	rm -rf .cache
+allow	feat	sub	rm -rf *
+allow	feat	.	git push origin main-fix
+allow	feat	.	git commit -m "push to main"
+allow	feat	.	npm run build 2>&1 | tail -5
+allow	feat	.	git log --oneline main
