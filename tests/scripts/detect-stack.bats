@@ -448,6 +448,19 @@ FIXTURES
   refute_equal "$FP" "$l1"
 }
 
+@test "a nested stack's wildcard configs count even when the root has none" {
+  copy monorepo mono
+  fp nextjs "$T/mono"; local n0=$FP
+  printf 'export default [];\n' > "$T/mono/apps/web/eslint.config.mjs"
+  fp nextjs "$T/mono"; local n1=$FP
+  refute_equal "$n1" "$n0"
+  printf 'export default [];\n' > "$T/mono/eslint.config.js"
+  fp nextjs "$T/mono"; local n2=$FP
+  printf '// edit\n' >> "$T/mono/apps/web/eslint.config.mjs"
+  fp nextjs "$T/mono"
+  refute_equal "$FP" "$n2"
+}
+
 @test "a major bump changes the line; a minor bump does not" {
   copy nextjs-tailwind app
   fp nextjs "$T/app"; local n0=$FP

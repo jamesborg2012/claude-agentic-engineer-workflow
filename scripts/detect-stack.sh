@@ -444,9 +444,12 @@ esac
 
 # Config files: the set's matches in the entry dir and the scanned root.
 : > "$TMP/cfgs.raw"
+# read splits the list without globbing it; an unquoted $CFGS would expand
+# each pattern in the scanned root (and drop it there under nullglob).
+read -r -a PATS <<< "$CFGS"
 shopt -s nullglob
 for d in "$EPATH" .; do
-  for pat in $CFGS; do
+  for pat in "${PATS[@]}"; do
     # shellcheck disable=SC2206  # the glob is the point
     m=(./"$d"/$pat)
     for f in ${m[@]+"${m[@]}"}; do
