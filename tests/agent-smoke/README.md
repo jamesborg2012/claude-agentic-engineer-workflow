@@ -516,6 +516,9 @@ not start the run (record its checks as `open`). Apply the same test before any 
 | 951 cycle 1 attempt 1 (cap 8; 0.38 + 8 = 8.38, under 60) | 951 | 0.61 | 0.99 | no |
 | 951 cycle 1 attempt 2, after fix 719f13e (cap 8; 0.99 + 8 = 8.99, under 60) | 951 | 0.57 | 1.56 | no |
 | 941 re-run after fix 719f13e (cap 5; 1.56 + 5 = 6.56, under 60) | 941 | 0.35 | 1.91 | no |
+| 961 fan-out attempt 1 (cap 10; 1.91 + 10 = 11.91, under 60) | 961 | 0.65 | 2.56 | no |
+| 961 fan-out attempt 2, after the git -C fix (cap 10; 2.56 + 10 = 12.56, under 60) | 961 | 0.80 | 3.36 | no |
+| 961 fan-out attempt 3, after the main-checkout git fix (cap 10; 3.36 + 10 = 13.36, under 60) | 961 | 0.79 | 4.15 | no |
 
 ### 8.2 Playwright MCP tool names (AC-2, probe 940)
 
@@ -777,3 +780,56 @@ Notes for run 951 cycle 1 (kept state for Phase E):
 - `screens.cycle1` mtimes (epoch seconds): TC-1 1792875850, TC-2 1792875855, TC-3 and TC-4 1792875856, desktop and mobile alike.
 - Attempt 1's outputs are not kept: attempt 2 wrote to the same `out-951-qa1`. Its two failures are recorded in rows 4
   and 13. Likewise `out-941` now holds the 941 re-run, not the run recorded in the first 941 rows.
+
+#### 961: developer `full` mode fan-out (D2)
+
+Setup, dispatch and invocation are section 8.3's `smoke_shop` and section 3's command, with these differences. Write the run into a script file and execute that file: the plugin's Bash safety hook blocks any command whose text contains `git push`, and redirect stdin with `< /dev/null`. `smoke_use` does not clear `$O`, so `rm -rf "$O"` first when re-running.
+
+```sh
+T="Add shop helpers"; BR=feat/202-add-shop-helpers
+smoke_shop developer fanout 961 202 "$T" "$BR" develop
+cp "$SHOP_RUN/03-standards.md" "$SHOP/run-fanout/02-brief.md" "$SHOP/run-fanout/05-plan.md" "$RUN/"
+git -C "$P" rev-parse main > "$O/main.sha"; (cd "$P" && pwd -P) > "$O/p.real"
+# ALLOW follows agents/developer.md Guardrails. No bare "Bash(git -C *)": one scoped rule per subcommand.
+ALLOW=(--allowedTools "Bash(git status *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git show *)"
+  "Bash(git add *)" "Bash(git commit *)" "Bash(git worktree *)" "Bash(git cherry-pick *)"
+  "Bash(git branch *)" "Bash(git rev-parse *)"
+  "Bash(git -C * status *)" "Bash(git -C * diff *)" "Bash(git -C * log *)" "Bash(git -C * show *)"
+  "Bash(git -C * add *)" "Bash(git -C * commit *)" "Bash(git -C * rev-parse *)"
+  "Bash(cd *)" "Bash(node *)" "Bash(npm *)" "Bash(npx *)" "mcp__plugin_context7_context7__*")
+smoke_dispatch developer "run_dir: $RUN, mode: full"; CAP=10
+SETTINGS=$(jq -nc --arg ex "$REPO/CLAUDE.md" --arg cap "cat >> '$O/stop-payloads.jsonl'; echo >> '$O/stop-payloads.jsonl'" \
+  '{claudeMdExcludes:[$ex], enabledPlugins:{"dev-workflow@jamesborg":false,"figma@claude-plugins-official":false},
+    hooks:{SubagentStop:[{hooks:[{type:"command",command:$cap}]}]}}')
+# then section 3's claude -p command with --settings "$SETTINGS" in place of the inline JSON, and < /dev/null
+```
+
+The capture hook has no matcher, so it records every `SubagentStop`; it runs alongside the plugin's gate, which still decides. The `node --test` summary in Node 26 is `ℹ pass <n>` (the spec reporter), not the TAP `# pass <n>` line, so count with `grep -E '^ℹ (pass|fail)'`.
+
+Attempts: 1 failed S3 (`cd <worktree> && git …` refused), 2 failed S13 (two `git -C <main checkout>` denials), 3 passed all checks. Final run ids and costs are in the 8.1 ledger.
+
+| run | check | result | notes |
+|---|---|---|---|
+| 961 | S1 fan-out in one message | pass | The developer's own tool calls are in the stream (source: stream, `parent_tool_use_id` = the main Agent call). Two `Agent` blocks under the same `message.id`, both `aew:developer`, `isolation` absent, prompts `run_dir: <abs>, mode: package, wp: WP-1\|WP-2, worktree: $RUN/worktrees/WP-<n>, branch: aew/961/wp-<n>`. |
+| 961 | S2 worktree commands | pass | `git worktree add -b aew/961/wp-1 $RUN/worktrees/WP-1 HEAD` and the same for `wp-2`. Caveat: the feature branch equals `main` at dispatch, so only this verbatim command evidences "from HEAD"; S4 to S7 cannot tell a HEAD worktree from a default-branch one. |
+| 961 | S3 sub-developer command form | pass (after fix) | Attempt 1: all four `cd <worktree> && git …` commands were denied although `Bash(cd *)` and the git rules were allowed. The Bash tool's built-in check ("changes directory before a version-control command, which can pick up untrusted hooks or repository configuration") cannot be allowlisted. Both sub-developers returned `blocked`. Agent fault, fixed in 7960b92: git runs as `git -C <worktree> <subcommand>`, other commands as `cd <worktree> && <command>`. Attempt 3: 0 `cd … && git` commands; git via `git -C <worktree> status\|rev-parse\|add\|commit`; `cd <worktree> && node --test` ran without denial; nothing ran outside a worktree. **Open item for prompt 05's permission proposal: the per-subcommand `git -C` fallback is in force (`Bash(git -C * status *)`, `diff`, `log`, `show`, `add`, `commit`, `rev-parse`; never a bare `Bash(git -C *)`).** |
+| 961 | S4 WP reports | pass | `06-dev-report-WP1.md` and `-WP2.md`: `Mode: package`, valid return block `ok`, template headings match, filled `## Commands run`. WP shas `3efa42a` and `7d8d435` are commit objects whose subjects equal the integrated commits'. |
+| 961 | S5 parent report | pass | `06-dev-report.md`: `Mode: full`, `ok`, headings match, newest `06-dev-report*.md`; WP rows carry `3da7027` and `53aab59` (the `main..HEAD` shas); `node --test` row passes (3 tests). |
+| 961 | S6 commits | pass | Exactly two commits in WP order: `feat(price): add formatPrice helper (#202)`, `feat(basket): add clampQuantity helper (#202)`. Non-matching subjects 0, `cherry picked from` 0, each commit touches exactly its WP's files (both diffs empty). |
+| 961 | S7 clean-up | pass | One worktree (the main one, equal to `p.real`), no `aew/*` branch, no `$RUN/worktrees` content, status empty, HEAD `feat/202-add-shop-helpers`, `main` unchanged. |
+| 961 | S8 harness re-run | pass | `node --test`: pass 3, fail 0 (basket, formatPrice, clampQuantity); status still empty. |
+| 961 | S9 final message | pass | `final.txt` (narrowed to the main Agent call) is a valid block, `STATUS: ok`, ARTEFACTS `.aew/runs/961/06-dev-report.md`. |
+| 961 | S10 gate (AC-23) | pass | Six `SubagentStop` hook responses (three stops, two hooks each: the capture hook and the plugin gate), all `outcome: success`, exit 0, none with `"decision":"block"`. The parent's stop, which followed a valid report written last, was allowed. No mis-block, so **D3 is not triggered**. |
+| 961 | S11 nested `SubagentStop` | recorded | See the table below. |
+| 961 | S12 agent hygiene | pass | No `isolation`; no Agent call under either sub-developer; no Bash command with `gh`, a push, merge, rebase, reset, checkout, switch, `cherry-pick -x` or `rm -r`. |
+| 961 | S13 per-run rows | pass (after fix) | Preload: `aew:run-protocol`, `superpowers:test-driven-development`, `superpowers:verification-before-completion` and `superpowers:systematic-debugging` each appear 3 times under `[Agent: aew:developer]` (parent plus both sub-developers preload them); no skip or missing line for them. `permission_denials` `[]` (attempt 2 had two `git -C <main checkout>` denials, agent fault, fixed in db2dc9e: plain `git` in the main checkout). `git -C $REPO status --porcelain` shows only this README, DESIGN and the prompt fixes. Cost 0.79 (ledger). |
+
+Nested `SubagentStop` observation (A29, AC-23), from `stop-payloads.jsonl` (Claude Code 2.1.308, attempt 3):
+
+| stop | `agent_type` | `agent_id` | `stop_hook_active` | ARTEFACTS in `last_assistant_message` | gate decision |
+|---|---|---|---|---|---|
+| sub-developer WP-1 | `aew:developer` | `a1c63030e4d8602e2` | false | absolute path to `06-dev-report-WP1.md` | allowed (exit 0) |
+| sub-developer WP-2 | `aew:developer` | `a0580a63bc10e2c52` | false | absolute path to `06-dev-report-WP2.md` | allowed (exit 0) |
+| parent developer | `aew:developer` | `a38ccb8541a2446b8` | false | `.aew/runs/961/06-dev-report.md` | allowed (exit 0) |
+
+Nested sub-developers do fire `SubagentStop`, with the same `agent_type` as the parent and distinct `agent_id`s; the debug log shows the plugin gate running for each of the three stops. The gate resolves the main worktree's run dir and each sub-developer wrote its own report before stopping, so the newest-report rule did not mis-block anyone in this run (the WP reports were written at different times, each before its own stop; the parent's report came last). A29's fallback (gate the report named in ARTEFACTS) is not needed.
