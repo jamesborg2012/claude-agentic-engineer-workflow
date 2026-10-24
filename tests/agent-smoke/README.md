@@ -800,6 +800,7 @@ T="Add shop helpers"; BR=feat/202-add-shop-helpers
 smoke_shop developer fanout 961 202 "$T" "$BR" develop
 cp "$SHOP_RUN/03-standards.md" "$SHOP/run-fanout/02-brief.md" "$SHOP/run-fanout/05-plan.md" "$RUN/"
 git -C "$P" rev-parse main > "$O/main.sha"; (cd "$P" && pwd -P) > "$O/p.real"
+# Harness-only; not safe to copy into user settings (see project-map open items for prompt 05).
 # ALLOW follows agents/developer.md Guardrails. No bare "Bash(git -C *)": one scoped rule per subcommand.
 ALLOW=(--allowedTools "Bash(git status *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git show *)"
   "Bash(git add *)" "Bash(git commit *)" "Bash(git worktree *)" "Bash(git cherry-pick *)"
