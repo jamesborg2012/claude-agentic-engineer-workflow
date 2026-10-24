@@ -76,7 +76,14 @@ ctx() { jq -r '.hookSpecificOutput.additionalContext' <<<"$output"; }
 
 @test "it runs in under a second" {
   seed_run 12
-  local ms
-  ms=$(elapsed_ms "$SCRIPTS/hooks/session-start.sh" <<<"$PAYLOAD")
+  local f="$BATS_TEST_TMPDIR/payload.json" ms
+  printf '%s\n' "$PAYLOAD" > "$f"
+  # elapsed_ms points the command's stdin at /dev/null, so the payload is
+  # redirected inside the timed command.
+  ms=$(elapsed_ms bash -c '"$0" < "$1"' "$SCRIPTS/hooks/session-start.sh" "$f")
   [ "$ms" -lt 1000 ]
+  # elapsed_ms ignores the exit status, so prove the timed run gave the hint.
+  run_hook session-start.sh "@$f"
+  assert_success
+  assert_contains "$(ctx)" "Active aew run 12"
 }
