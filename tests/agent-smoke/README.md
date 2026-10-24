@@ -524,6 +524,8 @@ not start the run (record its checks as `open`). Apply the same test before any 
 | 951 QA cycle 2 attempt 2, after fix d4b2c86 (cap 8; 5.16 + 8 = 13.16, under 60) | 951 | 0.36 | 5.52 | no |
 | 941 re-run after fix d4b2c86 (cap 5; 5.52 + 5 = 10.52, under 60) | 941 | 0.34 | 5.86 | no |
 | 951 doc-writer (cap 5; 5.86 + 5 = 10.86, under 60) | 951 | 0.44 | 6.30 | no |
+| 951 doc-writer re-run 1, after fix f2df416 (cap 5; 6.30 + 5 = 11.30, under 60) | 951 | 0.33 | 6.63 | no |
+| 951 doc-writer re-run 2, after fix 48cb638 (cap 5; 6.63 + 5 = 11.63, under 60) | 951 | 0.31 | 6.94 | no |
 
 ### 8.2 Playwright MCP tool names (AC-2, probe 940)
 
@@ -897,8 +899,36 @@ Note for the removed-lines check: a removed bullet shows in `git diff -U0` as `-
 | 951 docs | D9 no commit, scoped writes | pass | `git rev-parse HEAD` equals `36fd498`. `git status --porcelain --untracked-files=all` shows ` M CLAUDE.md`, `?? docs/specs/201-add-to-basket.md` and the two files under `.claude/agent-memory/aew-doc-writer/`, and nothing else. |
 | 951 docs | D10 shared rows | pass | Preloaded skill lines for `aew:run-protocol` and `aew:claude-md-curation`, no skip or missing line; `permission_denials` `[]`; no `Write` was refused (no fallback needed, so the Write basename rule from the E3 notes did not bite); tools used: Read 17, Write 7, Glob 2 (no Bash, Edit or Agent); the plugin's `SubagentStop` matcher is `^aew:(developer\|qa-engineer)$`, so no gate ran for the doc-writer, as designed; `$REPO` status clean. Cost 0.44 (ledger). |
 
+Re-runs, each restored from `snap-951-docs` into `$P`, output to a fresh `out-951-docs`, same dispatch and cap 5. The removed-lines extraction for D4 is the one in the note above, with blank lines dropped, and each line is looked up with `grep -F` in the Summary of `10-summary.md`.
+
+Re-run 1 (after fix `f2df416`: doc-writer reports removed, merged or rewritten entries; curation step 3 re-checks merged entries):
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 docs re-run 1 | D1 | pass | `wc -l` 24 (was 37), cap 40; diff non-empty. |
+| 951 docs re-run 1 | D2 | fail | The dated freeze line "Until 2026-11-30 the sale banner copy is frozen..." was kept (the Summary justified it by its expiry date). The skill's never-include list says "dates" are time-bound, but the curator read "no removal condition" as excusing it. Skill fault. The const/var line went. |
+| 951 docs re-run 1 | D3 | pass | No added line is in `docs/standards/*`; the added evidence-dir line is not in `web.md`. |
+| 951 docs re-run 1 | D4 | fail (mechanical) | Line count stated (24) equals `wc -l`, and the rewritten intro line is now listed. But with `grep -F` on the lines as extracted (leading `- `), 17 of 18 are not found, because the Summary quoted them without the bullet marker; the content was all listed. The mechanical check is kept as written, so the fix makes the skill require the exact original line. |
+| 951 docs re-run 1 | D5 to D10 | pass | D6 to D10 as in the first run (`pr-body` 0 comments, `Closes #201`, 8 links; headings equal; HEAD unchanged; scoped writes; `permission_denials` `[]`; cost 0.33). |
+
+Re-run 2 (after fix `48cb638`: curation drops any entry carrying a date or expiry; section 7 quotes each original entry exactly including its leading `- `, and reports a moved entry as rewritten):
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 docs re-run 2 | D1 | pass | `wc -l` 27 (was 37), cap 40; `git diff --quiet -- CLAUDE.md` exits 1. |
+| 951 docs re-run 2 | D2 | pass | `grep -Fx` finds neither planted line. |
+| 951 docs re-run 2 | D3 | pass | `grep -Fxf` of the added lines against `docs/standards/*` prints nothing. Added: the `web.md` pointer line, a rewritten order-flow line (adds the manual-test consequence and the spec link) and the `AEW_EVIDENCE_DIR` capture line (not in `web.md`; it names `npx playwright test` only as the command the variable applies to, not as a rule). |
+| 951 docs re-run 2 | D4 | pass | 13 removed non-blank lines by the mechanical extraction, every one found with `grep -F` in the Summary; stated count 27 equals `wc -l`. Entries are quoted with their `- ` and the two rewrites show the new text. |
+| 951 docs re-run 2 | D5 | pass | Nothing `web.md` lacks was dropped (removed: ES modules, spec naming, file layout, integer pence, const/var, landmarks, accessible names, comments, the update-this-file line, the dated freeze). Under-pruning remains: the curator kept the Install, Serve, `node --test`, `npx playwright test` and Node 22 lines, which `web.md` Tooling states; not a planned check, recorded as a concern. |
+| 951 docs re-run 2 | D6 | pass | One `docs/specs/201-add-to-basket.md`; five `##` headings in order; AC diff empty; AC-4 row points to `manual-tests.md`. |
+| 951 docs re-run 2 | D7 | pass | 0 template comments; `Closes #201`; eight links all matching the `blob/<branch>/...?raw=true` form; link set equals the eight files. |
+| 951 docs re-run 2 | D8 | pass | Headings equal for summary, pr-body and retro; `valid_return_block` `ok` for `final.txt` and `10-summary.md`; ARTEFACTS lists the five paths; three plugin-level `###` retro items. |
+| 951 docs re-run 2 | D9 | pass | HEAD unchanged; status shows ` M CLAUDE.md`, `docs/specs/201-add-to-basket.md` and two files under `.claude/agent-memory/aew-doc-writer/`, nothing else. |
+| 951 docs re-run 2 | D10 | pass | Preloaded `aew:run-protocol` and `aew:claude-md-curation`; `permission_denials` `[]`; no `"decision":"block"`; tools Read 16, Write 7, Glob 2, Grep 1; `$REPO` status clean. Cost 0.31 (ledger). |
+
 Notes for E5:
 
-- D3 and D4 failed in the senior review. E4 is open until a `fix(agents)` commit to `agents/doc-writer.md` and `skills/claude-md-curation/SKILL.md` and a re-run restored from `snap-951-docs` pass every D row; the rows above record the first run. The first run's Summary also says the curated file "now has 20 lines" (and SUMMARY "37 to 20"); it has 19.
+- The first-run rows above are history. The final state is re-run 2: every D row passes.
+- (First run) D3 and D4 failed in the senior review. E4 is open until a `fix(agents)` commit to `agents/doc-writer.md` and `skills/claude-md-curation/SKILL.md` and a re-run restored from `snap-951-docs` pass every D row; the rows above record the first run. The first run's Summary also says the curated file "now has 20 lines" (and SUMMARY "37 to 20"); it has 19.
 - `smoke-shop-loop` is left as the doc-writer left it: stage `docs`, HEAD `36fd498`, uncommitted `CLAUDE.md`, `docs/specs/201-add-to-basket.md` and the agent memory, plus `10-summary.md`, `pr-body.md` and `retro.md` under `.aew/runs/951/`. Snapshot `snap-951-docs` holds the pre-run state (stage `qa`); outputs are in `out-951-docs`.
 - The doc-writer's `ARTEFACTS` order differs from the template's but lists exactly the five paths.
