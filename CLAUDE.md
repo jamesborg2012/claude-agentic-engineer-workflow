@@ -28,6 +28,9 @@ claude --plugin-dir .           # load the plugin for one session (dependencies 
 npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s templates/config.schema.json -d templates/config.example.json
 npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s templates/state.schema.json  -d templates/state.example.json
 
+scripts/detect-stack.sh [path]                       # detect stack profiles; `fingerprint <profile> [path]` hashes the standards inputs
+# headless agent smoke runs (manual, paid): see tests/agent-smoke/README.md
+
 tests/run-script-tests.sh              # shellcheck (PATH or npx) + every bats file under tests/scripts/
 bats tests/scripts/gh-issue-body.bats  # one file
 bats -f 'revise twice' tests/scripts/gh-issue-body.bats   # one test by name
@@ -80,3 +83,4 @@ Key contracts every component must respect (full detail in `skills/run-protocol/
 ## Recent changes
 
 - 2026-10-24 · feature/scripts-github-io-and-hooks · Deterministic layer (build prompt 02): run-state, git and all GitHub I/O scripts, safety and gate hooks, github-ops skill, bats suite with a mocked `gh` · [spec](docs/superpowers/specs/2026-10-24-scripts-github-io-and-hooks.md) · [plan](docs/superpowers/plans/2026-10-24-scripts-github-io-and-hooks.md)
+- 2026-10-24 · feature/standards-and-planning-agents · Standards system and the four planning agents (build prompt 03): `detect-stack.sh`, `stack-standards` skill with six seeds, spec-analyser, brief-compiler, standards-setter, senior-engineer, agent `gh` deny in the Bash guard, headless smoke harness · [spec](docs/superpowers/specs/2026-10-24-standards-and-planning-agents.md) · [plan](docs/superpowers/plans/2026-10-24-standards-and-planning-agents.md)

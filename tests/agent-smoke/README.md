@@ -393,7 +393,7 @@ Filled in by E2 (isolation probe) and E3 (seed path resolution).
 
 ## 6. Results
 
-Every row starts as `pending`. Cost goes in the notes (and the ledger in section 1).
+Each row records its outcome. Cost goes in the notes (and the ledger in section 1).
 
 | check | result | notes |
 |---|---|---|
