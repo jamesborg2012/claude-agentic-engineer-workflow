@@ -26,7 +26,9 @@ claude plugin list               # record which other plugins are enabled: they 
 
 - superpowers and context7 must be installed (the agents preload `superpowers:systematic-debugging` and
   call the context7 MCP tools).
-- `CONTEXT7_API_KEY` is optional. Without it, context7 calls are anonymous and rate-limited.
+- `CONTEXT7_API_KEY` is optional for the checks, but without it the context7 server reported `needs-auth`
+  in the recorded headless runs, so no context7 tool resolved and the agents fell back to the seeds (see
+  the AC-18 row). Set it to observe the context7 tool names.
 - `jq`, `shasum`, `git` and `/bin/bash` (3.2) are assumed.
 
 ### Spend ledger (CTO condition E-1)
@@ -445,7 +447,7 @@ Each row records its outcome. Cost goes in the notes (and the ledger in section 
 | 921 each doc 400 lines or fewer; `tailwind.md` opens with "Overlay on: nextjs" | pass | 155 and 87 lines; `tailwind.md` line 2 is `Overlay on: nextjs`. |
 | 921 `03-standards.md` follows template, ends in valid return block, both rows `generated`, section rows name existing sections | pass | Heading diff empty; both rows `generated`; all 12 section rows resolve to an existing `## ` heading in the named doc. |
 | 921 `STATUS: ok` | pass | Final message and artefact. |
-| 921 AC-18: no skip warning for `aew:stack-standards`; context7 tool names called recorded verbatim | pass (names not observable) | No skip warning; `aew:stack-standards` and `aew:run-protocol` preloaded. context7 was never called: in this headless session the server is `plugin:context7:context7` with status `needs-auth` (no `CONTEXT7_API_KEY`), so the debug log warns `Agent tools entry "mcp__plugin_context7_context7__*" takes no tool`. The agent fell back as designed ("context7 unavailable" in the docs). The server key matches the `mcp__plugin_context7_context7__` form, so no `tools:` change; the call names stay unverified for E6. |
+| 921 AC-18: no skip warning for `aew:stack-standards`; context7 tool names called recorded verbatim | partial: preload pass, context7 names not observable | No skip warning; `aew:stack-standards` and `aew:run-protocol` preloaded. context7 was never called: in this headless session the server is `plugin:context7:context7` with status `needs-auth` (no `CONTEXT7_API_KEY`), so the debug log warns `Agent tools entry "mcp__plugin_context7_context7__*" takes no tool`. The agent fell back as designed ("context7 unavailable" in the docs). The server key matches the `mcp__plugin_context7_context7__` form, so no `tools:` change; the call names stay unverified for E6. |
 | 921 Preload, permission denials, final.txt return block, E-2 | pass | Attempt 1 failed here (agent fault): a `for f in ...; do cat $f; done` Bash loop was denied. Fix `dcac6f4` (Guardrails name them off limits) told it to use Glob/Grep, which do not exist for an agent with Bash (see notes); fix `72497e2` replaced that with `find`/`grep`. Re-run on a fresh `$P` after `72497e2`: denials `[]`, no `No such tool` line, `valid_return_block` ok on final.txt and the artefact, E-2 clean (nothing differs in `$REPO`). Cost 0.42. |
 | 921 re-check after `72497e2` (fresh `$P`): fingerprint calls, headers, README, line counts, `Overlay on: nextjs`, `03-standards.md` rows `generated`, section rows resolve, `STATUS: ok`, no Glob error | pass | Fingerprints equal the recorded values (`nextjs ... cfg:388ef4ff81b7`, `tailwind ... cfg:3f0744e5bcde`); headers match the format; docs 140 and 91 lines; all 11 section rows resolve to existing `## ` headings; the agent searched with `find docs/standards -type f` and `find . -path ./node_modules -prune ...`, both allowed. |
 | 921 post-pass: `git -C $P add -A && git -C $P commit -qm standards` done | pass | `git commit -qm standards` in the fresh `$P` (commit `e64c740`, replacing `62d5ac3`): clean tree for E4. |
