@@ -24,9 +24,9 @@ each run in a fresh session and building on the committed output of the previous
 claude plugin validate .        # validate plugin + marketplace manifests and components
 claude --plugin-dir .           # load the plugin for one session (dependencies must already be installed)
 
-# validate an example against its schema (JSON Schema draft 2020-12)
-npx ajv-cli validate --spec=draft2020 -s templates/config.schema.json -d templates/config.example.json
-npx ajv-cli validate --spec=draft2020 -s templates/state.schema.json  -d templates/state.example.json
+# validate an example against its schema (JSON Schema draft 2020-12; ajv-formats needed for date-time)
+npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s templates/config.schema.json -d templates/config.example.json
+npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s templates/state.schema.json  -d templates/state.example.json
 ```
 
 Scripts (from build prompt 02 onward) must be bash with `set -euo pipefail`, shellcheck-clean, support
