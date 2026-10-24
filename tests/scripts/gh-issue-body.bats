@@ -509,7 +509,7 @@ mt() { run --separate-stderr "$SCRIPTS/gh-issue.sh" manual-tests "$@"; }
   assert_equal "$(grep -c '^<!-- aew:manual-tests -->' "$W/after")" 1
   manual_of "$W/after" | cmp - "$I/manual-tests-2.md"
   head -c "$(wc -c < "$I/body-v1.md" | tr -d ' ')" "$W/after" | cmp - "$I/body-v1.md"
-  ! grep -qF 'Export an empty list' "$W/after"
+  refute_contains "$(cat "$W/after")" 'Export an empty list'
   assert_no_line_lost "$I/body-v1.md" "$W/after"
   assert_no_line_lost "$I/body-v1-manual.md" "$W/after" --except-manual
 }
@@ -616,8 +616,8 @@ mt() { run --separate-stderr "$SCRIPTS/gh-issue.sh" manual-tests "$@"; }
   mt 7 "$I/manual-tests.md"
   assert_success
   assert_equal "$(gh_mock_labels 7)" "$before"
-  ! gh_calls | grep -q -e '--add-label'
-  ! gh_calls | grep -q -e '--remove-label'
+  refute_gh_called "--add-label"
+  refute_gh_called "--remove-label"
 }
 
 @test "M8. dispatch: --help lists manual-tests" {

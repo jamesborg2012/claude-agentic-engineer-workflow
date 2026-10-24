@@ -112,7 +112,7 @@ def serialise_unmanaged($v; $m):
   end
 | (if $mts | length == 1 then inner($L; $mts[0]) | join("\n") else null end) as $m
 | (if $managed then $specs[0].k else 1 end) as $cur
-| if $op != "revise" then .
+| if $op == "manual" then .
   elif $version < 2 then refuse("version must be >= 2 (v1 is the author's original)")
   elif $version < $cur then refuse("spec v\($version) is older than the recorded v\($cur) (regression); not editing")
   elif $version > $cur + 1 then refuse("spec v\($version) would skip v\($cur + 1) (gap); not editing")
