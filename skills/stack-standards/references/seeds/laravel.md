@@ -1,6 +1,6 @@
 # Laravel standards seed
 
-Versions covered: Laravel 13.x (requires PHP 8.3+; Laravel 12.x on PHP 8.2+ remains supported, bug fixes to 2026-08-13, security fixes to 2027-02-24) (researched 2026-10-24; sources: context7 unavailable, https://laravel.com/docs/13.x/releases, /validation, /eloquent, /csrf, /configuration, /testing, /database-testing, /pint, https://laravel.com/docs/master/*)
+Versions covered: Laravel 13.x (laravel/framework 13.38, requires PHP 8.3+; Laravel 12.x on PHP 8.2+ is past its bug-fix window and gets security fixes only, to 2027-02-24), Larastan 3.x (researched 2026-10-24; sources: context7 unavailable, https://laravel.com/docs/13.x/releases, /validation, /eloquent, /csrf, /configuration, /testing, /database-testing, /pint, https://laravel.com/docs/12.x/csrf, https://packagist.org/packages/larastan/larastan)
 
 Seed for the standards-setter. Rules marked **[tool]** are enforced by Laravel's default or official tooling (Pint, Artisan, the framework itself). Larastan/PHPStan is not part of a default install, so rules that rely on it are **[convention]**. Where Laravel 12 and 13 differ, the difference is stated.
 
@@ -11,7 +11,7 @@ Seed for the standards-setter. Rules marked **[tool]** are enforced by Laravel's
 - **[tool]** Run tests with `php artisan test` (or `./vendor/bin/pest` / `./vendor/bin/phpunit`); add `--parallel` with `brianium/paratest`, and `--coverage --min=<n>` to enforce a threshold (Artisan test runner).
 - **[tool]** Inspect the app with `php artisan about`, `php artisan route:list` and `php artisan config:show <file>` (Artisan).
 - **[tool]** Generate classes with `php artisan make:*` (`make:request`, `make:policy`, `make:model -mfc`, `make:job`) rather than hand-creating them (Artisan).
-- **[tool]** Run `php artisan config:cache`, `route:cache`, `view:cache` and `event:cache` (or `php artisan optimize`) on deploy, never in local development (Artisan).
+- **[convention]** Run `php artisan config:cache`, `route:cache`, `view:cache` and `event:cache` (or `php artisan optimize`) on deploy, never in local development.
 - **[convention]** Add Larastan (`larastan/larastan`, PHPStan level 5 or higher, raised over time) with a committed `phpstan.neon`, and run it in CI beside Pint and the test suite.
 - **[convention]** Pin the framework with a caret constraint, for example `"laravel/framework": "^13.0"`, and commit `composer.lock`.
 - **[convention]** Keep a `composer` script (for example `composer test`) that runs Pint `--test`, static analysis and the suite, so agents and CI use one command.
@@ -49,12 +49,12 @@ Seed for the standards-setter. Rules marked **[tool]** are enforced by Laravel's
 - **[convention]** Keep `authorize()` in the Form Request calling a policy or gate (`$this->user()->can('update', $this->post)`); return `true` only when authorisation is handled elsewhere.
 - **[convention]** Authorise through policies (`php artisan make:policy`) and gates; call `$this->authorize()`, `Gate::authorize()`, the `can` middleware or, in Laravel 13, `#[Authorize]`.
 - **[tool]** Protect against mass assignment: declare `$fillable` (or `#[Fillable([...])]` in Laravel 13) on every model; never unguard globally (Eloquent).
-- **[tool]** Call `Model::preventLazyLoading(! app()->isProduction())` and `Model::preventSilentlyDiscardingAttributes()` in `AppServiceProvider::boot()` to surface N+1 queries and dropped attributes in development (Eloquent strictness).
+- **[convention]** Call `Model::preventLazyLoading(! $this->app->isProduction())` and `Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction())` in `AppServiceProvider::boot()` to surface N+1 queries and dropped attributes outside production (opt-in Eloquent strictness).
 - **[convention]** Eager load relationships with `with()` (or `load()`), select only the columns you need, and use `chunkById`/`lazy()` for large result sets.
 - **[convention]** Wrap multi-write operations in `DB::transaction()` and dispatch queued work with `afterCommit` so jobs never run against uncommitted rows.
 - **[convention]** Queue slow work (mail, webhooks, exports) as jobs implementing `ShouldQueue`; make them idempotent, and set tries, backoff and timeout (`$tries`, or `#[Tries]`/`#[Backoff]`/`#[Timeout]` in Laravel 13).
 - **[convention]** Return API output through API Resources (`JsonResource`); Laravel 13 also ships JSON:API resources.
-- **[tool]** Read configuration with `config('app.name')` everywhere except `config/*.php`; `env()` returns `null` once `config:cache` has run (Laravel configuration).
+- **[convention]** Read configuration with `config('app.name')` everywhere except `config/*.php`; `env()` returns `null` once `config:cache` has run.
 - **[convention]** Put model casts, relationships and scopes on the model; keep factories in `database/factories` and use them in tests and seeders.
 
 Do:
@@ -104,17 +104,17 @@ $secret = env('STRIPE_SECRET'); // null after config:cache
 - **[convention]** Use `abort_if()`, `abort_unless()` and `findOrFail()`/`firstOrFail()` for HTTP-level failures; let the framework turn them into 404/403 responses.
 - **[tool]** Validation failures return a redirect with flashed errors, or a 422 JSON response for XHR/JSON requests; do not hand-roll these (Validator).
 - **[convention]** Log with `Log::` and structured context arrays (`Log::warning('Payment failed', ['order' => $order->id])`); never log secrets, tokens or full request bodies.
-- **[tool]** Keep `APP_DEBUG=false` in production; debug mode exposes configuration values (Laravel configuration).
-- **[convention]** Failed jobs: define `failed()` or `$exceptions->throttle()`, and monitor the `failed_jobs` table.
+- **[convention]** Keep `APP_DEBUG=false` in production; debug mode exposes configuration values.
+- **[convention]** Failed jobs: define a `failed()` method on the job for clean-up and alerts, and monitor the `failed_jobs` table (`php artisan queue:failed`).
 
 ## Security
 
-- **[tool]** Keep CSRF protection on: `@csrf` in every non-GET Blade form, `X-CSRF-TOKEN`/`X-XSRF-TOKEN` for AJAX. Laravel 13 names the middleware `PreventRequestForgery` and checks `Sec-Fetch-Site` first (Laravel 12: `ValidateCsrfToken`); exclude only webhook routes, ideally by routing them outside the `web` group (CSRF middleware).
+- **[tool]** Keep CSRF protection on: `@csrf` in every non-GET Blade form, `X-CSRF-TOKEN`/`X-XSRF-TOKEN` for AJAX. Laravel 13 names the middleware `PreventRequestForgery` and checks `Sec-Fetch-Site` first, falling back to the token (Laravel 12: `ValidateCsrfToken`). Exclude only webhook routes, ideally by routing them outside the `web` group, otherwise with `$middleware->preventRequestForgery(except: [...])` (Laravel 12: `validateCsrfTokens(except: [...])`) in `bootstrap/app.php` (CSRF middleware).
 - **[tool]** Escape output with `{{ $value }}`; `{!! $value !!}` is unescaped and only allowed for content that is already sanitised or fully trusted (Blade).
-- **[tool]** Use Eloquent or the query builder with bindings; never concatenate user input into `DB::raw()`, `whereRaw()` or `orderByRaw()` without bindings (PDO bindings).
-- **[tool]** Hash passwords with `Hash::make()`/the `hashed` cast; never store or compare plain text (Hash facade).
-- **[tool]** Never commit `.env`; keep `.env.example` with placeholders, or use `php artisan env:encrypt` for committed secrets (Laravel configuration).
-- **[tool]** Use `Route::middleware('auth')` (or `auth:sanctum` for APIs), `throttle` for login and public APIs, and signed URLs for one-off links (Laravel middleware).
+- **[convention]** Use Eloquent or the query builder with bindings; never concatenate user input into `DB::raw()`, `whereRaw()` or `orderByRaw()` without bindings.
+- **[convention]** Hash passwords with `Hash::make()`/the `hashed` cast and check them with `Hash::check()`; never store or compare plain text.
+- **[tool]** Never commit `.env`; keep `.env.example` with placeholders, or use `php artisan env:encrypt` for committed secrets (the skeleton's `.gitignore` excludes `.env`).
+- **[convention]** Use `Route::middleware('auth')` (or `auth:sanctum` for APIs), `throttle` for login and public APIs, and signed URLs for one-off links.
 - **[convention]** Authorise every action on every model with a policy, including API and queue entry points; do not rely on hidden UI.
 - **[convention]** Validate file uploads (`file`, `mimes`, `max`), store them on a non-public disk, and never trust the client file name.
 - **[convention]** Use Sanctum for first-party SPA/mobile tokens; set `secure`, `http_only` and `same_site` session cookie options for production.
@@ -159,11 +159,11 @@ Don't:
 
 ## Testing conventions
 
-- **[tool]** Laravel supports Pest and PHPUnit equally, with `phpunit.xml` preconfigured; follow whichever the repo already uses and do not mix them in one suite (Laravel testing docs).
-- **[tool]** Feature tests live in `tests/Feature` (full HTTP, database, container) and unit tests in `tests/Unit` (no application boot, so no database or facades); write mostly feature tests (Laravel testing docs).
-- **[tool]** Use `RefreshDatabase` on tests that touch the database (`pest()->use(RefreshDatabase::class)` or `use RefreshDatabase`); it wraps each test in a transaction (Illuminate testing traits).
-- **[tool]** Create data with model factories (`User::factory()->create()`), not hand-written inserts or shared fixtures (Eloquent factories).
-- **[tool]** Tests run with `APP_ENV=testing`, array session and cache drivers, and CSRF disabled; override extra values in `phpunit.xml` or `.env.testing` and run `config:clear` first (Laravel testing docs).
+- **[convention]** Laravel supports Pest and PHPUnit out of the box, with `phpunit.xml` preconfigured and Pest shown first in the docs; follow whichever the repo already uses and do not mix them in one suite.
+- **[tool]** Feature tests live in `tests/Feature` (full HTTP, database, container) and unit tests in `tests/Unit` (no application boot, so no database or facades); `make:test` defaults to Feature, `--unit` for Unit (Artisan `make:test`). The docs advise writing mostly feature tests.
+- **[convention]** Use `RefreshDatabase` on tests that touch the database (`pest()->use(RefreshDatabase::class)` or `use RefreshDatabase`); it migrates only when the schema is stale and wraps each test in a transaction.
+- **[convention]** Create data with model factories (`User::factory()->create()`), not hand-written inserts or shared fixtures.
+- **[tool]** Tests run with `APP_ENV=testing`, array session and cache drivers, and CSRF disabled; override extra values in `phpunit.xml` or `.env.testing` and run `config:clear` first (skeleton `phpunit.xml`, framework test bootstrap).
 - **[convention]** Name Pest tests as sentences (`it('rejects a post without a title')`) and PHPUnit methods `test_snake_case_describing_behaviour` in `{Subject}Test` classes mirroring the source path.
 - **[convention]** Assert behaviour through HTTP and the database: `assertStatus`, `assertRedirect`, `assertSessionHasErrors`, `assertDatabaseHas`, `assertForbidden` for policy denials.
 - **[convention]** Fake side effects with `Queue::fake()`, `Mail::fake()`, `Event::fake()` and `Http::fake()`; assert on the dispatched job or event, not the internals.
@@ -198,7 +198,7 @@ it('works', function () {
 ## Anti-patterns
 
 - **[convention]** Fat controllers and fat models: move orchestration to action or service classes.
-- **[convention]** `Model::unguard()` or `protected $guarded = []` as a shortcut: list `$fillable` and pass `validated()` data.
+- **[convention]** `Model::unguard()`, `#[Unguarded]` or `protected $guarded = []` as a shortcut: list `$fillable` (or `#[Fillable]`) and pass `validated()` data.
 - **[convention]** `env()` outside `config/`: read `config()` instead.
 - **[convention]** Querying inside Blade or loops: eager load in the controller and pass the data.
 - **[convention]** Validating in the controller with `$request->validate()` for non-trivial rules: use a Form Request so rules, messages and authorisation live together.
