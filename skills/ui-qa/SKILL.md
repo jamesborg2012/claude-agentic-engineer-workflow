@@ -272,7 +272,7 @@ server writes page snapshots to `.playwright-mcp/` in the project cwd, which §2
   regression runs never change committed evidence.
 - Each cycle clears the screenshots dir before its run (§8), so same-named files are overwritten and
   screenshots the cycle did not produce are deleted.
-- `report.md` (a copy of the passing `08-qa-report-<n>.md`) is written only for a passing cycle. If the last
+- `report.md` (a `cp` of the passing `08-qa-report-<n>.md`; a subagent's Write of a file named `report.md` is refused) is written only for a passing cycle. If the last
   allowed fix cycle fails, the committed screenshots are a failing cycle's and there is no `report.md`: the
   report says the evidence is not final, and the orchestrator must not present it as final.
 - Evidence is committed on the feature branch (`git add` of the evidence dir also stages deletions), and squash

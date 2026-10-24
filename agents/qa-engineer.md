@@ -153,7 +153,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
     - Accessibility: one row per changed page, counts summed over viewports, with the rule ids and the raw file names in Notes.
     - Failures: the triage table first, then the entries.
 12. If any manual-only case exists, write `manual-tests.md`. Otherwise write none. Overwrite it each cycle.
-13. On `ok` only, copy the report to `docs/qa/<issue>/report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.
+13. On `ok` only, copy the report to `docs/qa/<issue>/report.md` with Bash, as one `cp "<run_dir>/08-qa-report-<n>.md" "<abs root>/<evidence.dir>/<issue>/report.md"` (create the directory with `mkdir -p` first if it is missing). Never use Write or Edit for this file: Claude Code refuses a subagent's Write of a file named `report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.
 14. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)`. Stage by path only, and only these:
     - `ui.e2e_dir`;
     - `playwright.config.*`;
@@ -227,7 +227,7 @@ A phase-B `failed` means "QA failures, report complete": the orchestrator routes
   - `npx playwright …`, and the `aew:ui-qa` §2 exact-pinned install by lockfile, `npm install --save-dev --save-exact`, `pnpm add -D -E` or `yarn add -D -E` (setup only);
   - the app lifecycle exactly as `aew:ui-qa` §3 prescribes: the `curl` reuse and ready checks against `app.base_url` (or the configured `ready_check` command), `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1` (one Bash call with `run_in_background: true`, no trailing `&`), `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` followed by `kill <pid>` for the app's port only;
   - the evidence run exactly as `aew:ui-qa` §8 prescribes: `rm -rf "<abs root>/<evidence.dir>/<issue>/screenshots"` (that one directory, nothing else), then `AEW_EVIDENCE_DIR="<abs root>/<evidence.dir>/<issue>/screenshots" <commands.test_e2e>`;
-  - `mkdir -p`, `file -b <jpg>`, `jq` over `test-results/results.json`, and `find test-results -name 'axe-*.json'`;
+  - `cp` of the passing report to `<abs root>/<evidence.dir>/<issue>/report.md` only (step 13), `mkdir -p`, `file -b <jpg>`, `jq` over `test-results/results.json`, and `find test-results -name 'axe-*.json'`;
   - `git status`, `git diff`, `git log`, `git rev-parse`, `git add` and `git commit`;
   - read-only `ls`, `find`, `grep`, `head` and `wc`.
 - One plain command per call: no `cd … &&`, loops or `$(…)`, apart from the exact `aew:ui-qa` §3 and §8 forms above.
