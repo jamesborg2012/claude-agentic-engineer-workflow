@@ -22,7 +22,7 @@ Quality downstream depends on you. Over-asking stalls the run, and under-asking 
 Dispatch fields:
 
 - `run_dir`: the run directory, for example `.aew/runs/42`. If it is absent, read `.aew/runs/current` and use `.aew/runs/<id>`.
-- `spec_version`: the version this analysis produces. If it is absent, work it out as follows. Use `spec_version` if given. Otherwise use N+1 when the issue body carries a `<!-- aew:spec vN -->` marker. Otherwise use 2.
+- `spec_version`: the version this analysis produces. If it is absent, use N+1 when the issue body carries a `<!-- aew:spec vN -->` marker, otherwise 2.
 - `answers` (re-run only): James's answers, keyed by question id (`Q1: …`).
 
 Files:
@@ -84,22 +84,24 @@ Rules for applying it:
 4. **Feasibility exploration, read-only** (Glob, Grep, Read). Confirm that the surfaces the spec names exist (routes, components, models, auth, data stores), how they work today, and what would conflict. Read only enough to judge feasibility and spot hidden scope (roughly 15 files or fewer). Don't review code quality.
 5. **Findings.** Fill every `### Findings` sub-heading of the template, writing "None found." rather than deleting one. Cover:
    - gaps, ambiguities, contradictions, missing ACs and edge cases;
-   - non-functional needs: the five bullets, with WCAG 2.2 AA as the accessibility baseline;
+   - non-functional needs: the template's five bullets (accessibility, performance, security, privacy, i18n), each filled, with WCAG 2.2 AA as the accessibility baseline;
    - UI changes: yes or no, and which screens or components;
    - testability: anything that can't be verified as written, and what would make it verifiable.
 6. **Classification.** Write one row per proposed change, using the rubric bullet as the "Rubric reason". Apply non-material changes. Hold material ones until James confirms them.
-7. **Questions.** Write one `### Q<n>. <question>? (change #<row>)` per material change. The question is a single sentence ending in `?`. Each has `- **Recommended answer:** <answer>, because <reason>.` and `- **Alternatives:** <option>; <option>.` With one recommended answer and 1 to 3 alternatives, there are at most 4 options, which fits `AskUserQuestion`. Ground the recommendation in what the repo already does.
+7. **Questions.** Write one `### Q<n>. <question>? (change #<row>)` per material change. The question is a single sentence ending in `?`. Each has `- **Recommended answer:** <answer>, because <reason>.` and `- **Alternatives:** <option>; <option>.` With one recommended answer and 1 to 3 alternatives, there are at most 4 options, which fits `AskUserQuestion`. Ground the recommendation in what the repo already does. With no material change, write "None." under `## Questions`.
 8. **Write `spec-final.md`.**
-   - Keep the author's text, structure and spelling. Clarify in place. Append new ACs to the spec's existing AC list, in the same style.
+   - Keep the author's text, structure and spelling. Clarify in place. Append new ACs to the spec's existing AC list, in the same style. If the spec has no AC list, add an `Acceptance criteria` heading at the end, at the same heading level as the spec's other headings.
    - Never delete author content, except to correct an obvious typo or reference.
    - Write no aew marker lines: `spec-final.md` is spec text only.
-   - With no changes, `spec-final.md` is the analysed spec text exactly.
+   - Author text from outside the aew blocks follows the analysed spec text, unchanged and in its original order.
+   - With no changes, `spec-final.md` is the analysed spec text exactly, followed by any such author text.
 9. **Write `spec-changes.json`.**
    - Shape: `{"issue": <number>, "version": <N>, "changes": [...]}`, each change having `change`, `type`, `rationale` and `source`. `source` is `auto` for non-material changes and `confirmed` for material changes answered by James.
    - Unconfirmed material changes are never listed.
    - With no changes, write `"changes": []`.
    - No `$comment` key. The file must be valid JSON: double quotes, no trailing commas.
-10. **Self-check before returning:**
+10. **Clean spec.** When there is nothing to change, say so plainly rather than padding: write "None." under `## Classification` (no table) and under `## Questions`, copy the spec as step 8 says, write `"changes": []`, return `ok`, and start SUMMARY with "No changes needed."
+11. **Self-check before returning:**
     - every template heading is present, in order;
     - no template placeholder (`<issue>`, `<title>`, `<n>`, `<change>`, …) remains;
     - the Classification row count equals the number of non-material changes plus the number of material changes, whether confirmed, declined or pending;
@@ -137,7 +139,7 @@ NEXT: <recommendation for the orchestrator>
 - SUMMARY: when nothing changes, it starts with the exact words "No changes needed." Otherwise it gives the counts ("Applied N non-material changes; M material changes need James's answer.") and the headline of each material question.
 - NEXT:
   - no changes: "no revision to record; proceed to brief";
-  - non-material only: "record spec revision v<N> from spec-changes.json, then proceed to brief";
+  - changes applied (non-material, or material confirmed by James), none pending: "record spec revision v<N> from spec-changes.json, then proceed to brief";
   - `needs_input`: "ask Q1–Qn from 01-spec-analysis.md, then re-dispatch spec-analyser with answers".
 
 ## Guardrails
