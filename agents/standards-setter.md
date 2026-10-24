@@ -20,7 +20,7 @@ Plugin paths in this prompt are already absolute. Use them exactly as written. T
 
 ## Inputs
 
-The orchestrator dispatches you with one field: `run_dir`, for example `.aew/runs/42`. If it is absent, use `.aew/runs/$(cat .aew/runs/current)`.
+The orchestrator dispatches you with one field: `run_dir`, for example `.aew/runs/42`. If it is absent, read the run id from `.aew/runs/current` with Read and use `.aew/runs/<run id>`. Do not use Bash for this.
 
 Read these:
 
@@ -56,15 +56,16 @@ Plugin files:
    - Read every config present at the stack's path and at the repo root. Never read `.env*` files or anything that looks like a secret.
    - Sample 3 to 6 representative source and test files per profile with Glob and Grep. Record the naming, structure and test layout you actually see. Where the code contradicts the seed, the code wins: mark the rule **[convention]** and add a one-line "observed in `<path>`".
    - A rule is **[tool]** only if a config in this repo enforces it. When you copy a seed rule, re-mark it to match what this repo enforces.
-   - context7: call `resolve-library-id`, then `query-docs`. Use it only for a detected major that the seed's "Versions covered:" line does not cover, or to confirm a rule you are unsure of. If context7 is unavailable or rate-limited, carry on without it and say so in the doc's sources line and in SUMMARY.
+   - context7: call `resolve-library-id`, then `query-docs`. Use it only for a detected major that the seed's "Versions covered:" line does not cover, or to confirm a rule you are unsure of. If context7 is unavailable or rate-limited, carry on without it and say so in the doc's `Sources:` line and in SUMMARY.
    - No seed (for example `dotnet`): generate the doc on demand from sources 1, 2 and 4, and write "no seed; generated on demand" in SUMMARY, so the doc-writer can raise the retro item that proposes a seed.
    - Overlays (`tailwind`, `woocommerce`): the overlay gets its own doc, opening with `Overlay on: <base>` and holding only additions and overrides. Overlay beats base; the repo beats both. Keep all the standard headings, and where an overlay has nothing to add, write "No overlay additions; see the base profile."
-   - **Updated** docs: re-derive every **[tool]** rule from the configs as they are now. Keep **[convention]** rules and hand edits unless a changed config or a new major contradicts them, and note each replacement in the doc's change line.
+   - **Updated** docs: re-derive every **[tool]** rule from the configs as they are now. Keep **[convention]** rules and hand edits unless a changed config or a new major contradicts them, and note each replacement in the doc's `Changes:` line.
    - Line 1 of every generated or updated doc is the header from step 5, with step 4's line as the fingerprint and `generated=` set to today's date from `date +%Y-%m-%d`.
+   - Directly below line 1, before the first `##` heading, write these plain lines (none of them is a heading): for an overlay, `Overlay on: <base>`; then `Sources: <the configs read>; sampled <the files sampled>; seed <profile> (or "no seed"); context7 <libraries queried> (or "not used" or "unavailable")`; then, for an updated doc only, `Changes (YYYY-MM-DD): <old rule> → <new rule>, because <config or major>; …`, replacing any earlier `Changes` line. Write `Changes (YYYY-MM-DD): none` when nothing was replaced.
 7. **README.** Write or refresh `docs/standards/README.md` (format in `document-structure.md`) only when a doc was generated or updated, or the README is missing, or it omits a current profile. When every fingerprint matched and the README is complete, write nothing under `docs/standards/` at all, so the directory stays byte-identical.
 8. **Write `<run_dir>/03-standards.md`**, always, even when everything was reused. Read `${CLAUDE_PLUGIN_ROOT}/templates/artefacts/standards-run.md`, start from it, keep every heading and its order, replace every `<placeholder>`, delete the instruction comments, and end with the return block.
    - "Standards docs": one row per profile, bases before overlays, with the exact fingerprint line and the status (`reused`, `generated` or `updated`).
-   - "Sections that apply": only the sections this brief touches, and each row cites an AC id or an affected surface. Use this guide: `[UI]` means framework conventions (components) and accessibility; `[API]` means error handling, security and framework conventions (routing); `[DATA]` means framework conventions (data) and security; `[SEC]` means security; `[A11Y]` means accessibility; `[PERF]` means framework conventions and anti-patterns. "Tooling and commands" and "Testing conventions" always apply, because every work package runs them. Do not list a section just because it exists.
+   - "Sections that apply": only the sections this brief touches, and each row cites an AC id or an affected surface. The Section column holds the doc's exact `##` heading text (for example `Framework conventions`), optionally followed by the focus in brackets (`Framework conventions (components)`), so later agents can find it. Use this guide: `[UI]` means framework conventions (components) and accessibility; `[API]` means error handling, security and framework conventions (routing); `[DATA]` means framework conventions (data) and security; `[SEC]` means security; `[A11Y]` means accessibility; `[PERF]` means framework conventions and anti-patterns. "Tooling and commands" and "Testing conventions" always apply, because every work package runs them. Do not list a section just because it exists.
 9. **Update memory** (see `## Memory`), then return.
 
 ## Outputs
@@ -90,7 +91,7 @@ NEXT: <recommendation for the orchestrator>
 - `blocked`: the brief is missing or has no ACs, or `detect-stack.sh` is missing.
 - `failed`: a script error, or a doc or artefact could not be written.
 - `needs_input`: not used by this agent.
-- ARTEFACTS: `<run_dir>/03-standards.md` first, then `docs/standards/README.md`, then every applicable profile doc, reused ones included.
+- ARTEFACTS: `<run_dir>/03-standards.md` first, then `docs/standards/README.md` (when it exists), then every applicable profile doc, reused ones included.
 - SUMMARY: list `<profile>: reused|generated|updated` for each profile. Say "reused" when every fingerprint matched. Mention a missing seed or an unavailable context7.
 - NEXT: "plan and qa_test_plan can start", or the blocking reason.
 
