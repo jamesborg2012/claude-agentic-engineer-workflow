@@ -58,6 +58,7 @@ Build the user-facing skills that tie the scripts and agents into the pipeline i
    - It must:
      - parse `$ARGUMENTS`: an issue number (required), `--auto`, and `--from <stage>`, with clear errors on bad input;
      - run the preflight in DESIGN §9;
+     - also in preflight: warn, without blocking, if the installed superpowers major version differs from the one this plugin was built against (DESIGN §4). Superpowers can't be range-pinned, so this is the early warning for upstream changes.
      - fetch the issue, initialise state, set `current`, set the stage labels, and create the branch;
      - dispatch each agent with explicit file inputs, reading only its return block. Run QA phase A and the senior engineer's plan **in parallel** (one message, two agent calls).
      - **Material spec change gate** (always on): ask via AskUserQuestion with the recommended answers, then send the answers back to the spec-analyser to finalise. Record the result with `gh-issue.sh revise`, `comment` and the `spec-revised` flag.
