@@ -526,6 +526,8 @@ not start the run (record its checks as `open`). Apply the same test before any 
 | 951 doc-writer (cap 5; 5.86 + 5 = 10.86, under 60) | 951 | 0.44 | 6.30 | no |
 | 951 doc-writer re-run 1, after fix f2df416 (cap 5; 6.30 + 5 = 11.30, under 60) | 951 | 0.33 | 6.63 | no |
 | 951 doc-writer re-run 2, after fix 48cb638 (cap 5; 6.63 + 5 = 11.63, under 60) | 951 | 0.31 | 6.94 | no |
+| 971 report-less developer gate probe (cap 2; 6.94 + 2 = 8.94, under 60) | 971 | 0.30 | 7.24 | no |
+| 972 report-less qa-engineer gate probe (cap 2; 7.24 + 2 = 9.24, under 60) | 972 | 0.28 | 7.52 | no |
 
 ### 8.2 Playwright MCP tool names (AC-2, probe 940)
 
@@ -932,3 +934,31 @@ Notes for E5:
 - (First run) D3 and D4 failed in the senior review. E4 is open until a `fix(agents)` commit to `agents/doc-writer.md` and `skills/claude-md-curation/SKILL.md` and a re-run restored from `snap-951-docs` pass every D row; the rows above record the first run. The first run's Summary also says the curated file "now has 20 lines" (and SUMMARY "37 to 20"); it has 19.
 - `smoke-shop-loop` is left as the doc-writer left it: stage `docs`, HEAD `36fd498`, uncommitted `CLAUDE.md`, `docs/specs/201-add-to-basket.md` and the agent memory, plus `10-summary.md`, `pr-body.md` and `retro.md` under `.aew/runs/951/`. Snapshot `snap-951-docs` holds the pre-run state (stage `qa`); outputs are in `out-951-docs`.
 - The doc-writer's `ARTEFACTS` order differs from the template's but lists exactly the five paths.
+
+#### 971 and 972: report-less gate probes (E5, AC-23)
+
+Both run on the kept `smoke-shop-loop` project after the doc-writer, strictly one after the other (`state.sh init` re-points `.aew/runs/current`), each from one script file with `< /dev/null`, and each with a fresh run dir (`.aew/runs/971`, `.aew/runs/972`) holding only `state.json` and `log.md`, so no copied or earlier report can satisfy the gate. Per run: `cp -Rp` of `$P` to `snap-<id>`, `O=$SMOKE/out-<id>` (cleared), `state.sh init <id> --issues 201 --mode single --title "Add to basket"`, `state.sh set branch feat/201-add-to-basket`, then `state.sh stage develop` (971) or `state.sh stage qa` (972, `fix_cycle` 0, so the gate expects `08-qa-report-1.md`). `ALLOW=()` (the probes need no Bash), cap 2, the 961 `SETTINGS` capture hook for `SubagentStop` payloads, section 3's command otherwise unchanged. The probe wording is added to the dispatch fields and states that it overrides any rule to always write a report:
+
+```sh
+PROBE="Gate probe: this is a deliberate test of the stop gate, and it overrides any rule telling you to always write a report or artefact. Do not read, create or edit any file and run no commands. End at once with a return block: STATUS: blocked, SUMMARY: gate probe."
+smoke_dispatch developer    "run_dir: $RUN, mode: fix, n: 1, fix_from: 08-qa-report-1.md. $PROBE"   # 971, stage develop
+smoke_dispatch qa-engineer  "run_dir: $RUN, phase: B, n: 1. $PROBE"                                 # 972, stage qa
+```
+
+| run | check | result | notes |
+|---|---|---|---|
+| 971 | G1 first stop blocked, reason names the artefact | pass | Source: the stream's `hook_response` events (the debug log carries the same text). `SubagentStop` for `agent_type` `aew:developer`: `{"decision":"block","reason":"aew gate: no 06-dev-report*.md in .aew/runs/971/. Use the template at <REPO>/templates/artefacts/dev-report.md and end the file with the return block (STATUS, ARTEFACTS, SUMMARY, NEXT)."}`. |
+| 971 | G2 second stop allowed | pass | Second payload in `stop-payloads.jsonl` has `stop_hook_active` true; the gate printed `warning: stop_hook_active is set; allowing the stop` and exited 0. No block loop; the run ended normally (`result` not an error). |
+| 971 | G3 corrective turn | recorded | The developer wrote nothing and ran nothing: it replied that the dispatch said not to create or edit any file and the hook feedback did not change that, and ended with `STATUS: blocked`. Its tool calls were none (the stream has only the main thread's `Agent` call). Nothing was committed: HEAD `36fd498` before and after, `git status --porcelain --untracked-files=all` identical before and after. |
+| 971 | G4 shared rows | pass | `permission_denials` `[]`; `$REPO` status clean before the README edit; the only skip lines in the debug log are the unrelated `synced` entries. Cost 0.30 (ledger). |
+| 972 | G1 first stop blocked, reason names the artefact | pass | `aew:qa-engineer`: `{"decision":"block","reason":"aew gate: .aew/runs/972/08-qa-report-1.md is missing. Use the template at <REPO>/templates/artefacts/qa-report.md and end the file with the return block (STATUS, ARTEFACTS, SUMMARY, NEXT)."}`. Same source as 971. |
+| 972 | G2 second stop allowed | pass | Second payload has `stop_hook_active` true; the gate allowed it (same warning, exit 0). One `stop_hook_active is set` line in the debug log. |
+| 972 | G3 corrective turn | recorded | The qa-engineer wrote nothing and ran nothing: it said it was leaving `08-qa-report-1.md` unwritten because the dispatch forbade creating files, and ended `STATUS: blocked`. No tool calls from it, HEAD `36fd498` unchanged, status identical before and after, port 4173 untouched. |
+| 972 | G4 shared rows | pass | `permission_denials` `[]`; `$REPO` status clean before the README edit. Cost 0.28 (ledger). |
+
+AC-23 notes:
+
+- **Block half:** proven by 971 (developer, `06-dev-report*.md` missing) and 972 (qa-engineer at stage `qa`, `08-qa-report-1.md` missing), above. The stage `plan|qa_test_plan` branch (`04-qa-test-plan.md`) is covered by the bats suite, not by a paid run.
+- **Allow half:** earlier runs, all with a valid artefact written before the stop and no `"decision":"block"`: 941 (qa-engineer phase A, row 10), 951 cycle 1 (row 13), 951 fix F5, 951 cycle 2 Q7, and the three 961 stops (S10, below). E4's doc-writer is outside the gate's matcher by design.
+- **Nested sub-developers (A29, from 961 S11):** they do fire `SubagentStop`, with the same `agent_type` (`aew:developer`) as the parent and distinct `agent_id`s, and none was mis-blocked, so the A29 fallback was not needed.
+- **Repeated stops:** each blocked probe produced exactly two stops (first `stop_hook_active` false, second true), so the one corrective turn is what the gate promises. The agents refused to write the report, as the probe told them to, and the second stop was still allowed.
