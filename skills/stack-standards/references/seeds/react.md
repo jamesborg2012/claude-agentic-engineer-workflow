@@ -1,6 +1,6 @@
 # React (client-side, Vite) standards seed
 
-Versions covered: React 19.x (19.3), Vite 8, Vitest 5, TypeScript 6/7, ESLint 10 with eslint-plugin-react-hooks 7, Testing Library (React 16, user-event 14); context7 unavailable (researched 2026-10-24; sources: https://react.dev/versions, https://react.dev/reference/eslint-plugin-react-hooks, https://react.dev/learn/you-might-not-need-an-effect, https://vite.dev/guide/, https://vite.dev/guide/env-and-mode, https://vitest.dev/guide/, npm registry versions)
+Versions covered: React 19.x (19.3), Vite 8 (create-vite 9), Vitest 5, TypeScript 6.0 (the template pins `~6.0`; 7.0 is the current major but `typescript-eslint` supports only TypeScript below 6.1), Oxlint 1 or ESLint 10 with eslint-plugin-react-hooks 7, Testing Library (React 16, user-event 14); context7 unavailable (researched 2026-10-24; sources: https://react.dev/versions, https://react.dev/reference/eslint-plugin-react-hooks, https://react.dev/learn/you-might-not-need-an-effect, https://vite.dev/guide/, https://vite.dev/guide/env-and-mode, https://vitest.dev/guide/, https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/, create-vite@9.3.1 react-ts template, npm registry versions)
 
 Scope: plain React with TypeScript on a client build tool (React + Vite). No framework router or server rendering is assumed.
 
@@ -8,12 +8,13 @@ Scope: plain React with TypeScript on a client build tool (React + Vite). No fra
 
 - **[convention]** Scaffold with `npm create vite@latest -- --template react-ts`. Use the `react-compiler-ts` template only when adopting React Compiler deliberately.
 - **[convention]** Require Node.js 22.12 or later (Vite needs 20.19+ or 22.12+; Vitest 5 needs 22.12+). Pin it in `.nvmrc` or `engines`.
-- **[convention]** Standard scripts: `dev` (`vite`), `build` (`tsc -b && vite build`), `preview` (`vite preview`), `lint` (`eslint .`), `test` (`vitest run`), `typecheck` (`tsc -b --noEmit`).
-- **[tool]** Type-check with `strict: true` in `tsconfig.app.json`, plus `noUnusedLocals` and `noUnusedParameters` (tsc).
-- **[tool]** Lint with ESLint flat config (`eslint.config.js`), `typescript-eslint` and `reactHooks.configs.flat.recommended` (eslint-plugin-react-hooks).
-- **[tool]** Enforce the Rules of Hooks and complete dependency arrays (`react-hooks/rules-of-hooks`, `react-hooks/exhaustive-deps`).
-- **[tool]** Keep the compiler-backed rules on: `react-hooks/purity`, `react-hooks/refs`, `react-hooks/set-state-in-effect`, `react-hooks/set-state-in-render`, `react-hooks/static-components`, `react-hooks/immutability`.
-- **[tool]** Keep fast-refresh safe: modules that export components export only components (`react-refresh/only-export-components`, eslint-plugin-react-refresh, shipped in the Vite template).
+- **[convention]** Standard scripts: `dev` (`vite`), `build` (`tsc -b && vite build`), `preview` (`vite preview`), `lint` (`oxlint` or `eslint .`), `test` (`vitest run`), `typecheck` (`tsc -b`).
+- **[tool]** Type-check strictly: `strict` is the TypeScript 6.0 default (state it in `tsconfig.app.json` anyway), and the template adds `noUnusedLocals`, `noUnusedParameters` and `verbatimModuleSyntax` (tsc).
+- **[convention]** Stay on TypeScript 6.0 while `typescript-eslint` or another tool needs the compiler API. TypeScript 7 can run side by side through the `@typescript/typescript6` npm alias described in its release notes.
+- **[tool]** create-vite 9 asks for a linter. The default is Oxlint (`.oxlintrc.json` with `react/rules-of-hooks` and `react/only-export-components`). `--eslint` gives an ESLint flat config (`eslint.config.js`) with `@eslint/js`, `typescript-eslint` and `reactHooks.configs.flat.recommended`, plus `reactRefresh.configs.vite`. Keep whichever the repo uses.
+- **[tool]** Enforce the Rules of Hooks and complete dependency arrays (`react-hooks/rules-of-hooks`, `react-hooks/exhaustive-deps` in eslint-plugin-react-hooks; Oxlint's template enables only `react/rules-of-hooks`).
+- **[tool]** Keep the compiler-backed rules of the eslint-plugin-react-hooks recommended preset on: `react-hooks/purity`, `react-hooks/refs`, `react-hooks/set-state-in-effect`, `react-hooks/set-state-in-render`, `react-hooks/static-components`, `react-hooks/immutability`.
+- **[tool]** Keep fast refresh safe: modules that export components export only components (`react-refresh/only-export-components` in ESLint, `react/only-export-components` in Oxlint).
 - **[convention]** Format with Prettier (or the repo's formatter) and run it in CI as a check, not a rewrite.
 - **[convention]** Commit the lockfile. Install with `npm ci` in CI.
 
@@ -24,7 +25,7 @@ Scope: plain React with TypeScript on a client build tool (React + Vite). No fra
 - **[convention]** Import across features only through the feature's `index.ts`. Do not reach into another feature's internals.
 - **[convention]** Static assets imported by code go in `src/assets/`; files served as-is go in `public/`.
 - **[convention]** Use one path alias (`@/` to `src/`) configured in both `tsconfig.app.json` and `vite.config.ts`.
-- **[convention]** Declare environment variable types in `src/vite-env.d.ts` with no `import` statements in that file.
+- **[convention]** Type `VITE_` variables by augmenting `ImportMetaEnv` in `src/vite-env.d.ts`, with no `import` statements in that file. The template already lists `vite/client` in `types`.
 - **[convention]** Keep `main.tsx` thin: create the root, wrap providers, render `<App />` inside `<StrictMode>`.
 
 ## Naming
@@ -40,13 +41,13 @@ Scope: plain React with TypeScript on a client build tool (React + Vite). No fra
 
 ## Language idioms
 
-- **[tool]** No `any`; use `unknown` and narrow (`@typescript-eslint/no-explicit-any`).
-- **[tool]** Use `import type` for type-only imports (`@typescript-eslint/consistent-type-imports`, `verbatimModuleSyntax`).
+- **[tool]** No `any`; use `unknown` and narrow (`@typescript-eslint/no-explicit-any` in the ESLint template's `typescript-eslint` recommended preset).
+- **[tool]** Use `import type` for type-only imports (`verbatimModuleSyntax` in the template's `tsconfig.app.json` makes tsc reject a value import of a type).
 - **[convention]** Write function components as plain functions with typed props. Do not use `React.FC`.
 - **[convention]** Model state with discriminated unions rather than several booleans (`status: 'idle' | 'loading' | 'error'`).
 - **[convention]** Prefer `const`, immutable updates (spread, `map`, `filter`, `toSorted`) and early returns.
 - **[convention]** Use named exports. Reserve default exports for lazily loaded route modules.
-- **[tool]** Handle promises explicitly in handlers and effects (`@typescript-eslint/no-floating-promises`).
+- **[convention]** Handle promises explicitly in handlers and effects. Enforce it with type-aware linting (`@typescript-eslint/no-floating-promises`, or Oxlint with `oxlint-tsgolint`), which the template leaves off.
 
 ## Framework conventions
 
@@ -59,7 +60,7 @@ Scope: plain React with TypeScript on a client build tool (React + Vite). No fra
 - **[convention]** Keep state as close as possible to where it is used. Lift it only to the nearest shared parent. Keep server state out of global client stores.
 - **[convention]** Store the minimum: keep IDs not objects, and never duplicate derived data in state.
 - **[convention]** Reset component state by changing its `key`, not by an effect.
-- **[tool]** Give list items a stable, unique `key` from the data, never the array index for reorderable lists (react/jsx-key, eslint-plugin-react).
+- **[convention]** Give list items a stable, unique `key` from the data, never the array index for reorderable lists. React warns about missing keys at runtime; `react/jsx-key` lints it where the repo enables it.
 - **[tool]** Define components at module level, never inside another component (react-hooks/static-components).
 - **[convention]** Use `<form action={fn}>`, `useActionState` and `useTransition` for async form submissions instead of manual `isLoading` flags.
 - **[convention]** Do not add `useMemo`, `useCallback` or `React.memo` speculatively. Measure first, or rely on React Compiler where adopted. Existing memoisation must stay correct (react-hooks/preserve-manual-memoization).
@@ -122,14 +123,14 @@ useEffect(() => { setDraft(''); }, [userId]);
 - **[convention]** Model request state explicitly (`idle`, `loading`, `success`, `error`) and render every state, including empty.
 - **[convention]** Show users a short, actionable message; log the technical detail to monitoring, not the UI.
 - **[convention]** Throw `Error` instances (never strings) and validate external data at the boundary (for example with Zod) before it enters component state.
-- **[tool]** Remove stray `console.log` before merging (`no-console` with `warn` and `error` allowed).
+- **[convention]** Remove stray `console.log` before merging (`no-console` with `warn` and `error` allowed, where the repo enables it).
 
 ## Security
 
 - **[convention]** React escapes interpolated text. Never bypass it with `dangerouslySetInnerHTML` unless the HTML is sanitised with DOMPurify (or equivalent) immediately before use. Add a comment saying why it is safe.
 - **[convention]** Validate URLs that come from users or an API before using them in `href`, `src` or `window.location`. Allow only `https:`, `http:`, `mailto:` and `tel:`; reject `javascript:` and `data:`.
-- **[tool]** Add `rel="noopener noreferrer"` to external `target="_blank"` links (react/jsx-no-target-blank).
-- **[tool]** Forbid `eval`, `new Function` and string timers (`no-eval`, `no-implied-eval`).
+- **[convention]** Add `rel="noopener noreferrer"` to external `target="_blank"` links (`react/jsx-no-target-blank` where enabled).
+- **[convention]** Forbid `eval`, `new Function` and string timers (`no-eval`, `no-implied-eval`; Oxlint enables `no-eval` by default, ESLint's recommended preset does not).
 - **[convention]** Every `VITE_`-prefixed variable is embedded in the public bundle. Never put secrets, API keys with write access or private tokens in one. Keep secrets on a backend.
 - **[convention]** Keep `.env*.local` files out of git. Commit a `.env.example` with names only and no values.
 - **[convention]** Do not store access tokens in `localStorage`; prefer `HttpOnly`, `Secure`, `SameSite` cookies set by the server. Treat anything in browser storage as readable by injected script.
@@ -161,7 +162,7 @@ return <a href={user.website}>{label}</a>;
 
 Target: WCAG 2.2 AA.
 
-- **[tool]** Lint JSX accessibility with `eslint-plugin-jsx-a11y` (recommended or strict preset): alt text, labels, valid ARIA, interactive roles.
+- **[convention]** Lint JSX accessibility with `eslint-plugin-jsx-a11y` (recommended or strict preset) or Oxlint's `jsx-a11y` plugin: alt text, labels, valid ARIA, interactive roles. The Vite template enables neither.
 - **[convention]** Use semantic elements first (`button`, `a`, `nav`, `main`, `ul`, `label`). Add ARIA only where no native element fits.
 - **[convention]** Every form control has a programmatic label: `<label htmlFor>` with `useId()` for the ID, or an `aria-label` for icon-only controls. Never rely on `placeholder` alone.
 - **[convention]** Link errors to fields with `aria-invalid` and `aria-describedby`. Announce submit results in an `aria-live` region and move focus to the first invalid field.
@@ -186,7 +187,7 @@ Target: WCAG 2.2 AA.
 - **[convention]** Mock at the network boundary with MSW rather than mocking `fetch` or your own modules. Reset handlers after each test.
 - **[convention]** Test hooks through a component or `renderHook`. Wrap providers in a shared `renderWithProviders` helper.
 - **[convention]** Do not test implementation details (internal state, child component calls, class names). Snapshot only small, stable output.
-- **[tool]** Fail tests on unexpected console errors by spying in the setup file, and run `vitest run --coverage` in CI with thresholds the repo chooses.
+- **[convention]** Fail tests on unexpected console errors by spying in the setup file, and run `vitest run --coverage` in CI with thresholds the repo chooses.
 - **[convention]** Cover critical journeys with Playwright end-to-end tests, kept separate from unit tests (`e2e/`).
 
 Do:
