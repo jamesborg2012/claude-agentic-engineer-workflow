@@ -1,0 +1,20 @@
+{
+  "number": 12,
+  "title": "Add the widget exporter",
+  "state": "OPEN",
+  "url": "https://github.com/acme/widgets/issues/12",
+  "author": {"id": "U_1", "is_bot": false, "login": "octo", "name": "Octo Cat"},
+  "body": "placeholder, replaced by --body-file",
+  "labels": [],
+  "comments": [
+    {"id": "C_1", "author": {"login": "octo"}, "authorAssociation": "OWNER", "createdAt": "2026-10-01T09:00:00Z", "url": "https://github.com/acme/widgets/issues/12#issuecomment-1", "body": "First line\r\nSee #20 for the follow-up.\r\n"},
+    {"id": "C_2", "author": {"login": "james"}, "authorAssociation": "MEMBER", "createdAt": "2026-10-02T10:30:00Z", "url": "https://github.com/acme/widgets/issues/12#issuecomment-2", "body": "Self reference #12 and other/repo#9 do not count."}
+  ],
+  "milestone": {"number": 2, "title": "v1.0"},
+  "assignees": [{"login": "james"}],
+  "blockedBy": {"nodes": [{"number": 3, "title": "Auth", "state": "OPEN", "url": "https://github.com/acme/widgets/issues/3"}], "totalCount": 1},
+  "blocking": {"nodes": [], "totalCount": 0},
+  "parent": {"number": 1, "title": "Epic", "state": "OPEN", "url": "https://github.com/acme/widgets/issues/1"},
+  "subIssues": {"nodes": [{"number": 13, "title": "Child task", "state": "OPEN", "url": "https://github.com/acme/widgets/issues/13"}], "totalCount": 1},
+  "closedByPullRequestsReferences": [{"id": "PR_6", "number": 6, "url": "https://github.com/acme/widgets/pull/6", "repository": {"name": "widgets", "owner": {"login": "acme"}}}]
+}
