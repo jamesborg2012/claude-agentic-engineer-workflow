@@ -59,6 +59,8 @@ only ever appended to / corrected.
 - 2026-10-24 scripts/hooks brainstorm (prompt 02): greenfield — no in-repo script analog; contracts above are the inputs. Spec: `docs/superpowers/specs/2026-10-24-scripts-github-io-and-hooks.md`.
 - 2026-10-24 scripts/hooks built (prompt 02): new scripts follow `scripts/state.sh` (Usage header = `--help`, `lib_main`, `die`) and test with `tests/scripts/helpers/common.bash` + the `gh` shim; new hooks call `hook_init "$@"` from `scripts/lib/hooks.sh` and add a row to `tests/scripts/hooks-json.bats`'s fail-open matrix automatically (it globs `scripts/hooks/*.sh`). Reviews found most defects in bash 3.2 strict-mode edges and guard bypasses — table-driven tests (`fixtures/hooks/bash-cases.tsv`) were the cheapest way to pin them.
 
+- 2026-10-24 standards/planning agents brainstorm (prompt 03): analogs are `scripts/state.sh` (script pattern), `run-protocol` (internal skill frontmatter), the artefact templates (agent outputs), and `gate-subagent.sh` `valid_return_block` (return-block rule for smoke checks). Cross-prompt contracts proposed for prompt 05: agent dispatch fields (`run_dir`; spec-analyser `spec_version`/`answers`; brief-compiler `mode`; senior-engineer `mode`/`n`/`base`), the standards fingerprint header `<!-- aew:standards fingerprint="…" generated="…" -->`, and `detect-stack.sh` output `{profile,path,version,evidence}`, from which the orchestrator drops `evidence` before writing config `stacks` (`additionalProperties:false`). Spec: `docs/superpowers/specs/2026-10-24-standards-and-planning-agents.md`.
+
 ### Gotchas
 
 - Dev machine `bash` is macOS `/bin/bash` 3.2.57 (the only bash on PATH): no associative arrays, `mapfile`, `${v,,}`, `EPOCHREALTIME`, `|&`. Scripts must stay 3.2-compatible.
@@ -74,3 +76,8 @@ only ever appended to / corrected.
 - jq 1.7.1: `jq -Rs` corrupts multi-byte characters at 4096-byte read boundaries; use `--rawfile`.
 - bats: a bare `! cmd` that is not the last line of a test never fails it; use the refute helpers.
 - bats helper `elapsed_ms` discards the command's exit status and stdin; time with `bash -c '"$0" < "$1"'` and assert the real run separately.
+- Agent frontmatter `disallowedTools: Bash(gh *)` removes ALL of Bash (docs); per-command denial needs `permissions.deny`, which a plugin cannot ship. A `PreToolUse` hook can deny instead, because subagent payloads carry `agent_type`.
+- `${CLAUDE_PLUGIN_ROOT}` is substituted inline in agent and skill Markdown bodies but is NOT in the Bash tool's environment, so write literal `${CLAUDE_PLUGIN_ROOT}/…` paths in prompts.
+- `memory:` on an agent auto-enables Read/Write/Edit; a missing `skills:` entry is skipped silently (debug-log warning only), so verify preloads with `--debug-file`.
+- Headless runs in `tests/tmp/` load this repo's `CLAUDE.md` as an ancestor; exclude it with `--settings '{"claudeMdExcludes":["<abs>/CLAUDE.md"]}'`.
+- `tests/scripts/conventions.bats` runs every `scripts/*.sh` with no args expecting exit 1; a script whose args are all optional needs that rule narrowed.
