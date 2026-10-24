@@ -30,6 +30,42 @@ is_deny() {
     and (.hookSpecificOutput.permissionDecisionReason | length > 0)' > /dev/null 2>&1
 }
 
+# agent_payload <agent_type> <command> <cwd>: a Bash payload as sent from inside a subagent.
+agent_payload() {
+  bash_payload "$2" "$3" | jq -c --arg a "$1" '.agent_type = $a | .agent_id = "agent-1"'
+}
+
+@test "an aew agent may not run gh" {
+  setup_guard_project
+  git switch -q feat/x
+  mkdir -p x
+  run_hook guard-bash.sh "$(agent_payload aew:senior-engineer 'gh issue view 3' "$PROJECT")"
+  assert_success
+  is_deny
+  assert_contains "$output" "aew agent"
+  assert_contains "$output" "(only the orchestrator talks to GitHub; put the request in your NEXT line)"
+  run_hook guard-bash.sh "$(agent_payload aew:developer 'cd x && gh pr list' "$PROJECT")"
+  assert_success
+  is_deny
+  run_hook guard-bash.sh "$(agent_payload aew:developer 'git status && /opt/homebrew/bin/gh api user' "$PROJECT")"
+  assert_success
+  is_deny
+}
+
+@test "the agent gh rule spares other agents and non-gh commands" {
+  setup_guard_project
+  git switch -q feat/x
+  run_hook guard-bash.sh "$(agent_payload Explore 'gh issue view 3' "$PROJECT")"
+  assert_success
+  assert_equal "$output" ""
+  run_hook guard-bash.sh "$(agent_payload aew:developer 'git status' "$PROJECT")"
+  assert_success
+  assert_equal "$output" ""
+  run_hook guard-bash.sh "$(agent_payload aew:developer 'echo gh issue view 3' "$PROJECT")"
+  assert_success
+  assert_equal "$output" ""
+}
+
 @test "the case table agrees with the guard, row by row" {
   setup_guard_project
   local expect branch cwd command want got bad="" n=0 cur=main dir

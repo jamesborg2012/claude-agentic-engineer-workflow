@@ -4,8 +4,8 @@
 # PreToolUse hook for the Bash tool (DESIGN section 11). Denies, with a reason,
 # commands aew must never run: pushes to the default branch, force pushes,
 # `gh pr merge`, `gh repo delete`, `git reset --hard` on the default branch,
-# `git clean -fdx`, and recursive `rm` outside the project (or of a `.git`
-# path). Active only in repos with .aew/config.json; every failure allows.
+# `git clean -fdx`, recursive `rm` outside the project (or of a `.git` path),
+# and any `gh` command from an aew agent. Active only in repos with .aew/config.json; every failure allows.
 # A deny is `hookSpecificOutput.permissionDecision: "deny"` on exit 0.
 #
 # Rules, in the order the parser applies them:
@@ -27,7 +27,9 @@
 # - The branch used by those rules is the target of the latest `git switch` or
 #   `git checkout` in the same command (the new name for -c/-C/-b/-B), else the
 #   branch checked out at hook time.
-# - gh: `pr merge` and `repo delete` are denied.
+# - gh: inside an aew agent (the payload's agent_type starts with aew:) every
+#   gh command is denied, because only the orchestrator talks to GitHub.
+#   Otherwise `pr merge` and `repo delete` are denied.
 # - rm: a recursive rm is denied when a target has a .git path component
 #   or a dot-glob matching .git (.*, .g*) ("rm of git internals"), holds an
 #   unexpanded variable or substitution, or is not strictly inside the repo's
@@ -40,6 +42,9 @@
 # does not resolve `git -C "$dir"` or `gh api` calls. Quoted text containing
 # ; | & or && is split too, and heredoc lines are scanned as commands, so
 # false positives are possible.
+# The agent gh rule matches the gh command itself, so an agent calling the
+# plugin's scripts/gh-*.sh wrappers by path is not caught (agent prompts
+# never name them).
 
 # shellcheck source=../lib/common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
@@ -55,13 +60,14 @@ AN=0
 CANON=""
 CWD_UNKNOWN=0
 ecwd=""
+AGENT_TYPE=""
 
 # An unbound variable or a syntax error fails open silently (bash 3.2), so
 # every array expansion that can be empty is written ${a[@]+"${a[@]}"} and every
 # function ends with an explicit return 0.
 
 deny() {
-  local r="aew guard: blocked $1 in \"$CURSEG\". aew never does this; if it is needed, James runs it himself."
+  local r="aew guard: blocked $1 in \"$CURSEG\"${2-. aew never does this; if it is needed, James runs it himself.}"
   jq -n --arg r "$r" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}' || exit 0
   exit 0
 }
@@ -287,6 +293,9 @@ guard_rm() {
 
 guard_gh() {
   local j=0 t p1="" p2=""
+  case "$AGENT_TYPE" in
+    aew:*) deny "gh from an aew agent" " (only the orchestrator talks to GitHub; put the request in your NEXT line)" ;;
+  esac
   while [ "$j" -lt "$AN" ]; do
     t=${A[$j]}
     case "$t" in
@@ -651,6 +660,7 @@ hook_init "$@"
 
 cmd=$(hook_field .tool_input.command) || exit 0
 if [ -z "$cmd" ]; then exit 0; fi
+AGENT_TYPE=$(hook_field .agent_type) || AGENT_TYPE=""
 
 ecwd=$(cd "$HOOK_CWD" 2> /dev/null && pwd -P) || ecwd=$HOOK_ROOT
 

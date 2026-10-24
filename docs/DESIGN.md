@@ -505,7 +505,8 @@ Matchers: `Bash`; `Edit|Write`; one `SubagentStop` entry with `^aew:(developer|q
   - `gh repo delete`;
   - `git reset --hard` while on the default branch;
   - `rm -rf` on the repo root, home or system paths, or anything outside the repo;
-  - `git clean -fdx`.
+  - `git clean -fdx`;
+  - any `gh` command from an aew agent (the hook payload's `agent_type` starts with `aew:`), because agents never touch GitHub (§2.4).
 
   The guard is a heuristic (it does not unwrap `bash -c` or `eval`); its limits are documented in the script header.
 - **`PreToolUse` on Edit and Write (guard).** Blocks writes to `.env*`, known secret files and `.git/`. It may not cover `MultiEdit` or `NotebookEdit` (undocumented, see section 3).
