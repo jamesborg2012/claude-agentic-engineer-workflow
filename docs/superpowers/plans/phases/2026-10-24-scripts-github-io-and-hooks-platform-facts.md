@@ -37,6 +37,13 @@ C = https://code.claude.com/docs/en/plugins/components. "Not documented" = not f
    line. So a fail-open warning on exit 0 is visible only in debug logs.
 8. **Timeouts and parallelism (H).** Default `command` timeout 600 s (set an explicit small `timeout`).
    Matching hooks for an event run in parallel; ordering not documented.
+9. **Timed-out hooks (H, "Timeouts"; verified during implementation).** Claude Code cancels a `command`
+   hook that reaches its `timeout` and discards its output, so on most events it renders no decision.
+   PreToolUse: "a timed-out `command` … hook doesn't block the tool call, except for hooks whose failure
+   blocks the action" (opt-in `"onFailure": "block"`, which aew does not set). `onFailure` has no effect on
+   Stop/SubagentStop, so a timed-out gate never blocks. SessionStart-specific behaviour not documented beyond
+   the discard-output rule (a timed-out hint is simply missing). This confirms CTO condition D-1(b): a 5 s
+   timeout is non-blocking.
 
 Implications for the spec's assumptions: A4 (gate accepts both `aew:developer` and `developer`) is
 harmless but the documented form is `aew:developer`; the hooks.json matcher should be anchored regex.
