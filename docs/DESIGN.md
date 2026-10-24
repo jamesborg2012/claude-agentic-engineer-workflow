@@ -206,6 +206,8 @@ The run id is the issue number, or `m-<milestone-number>` for milestone runs.
 
 Exceeding a cycle limit, or an agent returning `failed` twice, sets `blocked`. The orchestrator then posts a report comment, sets the `aew:blocked` label and stops.
 
+Exception (§8.6): qa-engineer phase B returns `failed` when its report is complete but tests or serious or critical accessibility checks failed. That `failed` means "QA failures, report complete": the orchestrator routes it by triage class under `limits.max_fix_cycles` and does not retry it. It counts as such only when `08-qa-report-<n>.md` exists, ends with a valid return block whose STATUS is `failed`, and the triage table at the top of its `## Failures` section has at least one `TC-<n>` row. Anything else is an ordinary agent `failed`: retry once, then `blocked`.
+
 ### 7.4 Labels
 
 - **Stage labels** (exactly one at a time): `aew:analysing`, `aew:awaiting-input`, `aew:planning`, `aew:awaiting-approval`, `aew:building`, `aew:testing`, `aew:documenting`, `aew:ready-for-review`, `aew:blocked`.
@@ -385,12 +387,14 @@ No code beyond short illustrative signatures.
 - accessibility checks;
 - manual-only cases, each with a reason.
 
+It lists every project file it opened in the plan's `## Files read` section.
+
 **Phase B: execute.** Runs after the review approves.
 
 - Implements the automated acceptance tests in the project's frameworks. UI tests are `@playwright/test` specs in `ui.e2e_dir`.
 - Starts the app per config and waits for `ready_check`.
 - Runs everything, and captures screenshots at key states for each viewport.
-- Runs an axe scan on every changed page. Serious or critical violations fail; moderate ones are reported.
+- Runs an axe scan on every changed page. Serious or critical violations fail; moderate ones are reported. `ui.axe_standard` names a conformance target: a WCAG level expands to the cumulative axe tags up to and including it (`wcag22aa` → `wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa`); any other value is one tag.
 - Does exploratory checks of the changed UI with Playwright MCP.
 - Writes `08-qa-report-<n>.md` with:
   - a results table (TC → AC → pass/fail);
@@ -398,6 +402,8 @@ No code beyond short illustrative signatures.
   - a screenshot index;
   - accessibility results;
   - failures, each with a triage class.
+- Returns `ok` (all pass, UI rule met), `failed` (report complete, failures in its triage table; routed per §7.3) or `blocked` (couldn't execute).
+- Commits its specs, Playwright setup and evidence at the end of every phase-B cycle (`test(e2e): … (#n)`).
 
 **Triage classes and routing:**
 
@@ -418,6 +424,9 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
 - Format: JPEG at quality 80.
 - Only the final passing cycle is kept; earlier cycles are overwritten. This limits repo growth, because squash merges carry the evidence into main.
 - Committed in the PR branch.
+- Specs write screenshots only when `AEW_EVIDENCE_DIR` is set, so other test runs never churn evidence.
+- Each cycle deletes screenshots it didn't produce, and `report.md` is written only for a passing cycle.
+- If the last allowed fix cycle fails, the committed screenshots are a failing cycle's and there is no `report.md`. The report says the evidence is not final, and the orchestrator must not present it as final.
 
 ### 8.7 doc-writer (Sonnet, medium)
 
