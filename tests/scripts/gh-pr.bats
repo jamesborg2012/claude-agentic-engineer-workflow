@@ -113,6 +113,14 @@ captured_body() { gh_captured_file 'pr create'; }
   [ "$(grep -c $'\r' "$(captured_body)")" -eq 0 ]
 }
 
+@test "only placeholder lines are removed; prose mentioning #<issue> is kept" {
+  printf 'The template ends with `Closes #<issue>`.\n  closes: #<issue>  \nFixes #<issue>\n' > "$BATS_TEST_TMPDIR/p.md"
+  run --separate-stderr "$PR" create 12 "$BATS_TEST_TMPDIR/p.md"
+  assert_success
+  printf 'The template ends with `Closes #<issue>`.\nCloses #12\n' > "$BATS_TEST_TMPDIR/expected"
+  cmp "$BATS_TEST_TMPDIR/expected" "$(captured_body)"
+}
+
 @test "gh failure: non-zero, empty stdout, gh message on stderr" {
   gh_mock_respond pr-create - 1 <<< "a pull request for branch feat/12-add-widget already exists"
   run --separate-stderr "$PR" create 12 "$TEMPLATE"

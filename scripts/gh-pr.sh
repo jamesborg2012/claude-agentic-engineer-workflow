@@ -67,7 +67,8 @@ EOF2
 }
 
 # normalise_body <body-file> <issues>: writes the fixed body to a new temp file (TMP).
-# Removes "#<issue>" placeholder lines, then appends "Closes #n" for each issue
+# Removes placeholder lines (a closing keyword plus "#<issue>" and nothing else;
+# prose that merely mentions "#<issue>" is kept), then appends "Closes #n" for each issue
 # not already covered by a closing keyword, in the body's line ending.
 normalise_body() {
   TMP=$(mktemp "${TMPDIR:-/tmp}/aew-pr.XXXXXX") || die "cannot create a temp file"
@@ -78,7 +79,7 @@ normalise_body() {
       n = split(issues, ids, " ")
       for (i = 1; i <= NR; i++) {
         l = raw[i]; sub(/\r$/, "", l)
-        if (index(l, "#<issue>") > 0) continue
+        if (tolower(l) ~ /^[ \t]*(close[sd]?|fix(es|ed)?|resolve[sd]?)[ \t]*:?[ \t]*#<issue>[ \t]*$/) continue
         kept[++k] = l
       }
       for (i = 1; i <= k; i++) printf "%s%s", kept[i], eol
