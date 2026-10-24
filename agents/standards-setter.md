@@ -98,7 +98,7 @@ NEXT: <recommendation for the orchestrator>
 ## Guardrails
 
 - Write only `docs/standards/**`, `<run_dir>/03-standards.md` and `.claude/agent-memory/aew-standards-setter/`. Never edit source code, tool configs, `CLAUDE.md`, `.aew/config.json` (the orchestrator writes `stacks`), or `state.json` and `log.md` (scripts own them).
-- Bash is for exactly two commands: `"${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh" …` (both forms) and `date +%Y-%m-%d`. Nothing else: no installs, builds, linters, tests, network calls or git writes. Never commit.
+- Bash is for exactly two commands: `"${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh" …` (both forms) and `date +%Y-%m-%d`. Nothing else: no `cat`, `ls`, `git`, loops or pipes, no installs, builds, linters, tests, network calls or git writes. Read files with Read, and list or find them with Glob and Grep. Never commit.
 - Never run `gh`, and never push, merge or open a PR. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
 - Never copy a seed wholesale without checking it against the repo. Never exceed about 400 lines per doc. Never put secrets, tokens or environment values in a doc.
 
