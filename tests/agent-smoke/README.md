@@ -513,6 +513,9 @@ not start the run (record its checks as `open`). Apply the same test before any 
 |---|---|---|---|---|
 | 940 Playwright MCP probe (haiku) | 940 | 0.01 | 0.01 | no |
 | 941 qa-engineer phase A blindness (cap 5; 0.01 + 5 = 5.01, under 60) | 941 | 0.37 | 0.38 | no |
+| 951 cycle 1 attempt 1 (cap 8; 0.38 + 8 = 8.38, under 60) | 951 | 0.61 | 0.99 | no |
+| 951 cycle 1 attempt 2, after fix 719f13e (cap 8; 0.99 + 8 = 8.99, under 60) | 951 | 0.57 | 1.56 | no |
+| 941 re-run after fix 719f13e (cap 5; 1.56 + 5 = 6.56, under 60) | 941 | 0.35 | 1.91 | no |
 
 ### 8.2 Playwright MCP tool names (AC-2, probe 940)
 
@@ -699,7 +702,7 @@ The `AEW_EVIDENCE_DIR=` env-prefixed rules are **unverified**: Claude Code strip
 matching, so the prefix may need its own pattern. There are two because a trailing ` *` matches the bare command only
 when it is the rule's only wildcard, and the §8 evidence run is the bare `commands.test_e2e` (`npx playwright test`).
 `nohup` is a wrapper Claude Code strips before matching, so `Bash(sh -c *)` is the documented match for the app start
-(the `&` is a separator and the `app.log` redirect is checked as a write inside the project). A denial of the evidence run or of the `kill` stop in C6 is a
+(the app is started by one Bash call with `run_in_background: true` and no trailing `&`: a command with the `&` operator needs interactive approval and is refused headless, run 951 attempt 1; the `app.log` redirect is checked as a write inside the project). A denial of the evidence run or of the `kill` stop in C6 is a
 harness fault: add the narrowest matching rule and record the denied command verbatim in the Notes. Dispatch fields:
 
 ```sh
@@ -749,16 +752,25 @@ rows below.
 | 941 | 8 blindness: Bash and browser | pass | Two Bash calls: `find <P>/tests <P>/docs -type f` and `ls <P>`. Neither matches the non-ls/find or forbidden-word greps. No `mcp__plugin_aew_playwright__` tool_use (tools used: Bash 2, Read 6, Write 1). |
 | 941 | 9 `## Files read` equals the successful reads | pass | Declared list equals `reads.ok` (diff empty). |
 | 941 | 10 shared rows (preload, denials, gate, status, cost) | pass | Preloaded skill lines for `aew:run-protocol`, `aew:ui-qa` and `superpowers:verification-before-completion`; no skip/missing line for them (the only skip lines are unrelated `synced` dir entries). `permission_denials` `[]`. SubagentStop hook: exit 0, outcome success, no `"decision":"block"`. `git -C $REPO status --porcelain` shows only this README; `$P` status clean (apart from `.claude/`). Cost 0.37 (ledger row 941). |
-| 951 c1 | 1 `failed`, report complete, headings, SUMMARY | pending | |
-| 951 c1 | 2 basket bug is `impl_bug` | pending | |
-| 951 c1 | 3 accessibility defect, email TC untriaged | pending | |
-| 951 c1 | 4 triage table in the final message | pending | |
-| 951 c1 | 5 `manual-tests.md` format and TC set | pending | |
-| 951 c1 | 6 screenshots (names, JPEG) | pending | |
-| 951 c1 | 7 specs (titles, no skip/only, evidence env, axe tags) | pending | |
-| 951 c1 | 8 no `report.md` yet | pending | |
-| 951 c1 | 9 QA commit (A14) | pending | |
-| 951 c1 | 10 app lifecycle (port freed) | pending | |
-| 951 c1 | 11 exploratory MCP checks | pending | |
-| 951 c1 | 12 commands recorded | pending | |
-| 951 c1 | 13 shared rows (preload, denials, gate 08-qa-report-1, status, cost) | pending | |
+| 951 c1 | 1 `failed`, report complete, headings, SUMMARY | pass | `valid_return_block` prints `failed` for `final.txt` and `08-qa-report-1.md`; `qa_failures_complete` exits 0; the `^## ` headings equal the template's; SUMMARY starts `1/4 automated TCs pass`. |
+| 951 c1 | 2 basket bug is `impl_bug` | pass | `tc_for AC-1` is TC-1; its triage row is `impl_bug`. |
+| 951 c1 | 3 accessibility defect, email TC untriaged | pass | AC-2 maps to TC-2 and TC-3, both `impl_bug`. `## Accessibility` row `/`: Critical 2, Serious 0 (`button-name`, one node per viewport); `button-name` appears 5 times; TC-5 (AC-4) has no triage row. |
+| 951 c1 | 4 triage table in the final message | pass (after fix) | Attempt 1 failed: the final message reworded and extended the Summary cells. Agent fault, fixed in 719f13e (copy rows character for character). Attempt 2: header hit; rows identical to the report's. |
+| 951 c1 | 5 `manual-tests.md` format and TC set | pass | Line 1 `## Manual testing required`, no `<!--`, one line matching the TC-5 pattern; TC set equals the plan's Manual-only set (TC-5). |
+| 951 c1 | 6 screenshots (names, JPEG) | pass | Exactly TC-{1..4}-{desktop,mobile}.jpg (diff against `screens.expected` empty); all start `ffd8ff`. |
+| 951 c1 | 7 specs (titles, no skip/only, evidence env, axe tags) | pass | `tests/e2e/201-add-to-basket.spec.ts` and `aew.ts`; every `test(` is titled `TC-<n>: `; no only/skip/fixme/`waitForTimeout`; `AEW_EVIDENCE_DIR` in `aew.ts`; all five cumulative tags present. |
+| 951 c1 | 8 no `report.md` yet | pass | `docs/qa/201/report.md` absent. |
+| 951 c1 | 9 QA commit (A14) | pass | One commit `test(e2e): QA specs and evidence for add to basket (#201)`; no file outside the allowed set; nothing under `site/`; `$P` status clean apart from `.claude/`. |
+| 951 c1 | 10 app lifecycle (port freed) | pass | Reuse `curl` (exit 7), start, ready `curl --retry`, then `lsof -ti`, `kill <pid>`, `lsof -ti` (empty); port 4173 free after the run. Decision 9: the app started with `run_in_background: true` survived across tool calls (ready check, tests and MCP all reached it). |
+| 951 c1 | 11 exploratory MCP checks | pass | Subagent used `browser_navigate` (2), `browser_resize` (2), `browser_console_messages`, `browser_snapshot`, `browser_press_key`, `browser_close`; the report has the `**Exploratory checks (Playwright MCP)**` label. Server `plugin:aew:playwright connected`. |
+| 951 c1 | 12 commands recorded | pass | `## Commands and output` has `node --test` (1 test, 0 fail) and the `npx playwright test` evidence run (6 failed, 2 passed), each with an excerpt. |
+| 951 c1 | 13 shared rows (preload, denials, gate 08-qa-report-1, status, cost) | pass (after fix) | Preload: `aew:run-protocol`, `aew:ui-qa`, `superpowers:verification-before-completion`, no skip/missing lines. `permission_denials` `[]` on attempt 2. SubagentStop: exit 0, success, no block. Return block valid; template headings match. `git -C $REPO status` shows README only. Cost 0.57 (attempt 2). Attempt 1 failed here: two denials of the `nohup ... &` form (`&` needs interactive approval headless; the agent recovered with `run_in_background`). Agent/skill fault, fixed in 719f13e (ui-qa section 3 and qa-engineer Guardrails: no trailing `&`). |
+| 941 | re-run after fix 719f13e | pass | Checks 1 to 10 re-run: `ok` return blocks, headings, AC coverage, manual-only AC-4, blindness allowlist and Bash (one `find`), Files read equal, preload, `[]` denials, gate success. Cost 0.35. |
+
+Notes for run 951 cycle 1 (kept state for Phase E):
+
+- Project `$SMOKE/smoke-shop-loop` (stage `qa`, `fix_cycle` 0, branch `feat/201-add-to-basket`, QA's cycle-1 commit); outputs in `$SMOKE/out-951-qa1` (`screens.cycle1`, `head.cycle1` = `828ba57e6359d6d5eef76d9d26578a4d58927f40`).
+- TCs per AC: AC-1 TC-1; AC-2 TC-2, TC-3; AC-4 TC-5 (manual); TC-4 passes.
+- Triage rows: TC-1 AC-1 `impl_bug`; TC-2 AC-2 `impl_bug`; TC-3 AC-2 `impl_bug`.
+- `screens.cycle1` mtimes (epoch seconds): TC-1 1792875850, TC-2 1792875855, TC-3 and TC-4 1792875856, desktop and mobile alike.
+- Attempt 1 final message came from a run that lost nothing else: its `out-951-qa1` is not kept (attempt 2 overwrote it).
