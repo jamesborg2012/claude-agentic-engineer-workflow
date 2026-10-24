@@ -88,7 +88,7 @@ stateDiagram-v2
     done --> [*]
 
     state "any agent stage" as any_stage
-    any_stage --> any_stage: agent failed once, retry the dispatch
+    any_stage --> any_stage: agent failed once, retry the dispatch (qa-engineer phase B report excepted, see Failure paths)
     any_stage --> blocked: agent failed twice
     any_stage --> blocked: agent blocked (developer excepted, see above)
 
@@ -113,13 +113,25 @@ on the delta, and the stages after it run again.
 
 | Trigger | Result |
 |---|---|
-| Agent returns `failed` | Retry the same dispatch once. A second `failed` sets `blocked`. |
+| Agent returns `failed` (any case other than the next row) | Retry the same dispatch once. A second `failed` sets `blocked`. |
+| qa-engineer phase B returns `failed` with a complete report | "QA failures, report complete": route by triage class (the `qa` state above), counted against `max_fix_cycles`. Not retried. |
 | Agent returns `blocked` | The orchestrator routes it: developer → senior-engineer (plan revision); anything else → `blocked`. |
 | `changes_required` once `review_cycle` = `max_review_cycles` | `blocked` |
 | QA failures once `fix_cycle` = `max_fix_cycles` | `blocked` |
 | UI brief with an automatable UI test still failing | Not done. It counts as a QA failure. |
 | James chooses stop at a gate | `failed` (terminal) |
 | SubagentStop gate hook blocks (artefact or return block missing) | The gate blocks once, and its reason becomes the agent's next instruction. If the agent stops again (`stop_hook_active` true), the gate allows the stop. The return is then checked as usual: a missing or invalid artefact or return block counts as `failed` (retry once, then `blocked`). |
+
+qa-engineer phase B returns `failed` when its report is complete but tests or serious or critical accessibility checks failed. That `failed` means "QA failures, report complete": the orchestrator routes it by triage class under `limits.max_fix_cycles` and does not retry it. It counts as such only when `08-qa-report-<n>.md` exists, ends with a valid return block whose STATUS is `failed`, and the triage table at the top of its `## Failures` section has at least one `TC-<n>` row. Anything else is an ordinary agent `failed`: retry once, then `blocked`.
+
+Mechanical test (the orchestrator implements it in prompt 05; the smoke checks use it), with `valid_return_block` as defined in `scripts/hooks/gate-subagent.sh`:
+
+```sh
+qa_failures_complete() {   # qa_failures_complete <report>; exit 0 = QA failures, report complete
+  [ -f "$1" ] && [ "$(valid_return_block "$1")" = failed ] &&
+    awk '/^## /{f=($0=="## Failures")} f && /^\|[[:space:]]*TC-[0-9]+[[:space:]]*\|/{n++} END{exit !(n>0)}' "$1"
+}
+```
 
 On `blocked`, the orchestrator posts a report comment with `gh-issue.sh comment`, sets
 `aew:blocked` and stops. `resume` re-checks the branch and working tree, then continues from the

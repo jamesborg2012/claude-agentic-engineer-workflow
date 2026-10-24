@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The four planning agents: `spec-analyser`, `brief-compiler`, `standards-setter` and `senior-engineer` (plan, review and triage modes), plus issue and brief fixtures.
 - Headless agent smoke harness and recorded results in `tests/agent-smoke/README.md`.
 - Agents that hold Bash (`standards-setter`, `senior-engineer`) search with `find` and `grep`; `Glob` and `Grep` are not in the default tool set on macOS and Linux.
+- Pinned Playwright MCP server (`.mcp.json`, `@playwright/mcp@0.0.83`) bundled for QA.
+- Skills `ui-qa` (Playwright, axe and QA evidence) and `claude-md-curation`.
+- Agents `developer` (full, package and fix modes; manual worktree fan-out with cherry-pick integration), `qa-engineer` (blind phase A, phase B with Playwright, axe and MCP exploration, triage) and `doc-writer`.
+- Static-shop fixture with planted defects, with `run/` and `run-fanout/` run directories.
+- Prompt-04 smoke harness and recorded results in `tests/agent-smoke/README.md` §8.
 
 ### Changed
 
@@ -33,3 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/hooks/guard-bash.sh` now denies any `gh` command from an `aew:*` agent (agents never touch GitHub).
 - `tests/scripts/conventions.bats`: the no-argument rule is narrowed so scripts whose arguments are all optional (`detect-stack.sh`) are exempt.
 - `docs/DESIGN.md` §3 records the platform facts verified in the smoke runs (skill preloading, `agent_type`, memory directory, path variables, search tools).
+- QA templates: `04-qa-test-plan.md` gains a `## Files read` section and `08-qa-report-<n>.md` a triage table.
+- run-protocol: a QA phase B `failed` with a complete report is routed by triage class instead of retried (`state-machine.md`, DESIGN §7.3).
+- `ui.axe_standard` is described as a cumulative conformance target (`wcag22aa` expands to WCAG 2.0 A/AA, 2.1 A/AA and 2.2 AA).
+- `docs/DESIGN.md` §3 adds the Playwright MCP tool names, worktree isolation and nested `SubagentStop`, the `SubagentStop` payload and Bash permission-rule facts.

@@ -1,0 +1,30 @@
+{
+  "project": "static-shop",
+  "default_branch": "main",
+  "stacks": [{ "profile": "web", "path": ".", "version": "es2022" }],
+  "commands": {
+    "install": "npm install",
+    "test_unit": "node --test",
+    "test_e2e": "npx playwright test"
+  },
+  "app": {
+    "base_url": "http://localhost:4173",
+    "start_command": "npx serve -l 4173 site",
+    "ready_check": "http://localhost:4173",
+    "env_type": "native",
+    "test_accounts": []
+  },
+  "ui": {
+    "viewports": [
+      { "name": "desktop", "width": 1440, "height": 900 },
+      { "name": "mobile", "width": 390, "height": 844 }
+    ],
+    "axe": true,
+    "axe_standard": "wcag22aa",
+    "e2e_dir": "tests/e2e"
+  },
+  "evidence": { "dir": "docs/qa", "format": "jpeg", "quality": 80 },
+  "limits": { "max_fix_cycles": 3, "max_review_cycles": 2, "max_parallel_developers": 4 },
+  "claude_md": { "max_lines": 40 },
+  "retro": { "repo": "jamesborg2012/claude-agentic-engineer-workflow", "label": "retro" }
+}

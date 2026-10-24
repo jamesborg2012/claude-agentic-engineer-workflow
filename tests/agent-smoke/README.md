@@ -495,3 +495,471 @@ are logged here, newest last.
 - Run 921's `$P` (`$SMOKE/smoke-standards-setter-newsletter`) is committed (`standards`) and untouched for E4 and E5; attempt 1's stream is kept as `$SMOKE/out-921-attempt1`.
 - E4 agent and DESIGN fault (prompt fix `72497e2`): the docs (tools-reference, sub-agents, permissions, fetched 2026-10-24) say `Glob` and `Grep` are absent by default on macOS/Linux/WSL, that a subagent gets them back only if it lists them **and leaves out `Bash`**, and that read-only Bash commands (`ls`, `cat`, `head`, `tail`, `grep`, `find`, `wc`, `diff`, `stat`, read-only `git`) run without a prompt in every mode (`find` with `-exec`, `-delete` or `-fprint` prompts). So `dcac6f4` was wrong to tell standards-setter to use Glob/Grep. Now standards-setter and senior-engineer (both have Bash) drop `Glob, Grep` from `tools:` and use read-only `find`, `grep`, `ls`, `head`, `wc` (Read for contents); spec-analyser and brief-compiler (no Bash) keep `Glob, Grep`. DESIGN section 3 has a new "Search tools" bullet in the same commit. Run 921 re-run on a fresh `$P` and passed all rows; it is the only passing case of standards-setter, so no further re-runs.
 - E4/E5 ran sequentially in the same `$P`; run 931 seeded `03-standards.md` from 922 and did not seed `spec-final.md` (optional context for plan mode). The headless `ALLOW` lines needed no change for `find`/`grep`/`head`/`wc` because they are auto-allowed read-only commands.
+
+## 8. Build agents (prompt 04)
+
+Smoke runs for `aew:developer`, `aew:qa-engineer` and `aew:doc-writer`, and the Playwright MCP probe they rely on.
+The conventions of sections 1 to 4 apply (`$SMOKE` outside the repo, `--settings` `enabledPlugins` disabling only
+`dev-workflow` and `figma`, `--debug-file`, the after-run `git -C "$REPO" status --porcelain`).
+
+### 8.1 Spend ledger (prompt 04, stop at $60)
+
+Separate from the prompt-03 ledger in section 1. Take each cost from the stream's final `result` event. Caps
+(Assumption 27): $5 per run, $8 for QA phase B, $10 for the fan-out run, $2 for gate checks, one raise to exactly 2x
+per run, **stop at $60 total**. Before each paid run add its cap to the total below; if the sum would exceed $60, do
+not start the run (record its checks as `open`). Apply the same test before any 2x raise.
+
+| run | id | cost (USD) | running total | cap raised? |
+|---|---|---|---|---|
+| 940 Playwright MCP probe (haiku) | 940 | 0.01 | 0.01 | no |
+| 941 qa-engineer phase A blindness (cap 5; 0.01 + 5 = 5.01, under 60) | 941 | 0.37 | 0.38 | no |
+| 951 cycle 1 attempt 1 (cap 8; 0.38 + 8 = 8.38, under 60) | 951 | 0.61 | 0.99 | no |
+| 951 cycle 1 attempt 2, after fix 719f13e (cap 8; 0.99 + 8 = 8.99, under 60) | 951 | 0.57 | 1.56 | no |
+| 941 re-run after fix 719f13e (cap 5; 1.56 + 5 = 6.56, under 60) | 941 | 0.35 | 1.91 | no |
+| 961 fan-out attempt 1 (cap 10; 1.91 + 10 = 11.91, under 60) | 961 | 0.65 | 2.56 | no |
+| 961 fan-out attempt 2, after the git -C fix (cap 10; 2.56 + 10 = 12.56, under 60) | 961 | 0.80 | 3.36 | no |
+| 961 fan-out attempt 3, after the main-checkout git fix (cap 10; 3.36 + 10 = 13.36, under 60) | 961 | 0.79 | 4.15 | no |
+| 951 developer fix, cycle 1 (cap 5; 4.15 + 5 = 9.15, under 60) | 951 | 0.47 | 4.62 | no |
+| 951 QA cycle 2 attempt 1 (cap 8; 4.62 + 8 = 12.62, under 60) | 951 | 0.54 | 5.16 | no |
+| 951 QA cycle 2 attempt 2, after fix d4b2c86 (cap 8; 5.16 + 8 = 13.16, under 60) | 951 | 0.36 | 5.52 | no |
+| 941 re-run after fix d4b2c86 (cap 5; 5.52 + 5 = 10.52, under 60) | 941 | 0.34 | 5.86 | no |
+| 951 doc-writer (cap 5; 5.86 + 5 = 10.86, under 60) | 951 | 0.44 | 6.30 | no |
+| 951 doc-writer re-run 1, after fix f2df416 (cap 5; 6.30 + 5 = 11.30, under 60) | 951 | 0.33 | 6.63 | no |
+| 951 doc-writer re-run 2, after fix 48cb638 (cap 5; 6.63 + 5 = 11.63, under 60) | 951 | 0.31 | 6.94 | no |
+| 971 report-less developer gate probe (cap 2; 6.94 + 2 = 8.94, under 60) | 971 | 0.30 | 7.24 | no |
+| 972 report-less qa-engineer gate probe (cap 2; 7.24 + 2 = 9.24, under 60) | 972 | 0.28 | 7.52 | no |
+
+### 8.2 Playwright MCP tool names (AC-2, probe 940)
+
+One Haiku session, `--plugin-dir "$REPO"`, in an empty git project under `$SMOKE`. It records the init tool list
+and drives the bundled server once, so it also settles the browser, files written into the cwd and the focus marker.
+Claude Code 2.1.308. Cap `--max-budget-usd 1`.
+
+```sh
+setopt interactivecomments 2>/dev/null || true
+REPO=$(git rev-parse --show-toplevel)
+SMOKE="${TMPDIR:-/tmp}"; SMOKE="${SMOKE%/}/aew-smoke"; mkdir -p "$SMOKE"
+PROBE="$SMOKE/probe-playwright"; O="$SMOKE/out-940"
+rm -rf "$PROBE" "$O" && mkdir -p "$PROBE" "$O"
+git -C "$PROBE" init -q && git -C "$PROBE" commit -q --allow-empty -m probe
+claude --version > "$O/claude-version.txt"
+URL='data:text/html,<title>aew-probe</title><button>One</button><button>Two</button>'
+T=mcp__plugin_aew_playwright__browser
+cd "$PROBE" && claude --plugin-dir "$REPO" -p "Use only the Playwright MCP tools, in this order: 1) browser_navigate to $URL 2) browser_press_key Tab 3) browser_snapshot 4) browser_console_messages with level error 5) browser_close. Then print four lines: TITLE: the page title; FOCUS: the snapshot line for the button that has focus, verbatim; CONSOLE: the console errors, or none; ERRORS: the exact text of any failed tool call, or none." \
+  --model haiku --output-format stream-json --verbose --max-budget-usd 1 --debug-file "$O/debug.log" \
+  --settings '{"enabledPlugins":{"dev-workflow@jamesborg":false,"figma@claude-plugins-official":false}}' \
+  --allowedTools "${T}_navigate" "${T}_press_key" "${T}_snapshot" "${T}_console_messages" "${T}_close" \
+  > "$O/stream.jsonl"
+cd "$REPO"
+```
+
+Checks:
+
+```sh
+S='select(.type=="system" and .subtype=="init")'
+jq -r "$S | .mcp_servers[] | select(.name|test(\"playwright\")) | \"\(.name) \(.status)\"" "$O/stream.jsonl"
+jq -r "$S | .tools[] | select(startswith(\"mcp__plugin_aew_playwright__\"))" "$O/stream.jsonl" | LC_ALL=C sort > "$O/playwright-tools.txt"
+wc -l < "$O/playwright-tools.txt"
+for t in navigate snapshot click type press_key select_option hover resize console_messages wait_for close; do
+  grep -qx "mcp__plugin_aew_playwright__browser_$t" "$O/playwright-tools.txt" || echo "MISSING browser_$t"
+done
+jq -r 'select(.type=="user") | .message.content[]? | select(.type=="tool_result") | "\(.is_error // false) \(.content|tostring|.[0:160])"' "$O/stream.jsonl"
+jq -r 'select(.type=="result") | .result' "$O/stream.jsonl"
+jq -r 'select(.type=="result") | .total_cost_usd' "$O/stream.jsonl"
+git -C "$PROBE" status --porcelain --untracked-files=all    # anything here = the server writes into the project cwd
+git -C "$REPO" status --porcelain                           # only this task's edits
+grep -i 'playwright' "$O/debug.log" | head -20
+```
+
+| check | result | notes |
+|---|---|---|
+| Server entry and status | pass | `plugin:aew:playwright connected` (init `mcp_servers`); debug: connected over stdio in 1309 ms, server version `1.64.0-alpha-1790635538000` (the bundled playwright). |
+| Tool count | pass | 25 `mcp__plugin_aew_playwright__*` names in init (expected at least 11). |
+| The eleven expected names present | pass | No `MISSING` line; no renamed tool (fallback 5e not needed). |
+| Tool results | pass | Five results, all `is_error` false. The first is a `tool_reference` result (the tools were deferred and loaded by ToolSearch before the first call). |
+| Title, focus, console | pass | `TITLE: aew-probe`; `FOCUS: - button "One" [active] [ref=e2]`; `CONSOLE: none`; `ERRORS: none`. |
+| Focus marker | `[active]` | After one `Tab`, `browser_snapshot` marks the focused element with `[active]` in its YAML line. No `browser_evaluate` needed (fallback 5c not needed). |
+| Browser | default channel (installed Google Chrome) | Navigation succeeded with no browser-not-found error and Google Chrome is installed on this machine (so this does not prove the server works without Chrome). Playwright's own chromium builds also exist in `~/Library/Caches/ms-playwright`. Fallback 5a not taken. |
+| Files written to the project cwd | **yes: `.playwright-mcp/`** | `browser_navigate` wrote `.playwright-mcp/page-<timestamp>.yml` into the probe project (its result links it). The probe git status showed only that file. Fallback 5d applies: `ui-qa` setup and the fixture `.gitignore` must ignore `.playwright-mcp/`. |
+| Repo `git status --porcelain` after the run | pass | Empty before the docs edits: the server's cwd is the session cwd, not the plugin root. |
+| Cost | 0.007 | Ledger row 940. |
+
+Full `mcp__plugin_aew_playwright__*` list (init, 0.0.83):
+
+```
+mcp__plugin_aew_playwright__browser_click
+mcp__plugin_aew_playwright__browser_close
+mcp__plugin_aew_playwright__browser_console_messages
+mcp__plugin_aew_playwright__browser_drag
+mcp__plugin_aew_playwright__browser_drop
+mcp__plugin_aew_playwright__browser_emulate_media
+mcp__plugin_aew_playwright__browser_evaluate
+mcp__plugin_aew_playwright__browser_file_upload
+mcp__plugin_aew_playwright__browser_fill_form
+mcp__plugin_aew_playwright__browser_find
+mcp__plugin_aew_playwright__browser_handle_dialog
+mcp__plugin_aew_playwright__browser_hover
+mcp__plugin_aew_playwright__browser_navigate
+mcp__plugin_aew_playwright__browser_navigate_back
+mcp__plugin_aew_playwright__browser_network_request
+mcp__plugin_aew_playwright__browser_network_requests
+mcp__plugin_aew_playwright__browser_press_key
+mcp__plugin_aew_playwright__browser_resize
+mcp__plugin_aew_playwright__browser_run_code_unsafe
+mcp__plugin_aew_playwright__browser_select_option
+mcp__plugin_aew_playwright__browser_snapshot
+mcp__plugin_aew_playwright__browser_tabs
+mcp__plugin_aew_playwright__browser_take_screenshot
+mcp__plugin_aew_playwright__browser_type
+mcp__plugin_aew_playwright__browser_wait_for
+```
+
+**qa-engineer Playwright tools**
+
+```
+mcp__plugin_aew_playwright__browser_navigate
+mcp__plugin_aew_playwright__browser_snapshot
+mcp__plugin_aew_playwright__browser_click
+mcp__plugin_aew_playwright__browser_type
+mcp__plugin_aew_playwright__browser_press_key
+mcp__plugin_aew_playwright__browser_select_option
+mcp__plugin_aew_playwright__browser_hover
+mcp__plugin_aew_playwright__browser_resize
+mcp__plugin_aew_playwright__browser_console_messages
+mcp__plugin_aew_playwright__browser_wait_for
+mcp__plugin_aew_playwright__browser_close
+```
+
+### 8.3 Static-shop harness (941, 951)
+
+The harness for the qa-engineer runs (941, 951), reused by the fan-out run (961, D2) and the later runs on 951's
+project (E3 to E5). Run section 2's `REPO`/`SMOKE` lines and section 3's `smoke_dispatch` first. Everything
+below runs in bash or zsh.
+
+**Prerequisites delta.** Node 20 or later, `npx`, Google Chrome (probe 940: the Playwright MCP uses the installed
+Chrome, so it needs no browser install of its own) and a free port 4173. The helper installs the fixture's
+dependencies and `@playwright/test`'s chromium itself.
+
+```sh
+node --version                         # 20 or later
+lsof -nP -iTCP:4173 -sTCP:LISTEN       # must print nothing
+```
+
+`smoke_shop` builds a project from the static-shop fixture. It installs dependencies **before** the fixture commit,
+so the lock file is committed and `node_modules/` stays ignored (the fixture `.gitignore` covers `node_modules/`,
+`.aew/runs/`, `test-results/`, `playwright-report/` and `.playwright-mcp/`). The fixture's `run/` and `run-fanout/`
+are removed from the copy; they are the seeds, read from `$SHOP_RUN` and `$SHOP/run-fanout`.
+
+```sh
+SHOP="$REPO/tests/fixtures/apps/static-shop"; SHOP_RUN="$SHOP/run"
+# smoke_shop <agent> <case> <run-id> <issue> <title> <branch> <stage>   (sets P, RUN, O and P_REAL; leaves $P on <branch>)
+smoke_shop() {
+  P="$SMOKE/smoke-$1-$2"
+  rm -rf "$P" && mkdir -p "$P" || return 1
+  cp -R "$SHOP/." "$P" && rm -rf "$P/run" "$P/run-fanout" "$P/node_modules" || return 1   # keep the fixture .gitignore
+  (cd "$P" && npm install --no-audit --no-fund --silent && npx playwright install chromium) || return 1
+  git -C "$P" init -q -b main && git -C "$P" add -A && git -C "$P" commit -qm fixture || return 1
+  git -C "$P" switch -q -c "$6" || return 1
+  (cd "$P" && "$REPO/scripts/state.sh" init "$3" --issues "$4" --mode single --title "$5" \
+     && "$REPO/scripts/state.sh" set branch "$6" && "$REPO/scripts/state.sh" stage "$7") || return 1
+  smoke_use "$1" "$2" "$3" && P_REAL=$(cd "$P" && pwd -P)   # /var symlink
+}
+TITLE_201=$(jq -r .title "$SHOP_RUN/issue.json")
+```
+
+After it runs, `git -C "$P" status --porcelain` must print nothing: that proves the fixture `.gitignore` covers
+`node_modules/` and `.aew/runs/`, and that the lock file is committed.
+
+**Fixture ids and table helpers.** TCs are always resolved from the plan at check time, never hard-coded.
+
+```sh
+AC_COUNT=AC-1; AC_A11Y=AC-2; AC_EMAIL=AC-4   # confirm against: grep -n 'AC-' "$SHOP_RUN/02-brief.md"; correcting these is a harness fix
+# table_col <file> <section title> <column>: cells of that column on TC rows of that section
+table_col() { awk -F'|' -v h="## $2" -v c="$3" '/^## /{f=($0==h)} f && $2 ~ /TC-[0-9]+/ {x=$(c+1); gsub(/^[[:space:]]+|[[:space:]]+$/,"",x); print x}' "$1"; }
+# tc_for <AC-id> <plan>: TCs in "Test cases" mapped to that AC
+tc_for() { awk -F'|' -v ac="$1" '/^## /{f=($0=="## Test cases")} f && $2 ~ /TC-[0-9]+/ && $3 ~ (ac "([^0-9]|$)") {x=$2; gsub(/[[:space:]]/,"",x); print x}' "$2"; }
+# qa_failures_complete <report>: exit 0 = QA failures, report complete (as in skills/run-protocol/references/state-machine.md;
+# needs valid_return_block, loaded with the eval line in section 4)
+qa_failures_complete() {
+  [ -f "$1" ] && [ "$(valid_return_block "$1")" = failed ] &&
+    awk '/^## /{f=($0=="## Failures")} f && /^\|[[:space:]]*TC-[0-9]+[[:space:]]*\|/{n++} END{exit !(n>0)}' "$1"
+}
+```
+
+**qa-engineer invocation.** The `ALLOW` line follows `agents/qa-engineer.md` Guardrails (the prompt is the source).
+Set it after `smoke_shop` (or `smoke_use`, as E3 does), so `$P` is this project's; the block recomputes `$P_REAL`. `ls`, `find`, `grep`, `head`, `wc` and the
+`find test-results ...` read are auto-allowed read-only commands, so they have no rule. The port and issue are the
+fixture's 4173 and 201. The `ready_check` is a URL, so the `for i in $(seq 1 60)` loop form is not allowed. The
+`--disallowedTools` rules stop `git add *` reaching `-A` and `.`, and block `reset`, `checkout`, pushes and `gh`
+(the plugin hook denies `gh` too).
+
+```sh
+# phase A (run 941): ls and find are auto-allowed read-only commands, and phase A has no browser, so no rule at all
+ALLOW=()
+# phase B (run 951 and later); set after smoke_shop or smoke_use (smoke_use does not set P_REAL, so recompute it)
+T=mcp__plugin_aew_playwright__browser; P_REAL=$(cd "$P" && pwd -P)
+ALLOW=(--allowedTools
+  "Bash(npm install *)" "Bash(node --test *)" "Bash(npx playwright *)" "Bash(pnpm add -D -E *)" "Bash(yarn add -D -E *)"
+  "Bash(curl *)" "Bash(nohup sh -c *)" "Bash(sh -c *)" "Bash(tail -n 20 *)" "Bash(lsof -ti tcp:4173 -sTCP:LISTEN)" "Bash(kill *)"
+  "Bash(rm -rf $P/docs/qa/201/screenshots)" "Bash(rm -rf $P_REAL/docs/qa/201/screenshots)"
+  "Bash(AEW_EVIDENCE_DIR=* npx playwright test)" "Bash(AEW_EVIDENCE_DIR=* npx playwright test *)"
+  "Bash(mkdir -p *)" "Bash(file -b *)" "Bash(jq *)" "Bash(cp *)"
+  "Bash(git status *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git rev-parse *)" "Bash(git add *)" "Bash(git commit *)"
+  "${T}_navigate" "${T}_snapshot" "${T}_click" "${T}_type" "${T}_press_key" "${T}_select_option"
+  "${T}_hover" "${T}_resize" "${T}_console_messages" "${T}_wait_for" "${T}_close"
+  --disallowedTools "Bash(gh *)" "Bash(git add -A*)" "Bash(git add .)" "Bash(git reset *)" "Bash(git checkout *)" "Bash(git push *)")
+```
+
+The `AEW_EVIDENCE_DIR=` env-prefixed rules are **unverified**: Claude Code strips only a fixed set of env vars before
+matching, so the prefix may need its own pattern. There are two because a trailing ` *` matches the bare command only
+when it is the rule's only wildcard, and the §8 evidence run is the bare `commands.test_e2e` (`npx playwright test`).
+`nohup` is a wrapper Claude Code strips before matching, so `Bash(sh -c *)` is the documented match for the app start
+(the `app.log` redirect is checked as a write inside the project). The app is started by one Bash call with
+`run_in_background: true` and no trailing `&`: a command with the `&` operator needs interactive approval and is
+refused headless (run 951 attempt 1). A denial of the evidence run or of the `kill` stop in C6 is a harness fault: add
+the narrowest matching rule and record the denied command verbatim in the Notes. Dispatch fields:
+
+```sh
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: A"        # run 941, CAP=5
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: B, n: 1"  # run 951 cycle 1, CAP=8
+```
+
+Both use the section 3 invocation block unchanged (`cd "$P" && claude --plugin-dir "$REPO" -p "$DISPATCH" ...`), then
+the section 4 checks. Add the CAP to the 8.1 ledger total before starting; if it would pass $60, do not start.
+
+**Per-case setup.**
+
+```sh
+# run 941: qa-engineer phase A blindness (cap 5). 05-plan.md, 06-dev-report.md and spec-final.md are traps.
+smoke_shop shop phase-a 941 201 "$TITLE_201" feat/201-add-to-basket plan
+cp "$SHOP_RUN"/{issue.json,spec-final.md,02-brief.md,03-standards.md,05-plan.md,06-dev-report.md} "$RUN/"   # no 04-qa-test-plan.md
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: A"; CAP=5; ALLOW=()
+
+# run 951 cycle 1: qa-engineer phase B (cap 8). Never run another phase-B run at the same time (port 4173).
+lsof -nP -iTCP:4173 -sTCP:LISTEN        # must print nothing before the run
+smoke_shop shop loop 951 201 "$TITLE_201" feat/201-add-to-basket qa   # fix_cycle 0, so the gate expects 08-qa-report-1.md
+cp "$SHOP_RUN"/{issue.json,spec-final.md,02-brief.md,03-standards.md,04-qa-test-plan.md,05-plan.md,06-dev-report.md} "$RUN/"
+O="$SMOKE/out-951-qa1"; mkdir -p "$O"
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: B, n: 1"; CAP=8      # then set the phase B ALLOW line above
+PLAN="$RUN/04-qa-test-plan.md"; R="$RUN/08-qa-report-1.md"; S="$P/docs/qa/201/screenshots"
+```
+
+Run 951's project (`$SMOKE/smoke-shop-loop`) is left as the run leaves it for E3 to E5; the cleanup line in section 4
+is not run until E7. The fan-out run (D2) calls `smoke_shop` the same way, sets its own `T`/`BR`, and copies
+`$SHOP_RUN/03-standards.md` plus `$SHOP/run-fanout/{02-brief,05-plan}.md`.
+
+### 8.4 Results (prompt 04)
+
+Rows are listed `pending` and updated by the task that runs them (C5 941, C6 951 cycle 1). D and E append their own
+rows below.
+
+| run | check | result | notes |
+|---|---|---|---|
+| 940 | MCP tool names, focus marker, files written | pass | See 8.2. |
+| 941 | 1 return blocks and template headings | pass | `valid_return_block` prints `ok` for `final.txt` and for `04-qa-test-plan.md`; the `^## ` heading diff against `templates/artefacts/qa-test-plan.md` (ending in `## Files read`) is empty. |
+| 941 | 2 AC coverage equals the brief's | pass | The brief's AC set equals the Test cases AC set (diff empty). |
+| 941 | 3 test levels valid | pass | No level outside `unit|integration|e2e|UI|manual`. |
+| 941 | 4 UI tests cover desktop and mobile | pass | Every UI/e2e TC is in the UI table; every viewport cell names desktop and mobile. |
+| 941 | 5 manual-only is exactly `AC-4`, with reasons | pass | Manual-only is exactly `AC-4`; the reason cell is non-empty (order service outside the repo, no email test hook). |
+| 941 | 6 accessibility section names axe and the tags | pass | Section names axe at `wcag22aa` expanded to the cumulative tags (`wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa`). |
+| 941 | 7 blindness: reads (allowlist, traps) | pass | Read attempts (`reads.all`): `.aew/config.json`, `.aew/runs/941/02-brief.md`, `03-standards.md`, `docs/standards/web.md`, `tests/unit/basket.test.js`, plus the plugin template (absolute, under `$REPO`). Outside-project, allowlist and trap greps all empty; no `site/`, `05-plan`, `06-dev-report` or `spec-final` read attempt. |
+| 941 | 8 blindness: Bash and browser | pass | Two Bash calls: `find <P>/tests <P>/docs -type f` and `ls <P>`. Neither matches the non-ls/find or forbidden-word greps. No `mcp__plugin_aew_playwright__` tool_use (tools used: Bash 2, Read 6, Write 1). |
+| 941 | 9 `## Files read` equals the successful reads | pass | Declared list equals `reads.ok` (diff empty). |
+| 941 | 10 shared rows (preload, denials, gate, status, cost) | pass | Preloaded skill lines for `aew:run-protocol`, `aew:ui-qa` and `superpowers:verification-before-completion`; no skip/missing line for them (the only skip lines are unrelated `synced` dir entries). `permission_denials` `[]`. SubagentStop hook: exit 0, outcome success, no `"decision":"block"`. `git -C $REPO status --porcelain` shows only this README; `$P` status clean (apart from `.claude/`). Cost 0.37 (ledger row 941). |
+| 951 c1 | 1 `failed`, report complete, headings, SUMMARY | pass | `valid_return_block` prints `failed` for `final.txt` and `08-qa-report-1.md`; `qa_failures_complete` exits 0; the `^## ` headings equal the template's; SUMMARY starts `1/4 automated TCs pass`. |
+| 951 c1 | 2 basket bug is `impl_bug` | pass | `tc_for AC-1` is TC-1; its triage row is `impl_bug`. |
+| 951 c1 | 3 accessibility defect, email TC untriaged | pass | AC-2 maps to TC-2 and TC-3, both `impl_bug`. `## Accessibility` row `/`: Critical 2, Serious 0 (`button-name`, one node per viewport); `button-name` appears 5 times; TC-5 (AC-4) has no triage row. |
+| 951 c1 | 4 triage table in the final message | pass (after fix) | Attempt 1 failed: the final message reworded and extended the Summary cells. Agent fault, fixed in 719f13e (copy rows character for character). Attempt 2: header hit; rows identical to the report's. |
+| 951 c1 | 5 `manual-tests.md` format and TC set | pass | Line 1 `## Manual testing required`, no `<!--`, one line matching the TC-5 pattern; TC set equals the plan's Manual-only set (TC-5). |
+| 951 c1 | 6 screenshots (names, JPEG) | pass | Exactly TC-{1..4}-{desktop,mobile}.jpg (diff against `screens.expected` empty); all start `ffd8ff`. |
+| 951 c1 | 7 specs (titles, no skip/only, evidence env, axe tags) | pass | `tests/e2e/201-add-to-basket.spec.ts` and `aew.ts`; every `test(` is titled `TC-<n>: `; no only/skip/fixme/`waitForTimeout`; `AEW_EVIDENCE_DIR` in `aew.ts`; all five cumulative tags present. |
+| 951 c1 | 8 no `report.md` yet | pass | `docs/qa/201/report.md` absent. |
+| 951 c1 | 9 QA commit (A14) | pass | One commit `test(e2e): QA specs and evidence for add to basket (#201)`; no file outside the allowed set; nothing under `site/`; `$P` status clean apart from `.claude/`. |
+| 951 c1 | 10 app lifecycle (port freed) | pass | Reuse `curl` (exit 7), start, ready `curl --retry`, then `lsof -ti`, `kill <pid>`, `lsof -ti` (empty); port 4173 free after the run. Decision 9: the app started with `run_in_background: true` survived across tool calls (ready check, tests and MCP all reached it). |
+| 951 c1 | 11 exploratory MCP checks | pass | Subagent used `browser_navigate` (2), `browser_resize` (2), `browser_console_messages`, `browser_snapshot`, `browser_press_key`, `browser_close`; the report has the `**Exploratory checks (Playwright MCP)**` label. Server `plugin:aew:playwright connected`. |
+| 951 c1 | 12 commands recorded | pass | `## Commands and output` has `node --test` (1 test, 0 fail) and the `npx playwright test` evidence run (6 failed, 2 passed), each with an excerpt. |
+| 951 c1 | 13 shared rows (preload, denials, gate 08-qa-report-1, status, cost) | pass (after fix) | Preload: `aew:run-protocol`, `aew:ui-qa`, `superpowers:verification-before-completion`, no skip/missing lines. `permission_denials` `[]` on attempt 2. SubagentStop: exit 0, success, no block. Return block valid; template headings match. `git -C $REPO status` shows README only. Cost 0.57 (attempt 2). Attempt 1 failed here: two denials of the `nohup ... &` form (`&` needs interactive approval headless; the agent recovered with `run_in_background`). Agent/skill fault, fixed in 719f13e (ui-qa section 3 and qa-engineer Guardrails: no trailing `&`). |
+| 941 | re-run after fix 719f13e | pass | Checks 1 to 10 re-run: `ok` return blocks, headings, AC coverage, manual-only AC-4, blindness allowlist and Bash (one `find`), Files read equal, preload, `[]` denials, gate success. Cost 0.35. |
+| 941 | re-run after fix d4b2c86 | pass | The E3 review required this re-run because d4b2c86 edited a Guardrails bullet (a shared section). Fresh `smoke_shop shop phase-a 941`, checks 1 to 10 as in C5: `ok` return blocks and empty heading diff; AC coverage equal; levels valid; every UI TC (TC-1 to TC-4) in the UI table with desktop and mobile; manual-only exactly `AC-4` with a reason; accessibility names axe and the cumulative tags; reads (`reads.all`) are `.aew/config.json`, `02-brief.md`, `03-standards.md`, `docs/standards/web.md`, `tests/unit/basket.test.js` and the plugin template, with the outside-project, allowlist and trap greps empty; one Bash call (`find <P>/tests <P>/docs -type f`), no `mcp__plugin_aew_playwright__` use (Bash 1, Read 6, Write 1); Files read equals `reads.ok`; preload lines for the three skills and no skip line; `permission_denials` `[]`; SubagentStop hook success, exit 0, no block; `$REPO` and `$P` status clean. Cost 0.34. |
+
+Notes for run 951 cycle 1 (kept state for Phase E):
+
+- Project `$SMOKE/smoke-shop-loop` (stage `qa`, `fix_cycle` 0, branch `feat/201-add-to-basket`, QA's cycle-1 commit); outputs in `$SMOKE/out-951-qa1` (`screens.cycle1`, `head.cycle1` = `828ba57e6359d6d5eef76d9d26578a4d58927f40`).
+- TCs per AC: AC-1 TC-1; AC-2 TC-2, TC-3; AC-4 TC-5 (manual); TC-4 passes.
+- Triage rows: TC-1 AC-1 `impl_bug`; TC-2 AC-2 `impl_bug`; TC-3 AC-2 `impl_bug`.
+- `screens.cycle1` mtimes (epoch seconds): TC-1 1792875850, TC-2 1792875855, TC-3 and TC-4 1792875856, desktop and mobile alike.
+- Attempt 1's outputs are not kept: attempt 2 wrote to the same `out-951-qa1`. Its two failures are recorded in rows 4
+  and 13. Likewise `out-941` now holds the 941 re-run, not the run recorded in the first 941 rows.
+
+#### 961: developer `full` mode fan-out (D2)
+
+Setup, dispatch and invocation are section 8.3's `smoke_shop` and section 3's command, with these differences. Write the run into a script file and execute that file: the plugin's Bash safety hook blocks any command whose text contains `git push`, and redirect stdin with `< /dev/null`. `smoke_use` does not clear `$O`, so `rm -rf "$O"` first when re-running.
+
+```sh
+T="Add shop helpers"; BR=feat/202-add-shop-helpers
+smoke_shop developer fanout 961 202 "$T" "$BR" develop
+cp "$SHOP_RUN/03-standards.md" "$SHOP/run-fanout/02-brief.md" "$SHOP/run-fanout/05-plan.md" "$RUN/"
+git -C "$P" rev-parse main > "$O/main.sha"; (cd "$P" && pwd -P) > "$O/p.real"
+# Harness-only; not safe to copy into user settings (see project-map open items for prompt 05).
+# ALLOW follows agents/developer.md Guardrails. No bare "Bash(git -C *)": one scoped rule per subcommand.
+ALLOW=(--allowedTools "Bash(git status *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git show *)"
+  "Bash(git add *)" "Bash(git commit *)" "Bash(git worktree *)" "Bash(git cherry-pick *)"
+  "Bash(git branch *)" "Bash(git rev-parse *)"
+  "Bash(git -C * status *)" "Bash(git -C * diff *)" "Bash(git -C * log *)" "Bash(git -C * show *)"
+  "Bash(git -C * add *)" "Bash(git -C * commit *)" "Bash(git -C * rev-parse *)"
+  "Bash(cd *)" "Bash(node *)" "Bash(npm *)" "Bash(npx *)" "mcp__plugin_context7_context7__*")
+smoke_dispatch developer "run_dir: $RUN, mode: full"; CAP=10
+SETTINGS=$(jq -nc --arg ex "$REPO/CLAUDE.md" --arg cap "cat >> '$O/stop-payloads.jsonl'; echo >> '$O/stop-payloads.jsonl'" \
+  '{claudeMdExcludes:[$ex], enabledPlugins:{"dev-workflow@jamesborg":false,"figma@claude-plugins-official":false},
+    hooks:{SubagentStop:[{hooks:[{type:"command",command:$cap}]}]}}')
+# then section 3's claude -p command with --settings "$SETTINGS" in place of the inline JSON, and < /dev/null
+```
+
+The capture hook has no matcher, so it records every `SubagentStop`; it runs alongside the plugin's gate, which still decides. The `node --test` summary in Node 26 is `ℹ pass <n>` (the spec reporter), not the TAP `# pass <n>` line, so count with `grep -E '^ℹ (pass|fail)'`.
+
+Attempts: 1 failed S3 (`cd <worktree> && git …` refused), 2 failed S13 (two `git -C <main checkout>` denials), 3 passed all checks. Final run ids and costs are in the 8.1 ledger.
+
+| run | check | result | notes |
+|---|---|---|---|
+| 961 | S1 fan-out in one message | pass | The developer's own tool calls are in the stream (source: stream, `parent_tool_use_id` = the main Agent call). Two `Agent` blocks under the same `message.id`, both `aew:developer`, `isolation` absent, prompts `run_dir: <abs>, mode: package, wp: WP-1\|WP-2, worktree: $RUN/worktrees/WP-<n>, branch: aew/961/wp-<n>`. |
+| 961 | S2 worktree commands | pass | `git worktree add -b aew/961/wp-1 $RUN/worktrees/WP-1 HEAD` and the same for `wp-2`. Caveat: the feature branch equals `main` at dispatch, so only this verbatim command evidences "from HEAD"; S4 to S7 cannot tell a HEAD worktree from a default-branch one. |
+| 961 | S3 sub-developer command form | pass (after fix) | Attempt 1: all four `cd <worktree> && git …` commands were denied although `Bash(cd *)` and the git rules were allowed. The Bash tool's built-in check ("changes directory before a version-control command, which can pick up untrusted hooks or repository configuration") cannot be allowlisted. Both sub-developers returned `blocked`. Agent fault, fixed in 7960b92: git runs as `git -C <worktree> <subcommand>`, other commands as `cd <worktree> && <command>`. Attempt 3: 0 `cd … && git` commands; git via `git -C <worktree> status\|rev-parse\|add\|commit`; `cd <worktree> && node --test` ran without denial; nothing ran outside a worktree. **Open item for prompt 05's permission proposal: the per-subcommand `git -C` fallback is in force (`Bash(git -C * status *)`, `diff`, `log`, `show`, `add`, `commit`, `rev-parse`; never a bare `Bash(git -C *)`).** |
+| 961 | S4 WP reports | pass | `06-dev-report-WP1.md` and `-WP2.md`: `Mode: package`, valid return block `ok`, template headings match, filled `## Commands run`. WP shas `3efa42a` and `7d8d435` are commit objects whose subjects equal the integrated commits'. |
+| 961 | S5 parent report | pass | `06-dev-report.md`: `Mode: full`, `ok`, headings match, newest `06-dev-report*.md`; WP rows carry `3da7027` and `53aab59` (the `main..HEAD` shas); `node --test` row passes (3 tests). |
+| 961 | S6 commits | pass | Exactly two commits in WP order: `feat(price): add formatPrice helper (#202)`, `feat(basket): add clampQuantity helper (#202)`. Non-matching subjects 0, `cherry picked from` 0, each commit touches exactly its WP's files (both diffs empty). |
+| 961 | S7 clean-up | pass | One worktree (the main one, equal to `p.real`), no `aew/*` branch, no `$RUN/worktrees` content, status empty, HEAD `feat/202-add-shop-helpers`, `main` unchanged. |
+| 961 | S8 harness re-run | pass | `node --test`: pass 3, fail 0 (basket, formatPrice, clampQuantity); status still empty. |
+| 961 | S9 final message | pass | `final.txt` (narrowed to the main Agent call) is a valid block, `STATUS: ok`, ARTEFACTS `.aew/runs/961/06-dev-report.md`. |
+| 961 | S10 gate (AC-23) | pass | Six `SubagentStop` hook responses (three stops, two hooks each: the capture hook and the plugin gate), all `outcome: success`, exit 0, none with `"decision":"block"`. The parent's stop, which followed a valid report written last, was allowed. No mis-block, so **D3 is not triggered**. |
+| 961 | S11 nested `SubagentStop` | recorded | See the table below. |
+| 961 | S12 agent hygiene | pass | No `isolation`; no Agent call under either sub-developer; no Bash command with `gh`, a push, merge, rebase, reset, checkout, switch, `cherry-pick -x` or `rm -r`. |
+| 961 | S13 per-run rows | pass (after fix) | Preload: `aew:run-protocol`, `superpowers:test-driven-development`, `superpowers:verification-before-completion` and `superpowers:systematic-debugging` each appear 3 times under `[Agent: aew:developer]` (parent plus both sub-developers preload them); no skip or missing line for them. `permission_denials` `[]` (attempt 2 had two `git -C <main checkout>` denials, agent fault, fixed in db2dc9e: plain `git` in the main checkout). `git -C $REPO status --porcelain` shows only this README, DESIGN and the prompt fixes. Cost 0.79 (ledger). |
+
+Nested `SubagentStop` observation (A29, AC-23), from `stop-payloads.jsonl` (Claude Code 2.1.308, attempt 3):
+
+| stop | `agent_type` | `agent_id` | `stop_hook_active` | ARTEFACTS in `last_assistant_message` | gate decision |
+|---|---|---|---|---|---|
+| sub-developer WP-1 | `aew:developer` | `a1c63030e4d8602e2` | false | absolute path to `06-dev-report-WP1.md` | allowed (exit 0) |
+| sub-developer WP-2 | `aew:developer` | `a0580a63bc10e2c52` | false | absolute path to `06-dev-report-WP2.md` | allowed (exit 0) |
+| parent developer | `aew:developer` | `a38ccb8541a2446b8` | false | `.aew/runs/961/06-dev-report.md` | allowed (exit 0) |
+
+Nested sub-developers do fire `SubagentStop`, with the same `agent_type` as the parent and distinct `agent_id`s; the debug log shows the plugin gate running for each of the three stops. The gate resolves the main worktree's run dir and each sub-developer wrote its own report before stopping, so the newest-report rule did not mis-block anyone in this run (the WP reports were written at different times, each before its own stop; the parent's report came last). A29's fallback (gate the report named in ARTEFACTS) is not needed.
+
+#### 951: developer fix, then QA cycle 2 (E3)
+
+Both steps run from `smoke_use shop loop 951` on the kept cycle-1 project. `smoke_use` sets `O=out-951` and does not clear it, so each step sets `O` itself (`out-951-fix1`, `out-951-qa2`). Each step is a script file (not inline Bash: the plugin hook blocks command text containing `git push`) with `< /dev/null`; it snapshots `$P` with `cp -Rp` to `snap-951-fix1` / `snap-951-qa2` first, so a re-run restores the same state, and it checks that port 4173 is free. Step 1 records `C1=$(git rev-parse HEAD)` (`828ba57`) and runs `state.sh bump fix_cycle` then `state.sh stage develop`; step 2 runs `state.sh stage qa`.
+
+```sh
+# step 1: developer ALLOW = the 961 developer line above, plus the ui-qa app lifecycle (the Skill call to aew:ui-qa needed no allow entry)
+ALLOW+=("Bash(curl *)" "Bash(nohup sh -c *)" "Bash(sh -c *)" "Bash(tail -n 20 *)" "Bash(lsof -ti tcp:4173 -sTCP:LISTEN)" "Bash(kill *)")
+smoke_dispatch developer "run_dir: $RUN, mode: fix, n: 1, fix_from: 08-qa-report-1.md"; CAP=5
+# step 2: the phase B ALLOW line of section 8.3 (it now includes "Bash(cp *)"), P_REAL recomputed
+smoke_dispatch qa-engineer "run_dir: $RUN, phase: B, n: 2"; CAP=8
+```
+
+Both used the 961 `SETTINGS` capture hook for `SubagentStop` payloads.
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 fix | F1 fix commits | pass | `C1..HEAD` is two commits, both matching `^fix\([^)]+\): .+ \(#201\)$`: `54d1046 fix(basket): write the count into the status text (#201)` (`site/app.js`, TC-1) and `004fd43 fix(basket): name the icon-only basket button (#201)` (`site/index.html`, TC-2 and TC-3). One commit per root cause. |
+| 951 fix | F2 no `tests/e2e/` change | pass | `git diff --name-only C1 HEAD` is `site/app.js`, `site/index.html` only. |
+| 951 fix | F3 report | pass | `06-dev-report.md` has `Mode: fix (cycle 1)`, filled `## Commands run` (node --test pass; `npx playwright test tests/e2e/201-add-to-basket.spec.ts` without `AEW_EVIDENCE_DIR`: 8 passed), headings equal the template's, valid return block `ok`; `final.txt` is `ok` with NEXT `qa-engineer phase B (cycle 2)`. |
+| 951 fix | F4 fix-mode process | pass | Read `08-qa-report-1.md`; the `aew:ui-qa` Skill call worked headless with no allow entry; app started with `nohup sh -c` (no trailing `&`), ready `curl --retry`, `lsof -ti` then `kill <pid>`; port free after. No `frontend-design` call, no Agent call. |
+| 951 fix | F5 gate allow (AC-23) | pass | `stop-payloads.jsonl`: one `SubagentStop`, `agent_type` `aew:developer`; the plugin gate finished with status 0; no `"decision":"block"` in the debug log or stream. |
+| 951 fix | F6 shared rows | pass | Preloaded `aew:run-protocol` and the three superpowers skills; no skip line; `permission_denials` `[]`; `$REPO` status clean; cost 0.47. |
+| 951 c2 | Q1 return blocks and headings | pass (after fix) | Attempt 1: `final.txt` and `08-qa-report-2.md` valid `ok`, headings equal the template's, all four automated TCs pass at both viewports, but `docs/qa/201/report.md` was missing. Cause: Claude Code refuses a subagent's `Write` of a file named `report.md` ("Subagents should return findings as text, not write report files"); `08-qa-report-2.md` is not refused. Agent fault, fixed in d4b2c86: step 13 copies with one `cp`, the Guardrails allow that `cp`, ui-qa section 10 says why; the harness `ALLOW` gains `Bash(cp *)`. Attempt 2 (restored `snap-951-qa2`): valid `ok`, headings equal. |
+| 951 c2 | Q2 report content | pass | Results: TC-1 to TC-4 `pass (desktop, mobile)`, TC-5 `manual`; 8 passed in the evidence run; axe 0 violations at `wcag22aa` on both viewports; the `Exploratory checks (Playwright MCP)` label is present. |
+| 951 c2 | Q3 `docs/qa/201/report.md` | pass (after fix) | Present after attempt 2 and `cmp`-identical to `08-qa-report-2.md`; part of QA's commit. |
+| 951 c2 | Q4 `manual-tests.md` | pass | Still one TC-5 line (the confirmation email), unchanged format. |
+| 951 c2 | Q5 overwrite (CTO cut 1) | pass | Screenshot names equal cycle 1's (`TC-{1..4}-{desktop,mobile}.jpg`, no stale file); `find ... ! -newer out-951-qa1/stream.jsonl` prints nothing; all eight are JPEGs by `file -b` (four 1440x900, four 390x844). |
+| 951 c2 | Q6 commit and tree | pass | `36fd498 test(e2e): QA pass and final evidence for add to basket (#201)`; changes `docs/qa/201/report.md` and the four JPEGs of the TCs the fix changed (TC-1, TC-2; the others were byte-identical); no `tests/e2e/` or `site/` change; `$P` status clean; HEAD to `C1` is the two fix commits plus this one. |
+| 951 c2 | Q7 app lifecycle and gate | pass | Reuse `curl`, start, ready `curl`, `lsof -ti`, `kill`, `lsof -ti` (empty); port free. qa-engineer `SubagentStop`: gate status 0, no block; `permission_denials` `[]`; preload shows the three skills, no skip line; `$REPO` status clean. Cost 0.36 (attempt 2); attempt 1 cost 0.54. |
+
+Notes for E4 and E5:
+
+- Final state of `$SMOKE/smoke-shop-loop` (kept for the doc-writer): stage `qa`, `fix_cycle` 1, HEAD `36fd498`, branch `feat/201-add-to-basket`, `docs/qa/201/report.md` present, `.aew/runs/951` holds `06-dev-report.md` (fix), `08-qa-report-1.md`, `08-qa-report-2.md`, `manual-tests.md`. Outputs: `out-951-fix1`, `out-951-qa2` (attempt 2; attempt 1's was overwritten by the script's `rm -rf "$O"`). Snapshots `snap-951-fix1` (cycle-1 state) and `snap-951-qa2` (after the developer fix, stage `develop`).
+- The two fix commits and QA's commit carry a `Co-Authored-By: Claude Sonnet 5.5` trailer. The developer prompt says no co-author trailer, but the headless session's harness attribution instruction asked for one and the developer followed it, noting the conflict in its Deviations. The trailer sits in a second `-m`, so the allowlisted command form held and the subjects match. Open item for prompt 05 (attribution policy), not a check failure.
+- A subagent's `Write` of a file named `report.md` is refused by Claude Code. In 2.1.308 the check sits in the Write tool's input validation, applies only to subagents, and refuses any basename matching `/^(REPORT|SUMMARY|FINDINGS|ANALYSIS).*\.md$/i` (so `08-qa-report-2.md` passes); Edit and Bash carry no such check. The doc-writer's outputs (`10-summary.md`, `pr-body.md`, `retro.md`, `<issue>-<slug>.md`, `CLAUDE.md`) do not match, so E4 needs no fallback.
+- The `Mode: fix` developer needed no `Bash(git -C ...)` rule: it works in the main checkout.
+- Fix d4b2c86 edits qa-engineer's phase B step 13 and one phase B bullet of its Guardrails. Because Guardrails is a shared section, run 941 (phase A, which has no Bash) was re-run after it: see the `941 | re-run after fix d4b2c86` row (pass). Cycle 1 is never re-run for E's sake.
+
+#### 951: doc-writer (E4)
+
+Runs on the kept `smoke-shop-loop` project: `smoke_use shop loop 951`, then `O="$SMOKE/out-951-docs"` (cleared first), `cp -Rp "$P" "$SMOKE/snap-951-docs"` (a re-run restores that copy to `$P`), `H=$(git -C "$P" rev-parse HEAD)` (`36fd498`), `claude_md.max_lines` from `$P/.aew/config.json` (40), `state.sh stage docs`, then `smoke_dispatch doc-writer "run_dir: $RUN"` with `ALLOW=()` (no Bash, so no `--allowedTools`) and `CAP=5`. The section 3 command is used unchanged, from a script file with `< /dev/null`. The `CLAUDE.md` before the run is copied to `$O/CLAUDE.before` for the diff checks. The planted lines are the two the B2 fixture put in `CLAUDE.md`: ``- Prefer `const` over `let`, and never use `var`.`` (a `web.md` duplicate) and `- Until 2026-11-30 the sale banner copy is frozen, so do not edit it.` (time-bound).
+
+Note for the removed-lines check: a removed bullet shows in `git diff -U0` as `-- text`, so the extraction is `grep -E '^-' | grep -v '^--- ' | sed 's/^-//'`, not `grep -E '^-[^-]'`.
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 docs | D1 `CLAUDE.md` size and change | pass | `wc -l` 19 (was 37), cap 40; `git diff --quiet -- CLAUDE.md` exits 1 (4 insertions, 22 deletions). |
+| 951 docs | D2 planted lines gone | pass | `grep -Fx` finds neither planted line. |
+| 951 docs | D3 no added line restates a standards rule | fail | `grep -Fxf` of the four added lines against `docs/standards/*` prints nothing. Per-line verdicts against `web.md`: the intro line (existing sentence plus a link to `web.md`) is a pointer, fine; the `AEW_EVIDENCE_DIR` capture command is in neither `web.md` nor the code, so it is a real learning; the no-order-flow line (rewritten, now linking the spec) is not in `web.md`. Fail: "Unit tests: `node --test`. End-to-end specs: `npx playwright test` (the app must be running)." restates two `web.md` Tooling rules ("Run unit tests with `node --test`", "Run end-to-end specs with `npx playwright test`"); only "the app must be running" is new (true: `playwright.config.ts` has no `webServer`). The curator merged two standards duplicates (skill section 6 step 3) instead of dropping them under step 2. Agent/skill fault; fix and re-run from `snap-951-docs`. |
+| 951 docs | D4 every removal listed in `10-summary.md` | fail | 20 removed non-blank lines. 19 are listed in the Summary verbatim or reworded with a reason (one merged pair, one whole Conventions section). The intro sentence "Project memory for the static-shop site. Keep it under 40 lines." was kept but rewritten (a pointer to `web.md` added), so the diff shows it removed, and the Summary does not list it. `claude-md-curation` section 7 requires every removed or rewritten entry to be reported with its original text, so this is an agent fault, not a judgement call: the doc-writer prompt says only "removal" (Process steps 3 and 4, Definition of done). Fix and re-run from `snap-951-docs`. |
+| 951 docs | D5 no over-pruning | pass | What went: lines that `web.md` states (install, Node 22, ES modules over HTTP, spec naming, integer pence, landmarks, accessible names, comments, const/var, file layout), `serve` caching (obvious) and the dated freeze. What stayed: no `npm install` in `site/`, the separate `playwright install chromium`, screenshots to `docs/qa/`, and the order-service fact, none of which `web.md` has. Nothing `web.md` lacks was dropped. Under-pruning, not a planned check: the kept "Serve the site: `npm start` (`serve -l 4173 site`), then open `http://localhost:4173`." restates `web.md`'s "serve the site with `npm start` (`serve -l 4173 site`), which listens on port 4173", although the curator dropped the install half of the same `web.md` bullet. |
+| 951 docs | D6 spec snapshot | pass | Exactly one `docs/specs/201-add-to-basket.md`, equal to `201-` plus the kebab-cased title "Add to basket"; its `##` headings are Spec, Revision history, Key decisions, Traceability, Outstanding manual tests, in order; the brief's AC bullets (AC-1 to AC-4) equal the Traceability AC column (diff empty); the AC-4 row points to `manual-tests.md`. |
+| 951 docs | D7 `pr-body.md` | pass | `grep -c '<!--'` is 0; `Closes #201`; eight screenshot links, all matching `https://github.com/acme/static-shop/blob/feat/201-add-to-basket/docs/qa/201/screenshots/TC-<n>-(desktop\|mobile).jpg?raw=true` (owner and repo from `issue.json` `.url`, branch from `state.json`); the linked file set equals the eight files in `docs/qa/201/screenshots/`. |
+| 951 docs | D8 `10-summary.md` and `retro.md` | pass | `^## ` headings equal the templates' (summary, pr-body, retro). `valid_return_block` prints `ok` for `final.txt` and `10-summary.md`; ARTEFACTS lists the five paths. `retro.md` has three `###` items, all plugin-not-project: the developer agent not checking its diff against the plan and the standards anti-patterns, the developer commit trailer versus the harness attribution reminder, and the doc-writer templates having no checkbox rule for a manual AC. The first reads close to a run-specific mistake but its improvement targets the developer prompt, so it passes. |
+| 951 docs | D9 no commit, scoped writes | pass | `git rev-parse HEAD` equals `36fd498`. `git status --porcelain --untracked-files=all` shows ` M CLAUDE.md`, `?? docs/specs/201-add-to-basket.md` and the two files under `.claude/agent-memory/aew-doc-writer/`, and nothing else. |
+| 951 docs | D10 shared rows | pass | Preloaded skill lines for `aew:run-protocol` and `aew:claude-md-curation`, no skip or missing line; `permission_denials` `[]`; no `Write` was refused (no fallback needed, so the Write basename rule from the E3 notes did not bite); tools used: Read 17, Write 7, Glob 2 (no Bash, Edit or Agent); the plugin's `SubagentStop` matcher is `^aew:(developer\|qa-engineer)$`, so no gate ran for the doc-writer, as designed; `$REPO` status clean. Cost 0.44 (ledger). |
+
+Re-runs, each restored from `snap-951-docs` into `$P`, output to a fresh `out-951-docs`, same dispatch and cap 5. The removed-lines extraction for D4 is the one in the note above, with blank lines dropped, and each line is looked up with `grep -F` in the Summary of `10-summary.md`.
+
+Re-run 1 (after fix `f2df416`: doc-writer reports removed, merged or rewritten entries; curation step 3 re-checks merged entries):
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 docs re-run 1 | D1 | pass | `wc -l` 24 (was 37), cap 40; diff non-empty. |
+| 951 docs re-run 1 | D2 | fail | The dated freeze line "Until 2026-11-30 the sale banner copy is frozen..." was kept (the Summary justified it by its expiry date). The skill's never-include list says "dates" are time-bound, but the curator read "no removal condition" as excusing it. Skill fault. The const/var line went. |
+| 951 docs re-run 1 | D3 | pass | No added line is in `docs/standards/*`; the added evidence-dir line is not in `web.md`. |
+| 951 docs re-run 1 | D4 | fail (mechanical) | Line count stated (24) equals `wc -l`, and the rewritten intro line is now listed. But with `grep -F` on the lines as extracted (leading `- `), 17 of 18 are not found, because the Summary quoted them without the bullet marker; the content was all listed. The mechanical check is kept as written, so the fix makes the skill require the exact original line. |
+| 951 docs re-run 1 | D5 to D10 | pass | D6 to D10 as in the first run (`pr-body` 0 comments, `Closes #201`, 8 links; headings equal; HEAD unchanged; scoped writes; `permission_denials` `[]`; cost 0.33). |
+
+Re-run 2 (after fix `48cb638`: curation drops any entry carrying a date or expiry; section 7 quotes each original entry exactly including its leading `- `, and reports a moved entry as rewritten):
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 docs re-run 2 | D1 | pass | `wc -l` 27 (was 37), cap 40; `git diff --quiet -- CLAUDE.md` exits 1. |
+| 951 docs re-run 2 | D2 | pass | `grep -Fx` finds neither planted line. |
+| 951 docs re-run 2 | D3 | pass | `grep -Fxf` of the added lines against `docs/standards/*` prints nothing. Added: the `web.md` pointer line, a rewritten order-flow line (adds the manual-test consequence and the spec link) and the `AEW_EVIDENCE_DIR` capture line (not in `web.md`; it names `npx playwright test` only as the command the variable applies to, not as a rule). |
+| 951 docs re-run 2 | D4 | pass | 13 removed non-blank lines by the mechanical extraction, every one found with `grep -F` in the Summary; stated count 27 equals `wc -l`. Entries are quoted with their `- ` and the two rewrites show the new text. |
+| 951 docs re-run 2 | D5 | pass | Nothing `web.md` lacks was dropped (removed: ES modules, spec naming, file layout, integer pence, const/var, landmarks, accessible names, comments, the update-this-file line, the dated freeze). Under-pruning remains: the curator kept the Install, Serve, `node --test`, `npx playwright test` and Node 22 lines, which `web.md` Tooling states; not a planned check, recorded as a concern. |
+| 951 docs re-run 2 | D6 | pass | One `docs/specs/201-add-to-basket.md`; five `##` headings in order; AC diff empty; AC-4 row points to `manual-tests.md`. |
+| 951 docs re-run 2 | D7 | pass | 0 template comments; `Closes #201`; eight links all matching the `blob/<branch>/...?raw=true` form; link set equals the eight files. |
+| 951 docs re-run 2 | D8 | pass | Headings equal for summary, pr-body and retro; `valid_return_block` `ok` for `final.txt` and `10-summary.md`; ARTEFACTS lists the five paths; three plugin-level `###` retro items. |
+| 951 docs re-run 2 | D9 | pass | HEAD unchanged; status shows ` M CLAUDE.md`, `docs/specs/201-add-to-basket.md` and two files under `.claude/agent-memory/aew-doc-writer/`, nothing else. |
+| 951 docs re-run 2 | D10 | pass | Preloaded `aew:run-protocol` and `aew:claude-md-curation`; `permission_denials` `[]`; no `"decision":"block"`; tools Read 16, Write 7, Glob 2, Grep 1; `$REPO` status clean. Cost 0.31 (ledger). |
+
+Notes for E5:
+
+- The first-run rows above are history. The final state is re-run 2: every D row passes.
+- (First run) D3 and D4 failed in the senior review. E4 is open until a `fix(agents)` commit to `agents/doc-writer.md` and `skills/claude-md-curation/SKILL.md` and a re-run restored from `snap-951-docs` pass every D row; the rows above record the first run. The first run's Summary also says the curated file "now has 20 lines" (and SUMMARY "37 to 20"); it has 19.
+- `smoke-shop-loop` is left as the doc-writer left it: stage `docs`, HEAD `36fd498`, uncommitted `CLAUDE.md`, `docs/specs/201-add-to-basket.md` and the agent memory, plus `10-summary.md`, `pr-body.md` and `retro.md` under `.aew/runs/951/`. Snapshot `snap-951-docs` holds the pre-run state (stage `qa`); outputs are in `out-951-docs`.
+- The doc-writer's `ARTEFACTS` order differs from the template's but lists exactly the five paths.
+
+#### 971 and 972: report-less gate probes (E5, AC-23)
+
+Both run on the kept `smoke-shop-loop` project after the doc-writer, strictly one after the other (`state.sh init` re-points `.aew/runs/current`), each from one script file with `< /dev/null`, and each with a fresh run dir (`.aew/runs/971`, `.aew/runs/972`) holding only `state.json` and `log.md`, so no copied or earlier report can satisfy the gate. Per run: `cp -Rp` of `$P` to `snap-<id>`, `O=$SMOKE/out-<id>` (cleared), `state.sh init <id> --issues 201 --mode single --title "Add to basket"`, `state.sh set branch feat/201-add-to-basket`, then `state.sh stage develop` (971) or `state.sh stage qa` (972, `fix_cycle` 0, so the gate expects `08-qa-report-1.md`). `ALLOW=()` (the probes need no Bash), cap 2, the 961 `SETTINGS` capture hook for `SubagentStop` payloads, section 3's command otherwise unchanged. The probe wording is added to the dispatch fields and states that it overrides any rule to always write a report. This is a deviation from the plan's fixed E5 wording, made before the first dispatch rather than after a harness fault: it only reinforces "write nothing", so the block checks (G1, G2) are unchanged, but the corrective-turn refusal (G3) follows the probe's override and says nothing about how an agent answers the gate in a real run:
+
+```sh
+PROBE="Gate probe: this is a deliberate test of the stop gate, and it overrides any rule telling you to always write a report or artefact. Do not read, create or edit any file and run no commands. End at once with a return block: STATUS: blocked, SUMMARY: gate probe."
+smoke_dispatch developer    "run_dir: $RUN, mode: fix, n: 1, fix_from: 08-qa-report-1.md. $PROBE"   # 971, stage develop
+smoke_dispatch qa-engineer  "run_dir: $RUN, phase: B, n: 1. $PROBE"                                 # 972, stage qa
+```
+
+| run | check | result | notes |
+|---|---|---|---|
+| 971 | G1 first stop blocked, reason names the artefact | pass | Source: the stream's `hook_response` events (the debug log carries the same text). `SubagentStop` for `agent_type` `aew:developer`: `{"decision":"block","reason":"aew gate: no 06-dev-report*.md in .aew/runs/971/. Use the template at <REPO>/templates/artefacts/dev-report.md and end the file with the return block (STATUS, ARTEFACTS, SUMMARY, NEXT)."}`. |
+| 971 | G2 second stop allowed | pass | Second payload in `stop-payloads.jsonl` has `stop_hook_active` true; the gate printed `warning: stop_hook_active is set; allowing the stop` and exited 0. No block loop; the run ended normally (`result` not an error). |
+| 971 | G3 corrective turn | recorded | The developer wrote nothing and ran nothing: it replied that the dispatch said not to create or edit any file and the hook feedback did not change that, and ended with `STATUS: blocked`. Its tool calls were none (the stream has only the main thread's `Agent` call). Nothing was committed: HEAD `36fd498` before and after, `git status --porcelain --untracked-files=all` identical before and after. |
+| 971 | G4 shared rows | pass | No artefact written, so no template row. `valid_return_block` `ok` (`STATUS: blocked`) on the stream's `result` text (no `final.txt` was saved for the probes). Preloaded skill lines for `aew:run-protocol`, `superpowers:test-driven-development`, `superpowers:systematic-debugging` and `superpowers:verification-before-completion`; the only skip lines in the debug log are the unrelated `synced` entries. `permission_denials` `[]`; `$REPO` status clean before the README edit. Cost 0.30 (ledger). |
+| 972 | G1 first stop blocked, reason names the artefact | pass | `aew:qa-engineer`: `{"decision":"block","reason":"aew gate: .aew/runs/972/08-qa-report-1.md is missing. Use the template at <REPO>/templates/artefacts/qa-report.md and end the file with the return block (STATUS, ARTEFACTS, SUMMARY, NEXT)."}`. Same source as 971. |
+| 972 | G2 second stop allowed | pass | Second payload has `stop_hook_active` true; the gate allowed it (same warning, exit 0). One `stop_hook_active is set` line in the debug log. |
+| 972 | G3 corrective turn | recorded | The qa-engineer wrote nothing and ran nothing: it said it was leaving `08-qa-report-1.md` unwritten because the dispatch forbade creating files, and ended `STATUS: blocked`. No tool calls from it, HEAD `36fd498` unchanged, status identical before and after, port 4173 untouched. |
+| 972 | G4 shared rows | pass | No artefact written, so no template row. `valid_return_block` `ok` (`STATUS: blocked`) on the stream's `result` text, as for 971. Preloaded skill lines for `aew:run-protocol`, `aew:ui-qa` and `superpowers:verification-before-completion`; the only skip lines are the unrelated `synced` entries. `permission_denials` `[]`; `$REPO` status clean before the README edit. Cost 0.28 (ledger). |
+
+AC-23 notes:
+
+- **Block half:** proven by 971 (developer, `06-dev-report*.md` missing) and 972 (qa-engineer at stage `qa`, `08-qa-report-1.md` missing), above. The stage `plan|qa_test_plan` branch (`04-qa-test-plan.md`) is covered by the bats suite, not by a paid run.
+- **Allow half:** earlier runs, all with a valid artefact written before the stop and no `"decision":"block"`: 941 (qa-engineer phase A, row 10), 951 cycle 1 (row 13), 951 fix F5, 951 cycle 2 Q7, and the three 961 stops (S10, above). E4's doc-writer is outside the gate's matcher by design.
+- **Nested sub-developers (A29, from 961 S11):** they do fire `SubagentStop`, with the same `agent_type` (`aew:developer`) as the parent and distinct `agent_id`s, and none was mis-blocked, so the A29 fallback was not needed.
+- **Repeated stops:** each blocked probe produced exactly two stops (first `stop_hook_active` false, second true), so the one corrective turn is what the gate promises. The agents refused to write the report, as the probe told them to, and the second stop was still allowed.

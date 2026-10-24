@@ -28,6 +28,7 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
 - **Plugin layout.** `.claude-plugin/` holds only `plugin.json` (and `marketplace.json` for a marketplace). Components live at the plugin root: `skills/`, `agents/`, `hooks/hooks.json`, `.mcp.json`, `scripts/`. Commands have merged into skills, so use `skills/`. A `CLAUDE.md` at the plugin root is **not** loaded.
 - **Plugin name.** The plugin is named `aew`. Names starting with `claude-`, `anthropic-`, `anthropics-` or `cc-plugin-` are reserved and fail `claude plugin validate`.
 - **Namespacing.** Skills are invoked as `/aew:<skill>`. Agents are named `aew:<agent>`. Plugin MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`, so `mcp__plugin_aew_<server>__<tool>`.
+- **Playwright MCP tool names.** aew's bundled server is `playwright`, so its tools are `mcp__plugin_aew_playwright__<tool>` (for example `mcp__plugin_aew_playwright__browser_navigate`), and the init `mcp_servers` entry is `plugin:aew:playwright`. Confirmed from the `system/init` event of a headless `--plugin-dir` session on 24 Oct 2026; the full list is in `tests/agent-smoke/README.md` §8.2. The server writes its page snapshots to `.playwright-mcp/` in the session's working directory, so target projects ignore that path. Agent `tools` accepts full MCP tool names. A server wildcard (`mcp__<server>__*`) is documented, but the plugin-prefixed wildcard is not shown, so qa-engineer lists exact names. An omitted `tools` inherits every tool, MCP included.
 - **Agent frontmatter.** Plugin agents honour `name`, `description`, `model`, `effort`, `maxTurns`, `autoCompactWindow`, `tools`, `disallowedTools`, `skills`, `memory`, `background`, `omitClaudeMd`, `isolation` (only `worktree`), `color` and `experimental.cacheTtl`.
   - They **ignore** `hooks`, `mcpServers`, `permissionMode` and `initialPrompt`.
   - So hooks go in `hooks/hooks.json` and MCP servers in the plugin's `.mcp.json`.
@@ -37,8 +38,11 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
 - **Plugin dependencies at run time.** Disabling a plugin's dependency in `enabledPlugins` stops the dependent plugin loading (headless harnesses must disable only unrelated plugins). `claude plugin validate` does not check agent frontmatter, so agent fields are verified by running the agents.
 - **context7 tool names.** Assumed `mcp__plugin_context7_context7__*` (context7 is a dependency plugin, not an `aew` server). Unverified: without `CONTEXT7_API_KEY` the server reports `needs-auth` in headless runs, no call was made, and the agents fall back to the seeds as designed.
 - **Models.** Valid `model` values are `sonnet`, `opus`, `haiku`, `fable`, a full model ID, or `inherit`.
-- **Nesting.** Subagents can spawn subagents, up to depth 3. In this design: orchestrator (main thread, depth 0) → developer (1) → sub-developers (2).
-- **Search tools.** On macOS, Linux and WSL `Glob` and `Grep` are not in the default tool set; Claude searches with `find` and `grep` through Bash instead (code.claude.com/docs/en/tools-reference). A subagent that lists `Glob` or `Grep` in `tools` and leaves out `Bash` gets them back for that subagent only (/en/sub-agents). So agents with Bash (standards-setter, senior-engineer) do not list them and search with `find`/`grep`; agents without Bash (spec-analyser, brief-compiler) list `Glob, Grep`. A built-in set of read-only Bash commands (`ls`, `cat`, `head`, `tail`, `grep`, `find`, `wc`, `diff`, `stat`, read-only `git`) runs without a permission prompt in every mode, but `find` with `-exec`, `-delete` or `-fprint` prompts (/en/permissions).
+- **Nesting.** Subagents can spawn subagents, up to depth 3. In this design: orchestrator (main thread, depth 0) → developer (1) → sub-developers (2). To spawn, `Agent` must be in the agent's `tools`. An `Agent(type)` restriction list is ignored in a subagent definition, so a sub-developer is kept from spawning by its prompt, not its frontmatter.
+- **Worktree isolation.** `isolation: worktree` (in frontmatter or on the Agent call) branches from the repo's default branch, not the caller's HEAD, unless the user sets `worktree.baseRef: "head"`. Its path and branch naming are undocumented, it is auto-cleaned only when unchanged, and nothing is merged back. So aew does not use it, and the developer creates its worktrees with `git worktree add`. Observed in run 961 (Claude Code 2.1.308): a sub-developer spawned by the developer fires `SubagentStop` with `agent_type` `aew:developer` and its own `agent_id` (so the developer gate runs for it as well, against the main run dir), and `last_assistant_message` carries its ARTEFACTS line. The Bash tool also refuses any `cd <dir> && git …` command (it cannot be allowlisted), so a sub-developer runs git as `git -C <worktree> <subcommand>` and other commands as `cd <worktree> && <command>`.
+- **Search tools.** On macOS, Linux and WSL `Glob` and `Grep` are not in the default tool set; Claude searches with `find` and `grep` through Bash instead (code.claude.com/docs/en/tools-reference). A subagent that lists `Glob` or `Grep` in `tools` and leaves out `Bash` gets them back for that subagent only (/en/sub-agents). So agents with Bash (standards-setter, senior-engineer) do not list them and search with `find`/`grep`; agents without Bash (spec-analyser, brief-compiler, doc-writer) list `Glob, Grep`. A built-in set of read-only Bash commands (`ls`, `cat`, `head`, `tail`, `grep`, `find`, `wc`, `diff`, `stat`, read-only `git`) runs without a permission prompt in every mode, but `find` with `-exec`, `-delete` or `-fprint` prompts (/en/permissions).
+- **SubagentStop payload.** `SubagentStop` carries `agent_type`, `agent_id`, `agent_transcript_path`, `last_assistant_message` and `stop_hook_active` (code.claude.com/docs/en/hooks). The nested-subagent behaviour observed in run 961 is under Worktree isolation above.
+- **Bash tool and permission rules.** A trailing `&` in a Bash command is refused in headless runs, so background processes start with the Bash tool's `run_in_background: true` and no `&`. `nohup` is stripped before permission rules are matched, so `Bash(sh -c *)` is what matches a `nohup sh -c …` start. A trailing ` *` also matches the bare command, but only when it is the rule's only wildcard. A `Skill` call (`aew:ui-qa`) works headless without an allow entry.
 - **Skills in agents.** `skills:` frontmatter preloads full skill content into an agent. Agents can still invoke other skills with the Skill tool. Up to 32 skills can be preloaded, and a skill with `disable-model-invocation: true` cannot be. **A missing skill is skipped silently** (debug-log warning only), so verify preloads with `--debug-file`. Qualified plugin skill names preload, including dependency skills (`aew:run-protocol`, `superpowers:systematic-debugging`); the debug log shows `Preloaded skill '<name>'` (confirmed in headless smoke runs).
 - **Agent memory.** `memory: project` gives an agent `.claude/agent-memory/<plugin>-<agent>/MEMORY.md` (for a plugin agent the directory is `aew-<agent>`, for example `aew-spec-analyser`, confirmed in a headless run). The first 200 lines or 25 KB are loaded. Memory scopes are `user`, `project` and `local`; any memory scope automatically enables Read, Write and Edit for the agent, and has no effect when auto memory is off.
 - **Dependencies.** Each `dependencies` entry in `plugin.json` is `"name"`, `"name@marketplace"` or `{ name, marketplace, version }`. A `version` range resolves only against git tags named `<plugin>--v<version>` on the dependency's repo; with no matching tag, installing a dependency that has its own repo fails. Cross-marketplace dependencies need `allowCrossMarketplaceDependenciesOn` (an array of marketplace names) in the root marketplace's `marketplace.json`.
@@ -66,9 +70,10 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
 | superpowers | `claude-plugins-official`, no version range (see note below) | Specific skills preloaded into specific agents (§5.3). **Not used:** brainstorming, writing-plans, executing-plans, subagent-driven-development, or the using-superpowers session flow. The pipeline replaces those. |
 | context7 | `claude-plugins-official` | Current library and framework docs for the standards-setter, senior-engineer and developer |
 | frontend-design | `claude-plugins-official` | The developer uses it on UI work packages |
-| Playwright MCP | plugin `.mcp.json`, pinned version | Exploratory UI checks by QA. If an official Playwright plugin or skill exists at build time and covers §8.6, prefer it and record the decision here. |
+| Playwright MCP | plugin `.mcp.json`: `npx --yes @playwright/mcp@0.0.83 --headless --isolated` (exact version) | Exploratory UI checks by QA (§8.6). `claude-plugins-official` ships a `playwright` plugin (by Microsoft), but it is only an unpinned `npx @playwright/mcp@latest` `.mcp.json` with no skill, so it covers neither §8.6 (that is the `ui-qa` skill) nor the pinning rule. aew bundles its own pinned server instead (decided 24 Oct 2026). `--headless` because QA runs unattended; `--isolated` so no browser profile or login state persists between runs. If the official plugin is also enabled, both servers run under different tool prefixes. The server drives the MCP's default browser channel, the installed Google Chrome (verified 24 Oct 2026). |
 
 - **Why superpowers has no version range.** obra/superpowers tags releases as `v<version>`, not `superpowers--v<version>`, so a range such as `^7.0.0` can't resolve and the install would fail. The official marketplace pins superpowers to a commit (v7.0.0 on 24 Oct 2026), so the dependency only moves when that pin moves. The plugin is built and tested against superpowers 7.x. Add a range once upstream publishes `superpowers--v*` tags.
+- **Playwright packages.** Plugin MCP servers start with the plugin, so every session with aew enabled runs one `npx @playwright/mcp` process (the first run downloads it). The test packages are not in the plugin: `ui-qa` setup exact-pins `@playwright/test@1.64.1` and `@axe-core/playwright@4.14.0` in the target project and installs Chromium with `npx playwright install chromium`.
 - **CLI prerequisites:** git, gh (authenticated), jq, Node ≥ 20, plus stack tools as needed (php/composer, dotnet, Docker for wp-env or ddev).
 - **GitHub access:** the `gh` CLI only, wrapped by plugin scripts. No GitHub MCP.
 
@@ -204,6 +209,8 @@ The run id is the issue number, or `m-<milestone-number>` for milestone runs.
 9. `pr`, then `done`.
 
 Exceeding a cycle limit, or an agent returning `failed` twice, sets `blocked`. The orchestrator then posts a report comment, sets the `aew:blocked` label and stops.
+
+Exception (§8.6): qa-engineer phase B returns `failed` when its report is complete but tests or serious or critical accessibility checks failed. That `failed` means "QA failures, report complete": the orchestrator routes it by triage class under `limits.max_fix_cycles` and does not retry it. It counts as such only when `08-qa-report-<n>.md` exists, ends with a valid return block whose STATUS is `failed`, and the triage table at the top of its `## Failures` section has at least one `TC-<n>` row. Anything else is an ordinary agent `failed`: retry once, then `blocked`.
 
 ### 7.4 Labels
 
@@ -363,11 +370,13 @@ No code beyond short illustrative signatures.
 - Code is readable, simple and documented: doc comments on public functions, and comments that explain why rather than what.
 - **Fan-out.** If at least two work packages are marked parallelisable and own disjoint files, it spawns sub-developers:
   - the same agent type, in "package mode", one work package each;
-  - each in an isolated worktree;
+  - each in its own git worktree;
   - at most `max_parallel_developers` at once;
-  - then it merges their branches into the feature branch one at a time and reruns all checks.
+  - then it integrates their commits into the feature branch one at a time and reruns all checks.
 
   Otherwise it works sequentially.
+
+  The developer creates each worktree itself from the feature-branch HEAD (`git worktree add -b aew/<run-id>/wp-<n> <run_dir>/worktrees/WP-<n> HEAD`) and dispatches the sub-developers without `isolation` (§3). It integrates each work package's single commit with `git cherry-pick` in WP-number order, removes the worktrees and WP branches, and only then reruns the checks.
 - **Deviations.** If a plan step is impossible or clearly wrong, it stops that work package and returns `STATUS: blocked` with the reason. The orchestrator routes this to the senior engineer. It never diverges silently.
 - **Fix mode.** Takes the triage instructions or QA's failing tests, fixes them, then reruns those tests and the full unit suite.
 - Uses the frontend-design skill on UI work packages.
@@ -384,12 +393,14 @@ No code beyond short illustrative signatures.
 - accessibility checks;
 - manual-only cases, each with a reason.
 
+It lists every project file it opened in the plan's `## Files read` section.
+
 **Phase B: execute.** Runs after the review approves.
 
 - Implements the automated acceptance tests in the project's frameworks. UI tests are `@playwright/test` specs in `ui.e2e_dir`.
 - Starts the app per config and waits for `ready_check`.
 - Runs everything, and captures screenshots at key states for each viewport.
-- Runs an axe scan on every changed page. Serious or critical violations fail; moderate ones are reported.
+- Runs an axe scan on every changed page. Serious or critical violations fail; moderate ones are reported. `ui.axe_standard` names a conformance target: a WCAG level expands to the cumulative axe tags up to and including it (`wcag22aa` → `wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa`); any other value is one tag.
 - Does exploratory checks of the changed UI with Playwright MCP.
 - Writes `08-qa-report-<n>.md` with:
   - a results table (TC → AC → pass/fail);
@@ -397,6 +408,8 @@ No code beyond short illustrative signatures.
   - a screenshot index;
   - accessibility results;
   - failures, each with a triage class.
+- Returns `ok` (all pass, UI rule met), `failed` (report complete, failures in its triage table; routed per §7.3) or `blocked` (couldn't execute).
+- Commits its specs, Playwright setup and evidence at the end of every phase-B cycle (`test(e2e): … (#n)`).
 
 **Triage classes and routing:**
 
@@ -417,6 +430,9 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
 - Format: JPEG at quality 80.
 - Only the final passing cycle is kept; earlier cycles are overwritten. This limits repo growth, because squash merges carry the evidence into main.
 - Committed in the PR branch.
+- Specs write screenshots only when `AEW_EVIDENCE_DIR` is set, so other test runs never churn evidence.
+- Each cycle deletes screenshots it didn't produce, and `report.md` is written only for a passing cycle.
+- If the last allowed fix cycle fails, the committed screenshots are a failing cycle's and there is no `report.md`. The report says the evidence is not final, and the orchestrator must not present it as final.
 
 ### 8.7 doc-writer (Sonnet, medium)
 
@@ -434,6 +450,8 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
   - manual tests;
   - `Closes #n` for every issue in the run.
 - **`retro.md`:** improvements to the plugin seen during the run (agent mistakes, missing rules, slow stages, cycles used, false-positive hooks). The orchestrator files these to the retro repo. They never go in the project repo.
+
+The doc-writer has no Bash and doesn't commit. The orchestrator commits its docs after the stage, as it does `docs/standards/` (prompt 05).
 
 ## 9. Orchestrator (`ship` skill)
 

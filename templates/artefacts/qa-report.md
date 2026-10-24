@@ -32,7 +32,11 @@ Read by: orchestrator (routing), senior-engineer (triage), developer (fix mode),
 
 ## Failures
 
-<!-- "None." or one entry per failure. Triage class: impl_bug | plan_divergence | spec_ambiguity | test_bug. -->
+<!-- Triage table first: one row per failure, in the same order as the entries below; zero rows on a passing cycle, followed by "None.". Then one entry per failure. Triage class: impl_bug | plan_divergence | spec_ambiguity | test_bug. -->
+
+| TC | AC | Triage class | Summary |
+|---|---|---|---|
+| TC-1 | AC-1 | impl_bug / plan_divergence / spec_ambiguity / test_bug | <one line> |
 
 ### <TC>: <short description>
 

@@ -59,7 +59,8 @@ Prompt mode stops after `brief`: brief-compiler writes `prompt.md` and the statu
 
 `status`: `running | awaiting_input | awaiting_plan_approval | blocked | done | failed`.
 
-- Exceeding a cycle limit, or an agent returning `failed` twice, sets `blocked`.
+- Exceeding a cycle limit, or an agent returning `failed` twice (except a complete QA failure report, see Return contract),
+  sets `blocked`.
   The orchestrator posts a report comment, sets `aew:blocked` and stops.
 - `failed` is terminal: James chose to stop, or the run can't continue.
 - `resume` continues from the recorded `stage`.
@@ -103,6 +104,13 @@ NEXT: <recommendation for the orchestrator>
   each with a recommended answer, in the artefact.
 - `blocked`: the agent can't proceed as instructed, for example an impossible plan step. Give the reason.
 - `failed`: the agent tried and couldn't produce the artefact.
+  - qa-engineer phase B returns `failed` when its report is complete but tests or serious or critical
+    accessibility checks failed. That `failed` means "QA failures, report complete": the orchestrator
+    routes it by triage class under `limits.max_fix_cycles` and does not retry it. It counts as such
+    only when `08-qa-report-<n>.md` exists, ends with a valid return block whose STATUS is `failed`, and
+    the triage table at the top of its `## Failures` section has at least one `TC-<n>` row. Anything
+    else is an ordinary agent `failed`: retry once, then `blocked`.
+    The test is in [references/state-machine.md](references/state-machine.md) under Failure paths.
 
 The orchestrator reads return blocks. It opens full artefacts only when a gate or routing
 decision needs them, so the SUMMARY must carry the essentials.

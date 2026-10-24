@@ -1,0 +1,14 @@
+{
+  "name": "static-shop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "serve -l 4173 site",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "serve": "14.2.6"
+  }
+}

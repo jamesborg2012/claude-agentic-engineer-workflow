@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Static Shop</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Static Shop</h1>
+      <button type="button" class="basket-button">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+          <path d="M3 4h2l2.4 10h10.2L20 7H6.2" fill="none" stroke="currentColor" stroke-width="2" />
+          <circle cx="9" cy="19" r="1.5" fill="currentColor" />
+          <circle cx="17" cy="19" r="1.5" fill="currentColor" />
+        </svg>
+      </button>
+      <p role="status">Items in basket: <span id="basket-count" data-count="0">0</span></p>
+    </header>
+    <main>
+      <ul class="products">
+        <li>
+          <h2>Tea towel</h2>
+          <p>£8.00</p>
+          <button type="button" data-product-id="tea-towel">Add to basket</button>
+        </li>
+        <li>
+          <h2>Mug</h2>
+          <p>£12.50</p>
+          <button type="button" data-product-id="mug">Add to basket</button>
+        </li>
+        <li>
+          <h2>Notebook</h2>
+          <p>£5.00</p>
+          <button type="button" data-product-id="notebook">Add to basket</button>
+        </li>
+      </ul>
+    </main>
+    <footer>
+      <p>Static Shop, a test fixture.</p>
+    </footer>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

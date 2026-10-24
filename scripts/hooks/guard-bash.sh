@@ -19,7 +19,8 @@
 #   basename of the first token.
 # - `cd <dir>` (or pushd) moves the working directory for later segments; a
 #   dir holding $ or a backtick makes later relative rm targets unknown.
-# - git: global options (-C, -c, --git-dir, ...) are skipped. push: force flags
+# - git: `-C <dir>` sets the directory whose branch the rules below check;
+#   other global options (-c, --git-dir, ...) are skipped. push: force flags
 #   (--forc* abbreviations, --force-if-includes, a short cluster containing f,
 #   a +refspec) are denied, as is --all/--mirror, any refspec whose destination
 #   is the default branch, and a bare push while on it. reset --hard (or --ha,
