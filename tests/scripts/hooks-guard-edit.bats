@@ -87,4 +87,8 @@ edit_payload() {
   edit_payload Edit "$PROJECT/.git/config" > "$f"
   ms=$(elapsed_ms bash -c '"$0" < "$1"' "$SCRIPTS/hooks/guard-edit.sh" "$f")
   [ "$ms" -lt 1000 ]
+  # elapsed_ms ignores the exit status, so prove the timed run really denies.
+  run_hook guard-edit.sh "@$f"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$output")" = deny ]
 }
