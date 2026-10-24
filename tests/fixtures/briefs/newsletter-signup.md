@@ -16,7 +16,7 @@ A Next.js App Router site styled with Tailwind (the `nextjs-tailwind` fixture). 
 - **AC-2** [API] Given a valid address (for example `ada@example.com`, including one already submitted), when a client sends `POST /api/newsletter` with the JSON body `{ "email": "ada@example.com" }`, then the response is 201 with `{ "status": "subscribed" }`. Valid means, after trimming leading and trailing whitespace, one `@`, a non-empty local part, a dot in the domain part, and 254 characters or fewer.
 - **AC-3** [API] [SEC] Given a missing or invalid `email`, when a client sends `POST /api/newsletter`, then the response is 400 with `{ "error": "invalid_email" }`; a body over 1 KB returns 413; any method other than POST returns 405; and nothing is stored in any case.
 - **AC-4** [UI] [A11Y] Given a valid address, when the visitor submits the form, then the button is disabled and reads "Subscribing…" while the request is pending, and after a 201 the form is replaced by "Thanks, you're subscribed." in a polite live region.
-- **AC-5** [UI] [A11Y] Given invalid input, whether caught in the browser (and then not submitted) or returned as a 400, when the visitor submits, then the inline error "Enter a valid email address" appears below the input, linked with `aria-describedby`, and the input gets `aria-invalid="true"` and keeps focus.
+- **AC-5** [UI] [A11Y] Given invalid input, whether caught in the browser (and then not submitted) or returned as a 400, when the visitor submits, then the inline error "Enter a valid email address" appears below the input, linked with `aria-describedby` and announced through the polite live region, and the input gets `aria-invalid="true"` and keeps focus.
 - **AC-6** [UI] Given a network error or a 5xx response, when the visitor submits a valid address, then "Something went wrong. Please try again." appears in the polite live region and the input keeps its value.
 - **AC-7** [A11Y] Given the footer form, when it is used by keyboard and scanned with axe at the 390×844 and 1440×900 viewports, then every control is operable with a visible focus indicator, its text meets 4.5:1 contrast, and the scan shows no serious or critical violations.
 
@@ -35,6 +35,7 @@ A Next.js App Router site styled with Tailwind (the `nextjs-tailwind` fixture). 
 - The API contract in AC-2 and AC-3 is fixed.
 - No new runtime dependency.
 - Tailwind utilities only, no new CSS file.
+- Accessibility target: WCAG 2.2 AA.
 
 ## Affected surfaces
 
