@@ -330,3 +330,24 @@ EOF
   assert_success
   assert_equal "$(ids)" '["nextjs@my app"]'
 }
+
+@test "a relative path ignores CDPATH, and a directory named - is scanned, not \$OLDPWD" {
+  put "app/package.json" '{"dependencies":{"react":"^19.2.0"}}'
+  put "other/app/package.json" '{"dependencies":{"next":"^16.0.1"}}'
+  put "-/package.json" '{"dependencies":{"next":"^16.0.1"}}'
+  cd "$T"
+  export CDPATH="$T/other" OLDPWD="$T/app"
+  ds app
+  assert_success
+  assert_equal "$(ids)" '["react@."]'
+  ds -
+  assert_success
+  assert_equal "$(ids)" '["nextjs@."]'
+}
+
+@test "a tab inside a header value does not shift the headers after it" {
+  put "p/p.php" $'<?php\n/*\n * Plugin Name: P\n * Requires at least: 6.4\tbeta\n * Requires PHP: 7.4\n */'
+  ds "$T"
+  assert_success
+  assert_equal "$(shape)" '[{"profile":"wordpress","path":"p","version":"6.4"}]'
+}

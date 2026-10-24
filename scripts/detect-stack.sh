@@ -20,7 +20,7 @@
 # tab or newline are not supported.
 # Options: -h, --help
 
-# The jq filters are single-quoted on purpose: $name is a jq variable.
+# The jq and awk programs are single-quoted on purpose: their $ is not the shell's.
 # shellcheck disable=SC2016
 # shellcheck source=lib/common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
@@ -47,7 +47,12 @@ done
 [ -d "$ROOT" ] || die "not a directory: $ROOT"
 { [ -r "$ROOT" ] && [ -x "$ROOT" ]; } || die "cannot read directory: $ROOT"
 require_cmd jq find
-cd "$ROOT" || die "cannot enter directory: $ROOT"
+# A relative path gets "./" so cd neither searches CDPATH nor reads "-" as
+# $OLDPWD; either would scan another tree and print its name to stdout.
+case "$ROOT" in
+  /*) cd "$ROOT" || die "cannot enter directory: $ROOT" ;;
+  *) cd "./$ROOT" || die "cannot enter directory: $ROOT" ;;
+esac
 
 TMP=$(mktemp -d) || die "cannot create a temporary directory"
 trap 'rm -rf "$TMP"' EXIT
@@ -250,7 +255,7 @@ FNR == 1 { flush(); cur = FILENAME; sub(/^\.\//, "", cur); off = 0; split("", v)
 off >= 8192 { nextfile }
 { off += length($0) + 1; l = tolower($0)
   for (i = 1; i <= nk; i++) if (!(i in v) && match(l, pre k[i] ":")) {
-    s = substr($0, RSTART + RLENGTH); gsub(/^[[:space:]]+|[[:space:]]+$/, "", s); if (s != "") v[i] = s } }
+    s = substr($0, RSTART + RLENGTH); gsub(/\t/, " ", s); gsub(/^[[:space:]]+|[[:space:]]+$/, "", s); if (s != "") v[i] = s } }
 END { flush() }'
 TW_RE='@import[[:space:]]+["'"'"']tailwindcss(/[^"'"'"']*)?["'"'"']'
 HOOK_RE='add_(action|filter)[[:space:]]*\([[:space:]]*["'"'"']woocommerce_'
