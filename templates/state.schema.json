@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aew run state",
+  "description": "Schema for .aew/runs/<run-id>/state.json. Written only by scripts/state.sh; read by the orchestrator, scripts and hooks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id", "issues", "title", "mode", "auto", "stage", "status", "branch", "base_branch",
+    "pr", "spec_revision", "fix_cycle", "review_cycle", "started_at", "updated_at", "history"
+  ],
+  "$defs": {
+    "stage": {
+      "description": "Pipeline stage (run-protocol skill). qa_test_plan and plan run in parallel; while they do, stage is plan.",
+      "type": "string",
+      "enum": [
+        "spec_analysis", "brief", "standards", "qa_test_plan", "plan",
+        "develop", "review", "qa", "docs", "pr"
+      ]
+    },
+    "status": {
+      "description": "Run status.",
+      "type": "string",
+      "enum": ["running", "awaiting_input", "awaiting_plan_approval", "blocked", "done", "failed"]
+    },
+    "timestamp": {
+      "description": "ISO 8601 UTC timestamp.",
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "run_id": {
+      "description": "Issue number, or m-<milestone-number> for a milestone run.",
+      "type": "string",
+      "pattern": "^([1-9][0-9]*|m-[1-9][0-9]*)$"
+    },
+    "issues": {
+      "description": "Every issue the run delivers. The PR closes all of them.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "title": {
+      "description": "Issue title, or milestone title for a milestone run.",
+      "type": "string"
+    },
+    "mode": {
+      "description": "single: one issue. bulk: a milestone as one run. sequential: a milestone parent run. sequential-child: one issue inside a sequential milestone.",
+      "type": "string",
+      "enum": ["single", "bulk", "sequential", "sequential-child"]
+    },
+    "auto": {
+      "description": "True when started with --auto: the plan gate is skipped. Material spec changes and irreversible actions are still gated.",
+      "type": "boolean"
+    },
+    "stage": { "$ref": "#/$defs/stage" },
+    "status": { "$ref": "#/$defs/status" },
+    "branch": {
+      "description": "Feature branch, or null before it is created.",
+      "type": ["string", "null"]
+    },
+    "base_branch": {
+      "description": "Branch the feature branch was cut from and the PR targets. Usually the default branch; an unmerged dependency's branch for a stacked PR.",
+      "type": "string"
+    },
+    "pr": {
+      "description": "PR number, or null before the PR exists.",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "spec_revision": {
+      "description": "Current spec version. 1 is the author's original; each recorded revision adds one.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "fix_cycle": {
+      "description": "QA fix cycles used so far. Limited by limits.max_fix_cycles.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "review_cycle": {
+      "description": "Review cycles used so far. Limited by limits.max_review_cycles.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "started_at": { "$ref": "#/$defs/timestamp" },
+    "updated_at": { "$ref": "#/$defs/timestamp" },
+    "history": {
+      "description": "One entry per stage or status transition, oldest first. Mirrored as one line each in log.md.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "status", "at"],
+        "properties": {
+          "stage": { "$ref": "#/$defs/stage" },
+          "status": { "$ref": "#/$defs/status" },
+          "at": { "$ref": "#/$defs/timestamp" },
+          "note": { "description": "Short reason for the transition.", "type": "string" }
+        }
+      }
+    }
+  }
+}

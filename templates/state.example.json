@@ -1,0 +1,31 @@
+{
+  "run_id": "42",
+  "issues": [42],
+  "title": "Add a newsletter sign-up form to the footer",
+  "mode": "single",
+  "auto": false,
+  "stage": "review",
+  "status": "running",
+  "branch": "feat/42-newsletter-signup",
+  "base_branch": "main",
+  "pr": null,
+  "spec_revision": 2,
+  "fix_cycle": 0,
+  "review_cycle": 1,
+  "started_at": "2026-10-24T09:00:00Z",
+  "updated_at": "2026-10-24T10:42:00Z",
+  "history": [
+    { "stage": "spec_analysis", "status": "running", "at": "2026-10-24T09:00:00Z" },
+    { "stage": "spec_analysis", "status": "awaiting_input", "at": "2026-10-24T09:06:00Z", "note": "1 material change: double opt-in" },
+    { "stage": "spec_analysis", "status": "running", "at": "2026-10-24T09:15:00Z", "note": "confirmed by James; re-analysing delta" },
+    { "stage": "brief", "status": "running", "at": "2026-10-24T09:19:00Z", "note": "spec v2 recorded" },
+    { "stage": "standards", "status": "running", "at": "2026-10-24T09:24:00Z" },
+    { "stage": "qa_test_plan", "status": "running", "at": "2026-10-24T09:25:00Z", "note": "standards reused: fingerprint match" },
+    { "stage": "plan", "status": "running", "at": "2026-10-24T09:25:00Z", "note": "parallel with qa_test_plan" },
+    { "stage": "plan", "status": "awaiting_plan_approval", "at": "2026-10-24T09:38:00Z" },
+    { "stage": "develop", "status": "running", "at": "2026-10-24T09:50:00Z", "note": "plan approved" },
+    { "stage": "review", "status": "running", "at": "2026-10-24T10:30:00Z" },
+    { "stage": "develop", "status": "running", "at": "2026-10-24T10:36:00Z", "note": "review 1: changes_required" },
+    { "stage": "review", "status": "running", "at": "2026-10-24T10:42:00Z" }
+  ]
+}

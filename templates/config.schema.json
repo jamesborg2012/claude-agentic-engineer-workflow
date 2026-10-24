@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aew project config",
+  "description": "Schema for .aew/config.json, committed in the target project. Holds environment variable names only, never secrets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "default_branch", "stacks", "commands", "app", "retro"],
+  "properties": {
+    "$schema": {
+      "description": "Optional pointer to this schema, for editor support.",
+      "type": "string"
+    },
+    "project": {
+      "description": "Project name.",
+      "type": "string",
+      "minLength": 1
+    },
+    "default_branch": {
+      "description": "The branch PRs target. Never pushed to by the plugin.",
+      "type": "string",
+      "minLength": 1,
+      "default": "main"
+    },
+    "stacks": {
+      "description": "Detected stack profiles. Each maps to a standards doc at docs/standards/<profile>.md.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile", "path", "version"],
+        "properties": {
+          "profile": {
+            "description": "Stack profile. Seeded in v1: nextjs, react, laravel, wordpress, woocommerce (overlay on wordpress), tailwind (overlay). Other profiles, such as dotnet, are generated on demand.",
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "path": {
+            "description": "Directory the stack lives in, relative to the repo root.",
+            "type": "string",
+            "default": "."
+          },
+          "version": {
+            "description": "Detected framework or language version, used in the standards fingerprint.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "commands": {
+      "description": "Shell commands the agents run. Omit a command the project does not have.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "install": { "description": "Install dependencies.", "type": "string" },
+        "dev": { "description": "Start the development server.", "type": "string" },
+        "build": { "description": "Production build.", "type": "string" },
+        "lint": { "description": "Lint check.", "type": "string" },
+        "format": { "description": "Format check or fix.", "type": "string" },
+        "typecheck": { "description": "Type check.", "type": "string" },
+        "test_unit": { "description": "Unit test suite.", "type": "string" },
+        "test_e2e": { "description": "End-to-end (Playwright) suite.", "type": "string" },
+        "seed": { "description": "Seed test data.", "type": "string" }
+      }
+    },
+    "app": {
+      "description": "How QA starts and reaches the running app.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_url", "start_command", "ready_check", "env_type"],
+      "properties": {
+        "base_url": {
+          "description": "Base URL of the running app.",
+          "type": "string",
+          "format": "uri"
+        },
+        "start_command": {
+          "description": "Command that starts the app for QA.",
+          "type": "string"
+        },
+        "ready_check": {
+          "description": "A URL that answers when the app is ready, or a command that exits 0 when it is.",
+          "type": "string"
+        },
+        "env_type": {
+          "description": "Kind of local environment.",
+          "type": "string",
+          "enum": ["wp-env", "ddev", "local", "docker", "native", "none"]
+        },
+        "test_accounts": {
+          "description": "Accounts QA signs in with. Holds environment variable names, never credentials.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "username_env", "password_env"],
+            "properties": {
+              "role": { "description": "Role the account has, e.g. admin.", "type": "string" },
+              "username_env": {
+                "description": "Name of the environment variable holding the username.",
+                "type": "string",
+                "pattern": "^[A-Z_][A-Z0-9_]*$"
+              },
+              "password_env": {
+                "description": "Name of the environment variable holding the password.",
+                "type": "string",
+                "pattern": "^[A-Z_][A-Z0-9_]*$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ui": {
+      "description": "UI testing settings.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {
+        "viewports": [
+          { "name": "desktop", "width": 1440, "height": 900 },
+          { "name": "mobile", "width": 390, "height": 844 }
+        ],
+        "axe": true,
+        "axe_standard": "wcag22aa",
+        "e2e_dir": "tests/e2e"
+      },
+      "properties": {
+        "viewports": {
+          "description": "Viewports every UI test and screenshot runs at.",
+          "type": "array",
+          "minItems": 1,
+          "default": [
+            { "name": "desktop", "width": 1440, "height": 900 },
+            { "name": "mobile", "width": 390, "height": 844 }
+          ],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "width", "height"],
+            "properties": {
+              "name": { "description": "Viewport name, used in screenshot file names.", "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "width": { "description": "Width in CSS pixels.", "type": "integer", "minimum": 1 },
+              "height": { "description": "Height in CSS pixels.", "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "axe": {
+          "description": "Run an axe-core scan on every changed page.",
+          "type": "boolean",
+          "default": true
+        },
+        "axe_standard": {
+          "description": "axe-core rule tag to scan against.",
+          "type": "string",
+          "default": "wcag22aa"
+        },
+        "e2e_dir": {
+          "description": "Directory for committed Playwright specs, relative to the repo root.",
+          "type": "string",
+          "default": "tests/e2e"
+        }
+      }
+    },
+    "git": {
+      "description": "Branch and commit conventions.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": {
+        "branch_pattern": "feat/{issue}-{slug}",
+        "milestone_branch_pattern": "feat/m{milestone}-{slug}",
+        "commit_convention": "conventional"
+      },
+      "properties": {
+        "branch_pattern": {
+          "description": "Branch name for a single-issue run. Placeholders: {issue}, {slug}.",
+          "type": "string",
+          "default": "feat/{issue}-{slug}"
+        },
+        "milestone_branch_pattern": {
+          "description": "Branch name for a bulk milestone run. Placeholders: {milestone}, {slug}.",
+          "type": "string",
+          "default": "feat/m{milestone}-{slug}"
+        },
+        "commit_convention": {
+          "description": "Commit message convention.",
+          "type": "string",
+          "default": "conventional"
+        }
+      }
+    },
+    "gates": {
+      "description": "Human gates. Material spec changes and irreversible operations are always gated and cannot be turned off here.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": { "plan_approval": true },
+      "properties": {
+        "plan_approval": {
+          "description": "Ask James to approve the plan before development. --auto also skips it.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "limits": {
+      "description": "Cycle and concurrency limits. Exceeding a cycle limit sets the run to blocked.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": { "max_fix_cycles": 3, "max_review_cycles": 2, "max_parallel_developers": 4 },
+      "properties": {
+        "max_fix_cycles": {
+          "description": "QA fix cycles allowed before the run is blocked.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 3
+        },
+        "max_review_cycles": {
+          "description": "Review cycles allowed before the run is blocked.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 2
+        },
+        "max_parallel_developers": {
+          "description": "Sub-developers that may run at once.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 4
+        }
+      }
+    },
+    "evidence": {
+      "description": "Where and how QA evidence is committed.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": { "dir": "docs/qa", "format": "jpeg", "quality": 80 },
+      "properties": {
+        "dir": {
+          "description": "Evidence root, relative to the repo root. Each issue gets <dir>/<issue>/.",
+          "type": "string",
+          "default": "docs/qa"
+        },
+        "format": {
+          "description": "Screenshot image format.",
+          "type": "string",
+          "default": "jpeg"
+        },
+        "quality": {
+          "description": "Screenshot quality, 0 to 100.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 80
+        }
+      }
+    },
+    "claude_md": {
+      "description": "CLAUDE.md curation settings.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": { "max_lines": 300 },
+      "properties": {
+        "max_lines": {
+          "description": "Line budget the doc-writer keeps CLAUDE.md within.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 300
+        }
+      }
+    },
+    "retro": {
+      "description": "Where retro items about the plugin are filed. Never the project repo.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo"],
+      "properties": {
+        "repo": {
+          "description": "GitHub repo for retro issues, as <owner>/<plugin-repo>.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "label": {
+          "description": "Label applied to retro issues.",
+          "type": "string",
+          "default": "retro"
+        }
+      }
+    }
+  }
+}

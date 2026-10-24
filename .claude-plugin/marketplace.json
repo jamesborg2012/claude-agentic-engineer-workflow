@@ -1,0 +1,13 @@
+{
+  "name": "jamesborg-plugins",
+  "owner": { "name": "James Borg" },
+  "description": "James Borg's personal plugins.",
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
+  "plugins": [
+    {
+      "name": "aew",
+      "source": "./",
+      "description": "Spec-driven, multi-agent pipeline that delivers GitHub issues end to end."
+    }
+  ]
+}

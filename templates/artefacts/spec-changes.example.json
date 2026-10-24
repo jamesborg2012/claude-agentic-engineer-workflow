@@ -1,0 +1,25 @@
+{
+  "$comment": "Artefact: .aew/runs/<run-id>/spec-changes.json. Written by: spec-analyser. Read by: orchestrator, which renders it into the 'Spec revision vN' issue comment (spec-revision-comment.md). type: material | non-material. source: auto (non-material, applied automatically) | confirmed (material, answered by James). A material change appears here only once James has answered.",
+  "issue": 42,
+  "version": 2,
+  "changes": [
+    {
+      "change": "Made the empty-email validation message an explicit AC.",
+      "type": "non-material",
+      "rationale": "Implied by the issue's 'show an error' wording; needed for a testable AC.",
+      "source": "auto"
+    },
+    {
+      "change": "Added a visible label to the email field.",
+      "type": "non-material",
+      "rationale": "Required by WCAG 2.2 AA (3.3.2 Labels or Instructions).",
+      "source": "auto"
+    },
+    {
+      "change": "Sign-ups use double opt-in: a confirmation email before the address is subscribed.",
+      "type": "material",
+      "rationale": "Changes user-visible behaviour and adds a privacy-relevant step.",
+      "source": "confirmed"
+    }
+  ]
+}

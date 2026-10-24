@@ -1,0 +1,48 @@
+{
+  "project": "acme-storefront",
+  "default_branch": "main",
+  "stacks": [
+    { "profile": "nextjs", "path": ".", "version": "15.1.0" },
+    { "profile": "tailwind", "path": ".", "version": "4.0.0" }
+  ],
+  "commands": {
+    "install": "npm ci",
+    "dev": "npm run dev",
+    "build": "npm run build",
+    "lint": "npm run lint",
+    "format": "npx prettier --check .",
+    "typecheck": "npx tsc --noEmit",
+    "test_unit": "npx vitest run",
+    "test_e2e": "npx playwright test",
+    "seed": "npm run db:seed"
+  },
+  "app": {
+    "base_url": "http://localhost:3000",
+    "start_command": "npm run dev",
+    "ready_check": "http://localhost:3000",
+    "env_type": "native",
+    "test_accounts": [
+      { "role": "admin", "username_env": "AEW_ADMIN_USER", "password_env": "AEW_ADMIN_PASSWORD" },
+      { "role": "customer", "username_env": "AEW_CUSTOMER_USER", "password_env": "AEW_CUSTOMER_PASSWORD" }
+    ]
+  },
+  "ui": {
+    "viewports": [
+      { "name": "desktop", "width": 1440, "height": 900 },
+      { "name": "mobile", "width": 390, "height": 844 }
+    ],
+    "axe": true,
+    "axe_standard": "wcag22aa",
+    "e2e_dir": "tests/e2e"
+  },
+  "git": {
+    "branch_pattern": "feat/{issue}-{slug}",
+    "milestone_branch_pattern": "feat/m{milestone}-{slug}",
+    "commit_convention": "conventional"
+  },
+  "gates": { "plan_approval": true },
+  "limits": { "max_fix_cycles": 3, "max_review_cycles": 2, "max_parallel_developers": 4 },
+  "evidence": { "dir": "docs/qa", "format": "jpeg", "quality": 80 },
+  "claude_md": { "max_lines": 300 },
+  "retro": { "repo": "jamesborg2012/claude-agentic-engineer-workflow", "label": "retro" }
+}
