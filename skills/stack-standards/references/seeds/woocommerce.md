@@ -1,12 +1,12 @@
 # WooCommerce standards seed
 
-Versions covered: WooCommerce 11.2 (11.2.1 current stable; 11.6 will require PHP 8.1) on the wordpress base profile (researched 2026-10-24; sources: context7 unavailable, https://developer.woocommerce.com/2026/, https://developer.woocommerce.com/docs/features/high-performance-order-storage/recipe-book/, https://developer.woocommerce.com/docs/block-development/extensible-blocks/cart-and-checkout-blocks/, https://developer.woocommerce.com/docs/theming/theme-development/template-structure/)
+Versions covered: WooCommerce 11.2 (11.2.1 current stable; 11.6, planned for February 2027, will require PHP 8.1), woocommerce/woocommerce-sniffs 2.0, on the wordpress base profile (researched 2026-10-24; sources: context7 unavailable, https://developer.woocommerce.com/2026/, https://developer.woocommerce.com/2026/09/29/php-8-1-requirement/, https://github.com/woocommerce/woocommerce/blob/trunk/docs/apis/store-api/extending-store-api/extend-store-api-add-data.md, https://github.com/woocommerce/woocommerce-sniffs, https://github.com/woocommerce/woocommerce/tree/trunk/plugins/woocommerce/tests/legacy/framework, https://developer.woocommerce.com/docs/features/high-performance-order-storage/recipe-book/, https://developer.woocommerce.com/docs/block-development/extensible-blocks/cart-and-checkout-blocks/, https://developer.woocommerce.com/docs/theming/theme-development/template-structure/)
 Overlay on: wordpress
 
 ## Tooling and commands
 
 - **[convention]** Develop against the current stable WooCommerce, and test against the development version before each release, so HPOS and block changes surface early.
-- **[tool]** Run the WordPress coding standards with `phpcs` using the `WordPress` ruleset plus `woocommerce/woocommerce-sniffs`, which is the ruleset WooCommerce core uses (phpcs.xml).
+- **[tool]** Run `phpcs` with the `WooCommerce-Core` ruleset from `woocommerce/woocommerce-sniffs`, which pulls in WPCS 3.4 and PHPCompatibilityWP and is the ruleset WooCommerce core's own `phpcs.xml` uses (`<rule ref="WooCommerce-Core" />`).
 - **[tool]** Run `phpcs` with `PHPCompatibilityWP` and set `testVersion` to the minimum PHP you declare, which WooCommerce 11.6 raises to 8.1 (PHPCompatibilityWP).
 - **[convention]** Provide `composer lint`, `composer test` and `composer fix` scripts so the commands do not depend on a global install.
 - **[convention]** Run unit tests with PHPUnit on the WordPress test suite, with WooCommerce loaded as a dependency, and run `wp-env` or an equivalent container for integration and end-to-end tests.
@@ -42,7 +42,7 @@ No overlay additions; see the base profile.
 - **[convention]** Check order types with `OrderUtil::is_order()` or `OrderUtil::get_order_type()`, not `get_post_type()`.
 - **[convention]** If a custom data store is unavoidable, extend the CRUD data store classes and register it with the `woocommerce_data_stores` filter. Never write directly to WooCommerce tables.
 - **[convention]** Customise through actions and filters (`woocommerce_*`) before overriding a template. Hooks survive WooCommerce upgrades; overrides drift.
-- **[convention]** If a template override is unavoidable, copy only that file into `yourtheme/woocommerce/`, keep its `@version` docblock tag, and diff it against core on every WooCommerce release. WooCommerce flags outdated overrides in its status report.
+- **[convention]** If a template override is unavoidable, copy only that file into `yourtheme/woocommerce/` (a child theme when the theme is third-party), dropping the `templates/` segment of the path, keep its `@version` docblock tag, and diff it against core on every WooCommerce release. WooCommerce flags outdated overrides in its status report.
 - **[convention]** Extend the Cart and Checkout blocks through the Store API (`ExtendSchema`), the `IntegrationInterface` and the Additional Checkout Fields API. Do not rely on classic checkout hooks, which do not run in blocks.
 - **[convention]** Register payment gateways as `WC_Payment_Gateway` subclasses, and add a blocks payment method integration so the gateway works in block checkout.
 - **[convention]** Use WooCommerce's own settings API and `WC_Settings_Page` for settings screens, and its `wc_get_logger()` for logging.
@@ -87,12 +87,17 @@ $orders = get_posts( array( 'post_type' => 'shop_order', 'post_status' => 'wc-pr
 
 Do:
 ```php
-woocommerce_store_api_register_endpoint_data( array(
-	'endpoint'        => 'cart',
-	'namespace'       => 'acme',
-	'data_callback'   => 'acme_cart_data',
-	'schema_callback' => 'acme_cart_schema',
-) );
+use Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema;
+
+add_action( 'woocommerce_blocks_loaded', function () {
+	woocommerce_store_api_register_endpoint_data( array(
+		'endpoint'        => CartSchema::IDENTIFIER,
+		'namespace'       => 'acme',
+		'data_callback'   => 'acme_cart_data',
+		'schema_callback' => 'acme_cart_schema',
+		'schema_type'     => ARRAY_A,
+	) );
+} );
 ```
 Don't:
 ```php
@@ -134,7 +139,7 @@ error_log( 'Capture failed for ' . $order->get_billing_email() . ' card ' . $car
 - **[convention]** Treat order, customer and payment data as personal data. Collect the minimum, keep it out of logs and URLs, and register exporters and erasers with the WordPress privacy hooks.
 - **[convention]** Never store card numbers, CVVs or raw gateway secrets. Use the gateway's tokens through `WC_Payment_Tokens`, and take API keys from settings or environment variables, never from source.
 - **[convention]** Do not trust client-sent prices, totals or shipping values. Recalculate on the server from the product and the cart.
-- **[convention]** Authenticate REST and Store API routes with `permission_callback`. Use `woocommerce_rest_check_permissions` for WooCommerce REST extensions, and never return `__return_true` on a route that exposes orders or customers.
+- **[convention]** Authenticate REST and Store API routes with `permission_callback`. For routes that extend the WooCommerce REST API, check with its helpers, such as `wc_rest_check_post_permissions( 'shop_order', 'read' )` or `wc_rest_check_manager_permissions( 'settings', 'edit' )`. Never return `__return_true` on a route that exposes orders or customers.
 - **[convention]** Verify webhook and gateway callbacks by signature, and make the handler idempotent so a replay cannot double-complete an order.
 - **[convention]** Use `$wpdb->prepare()` for any custom query, and prefer CRUD or `wc_get_orders()` so HPOS table changes do not break the query.
 
@@ -166,7 +171,7 @@ Target: WCAG 2.2 AA.
 
 ## Testing conventions
 
-- **[convention]** Unit tests extend `WC_Unit_Test_Case` and use the `WC_Helper_*` factories (such as `WC_Helper_Product`) from the WooCommerce test suite, or `wc_create_order()` and `WC_Product_Simple` when the helpers are not available.
+- **[convention]** Unit tests extend `WC_Unit_Test_Case` and use the `WC_Helper_*` factories (such as `WC_Helper_Product::create_simple_product()`) from WooCommerce's `tests/legacy/framework`. These ship only in the GitHub source, not the release zip, so bootstrap from a source checkout, or build data with `wc_create_order()` and `WC_Product_Simple` on a plain `WP_UnitTestCase`.
 - **[convention]** Run the same test suite twice, once with HPOS on and once with HPOS off and compatibility mode on, to prove storage independence.
 - **[convention]** Name test files `test-<class>.php` or `<Class>Test.php` to match the repo's PHPUnit configuration, and name cases `test_<behaviour>`.
 - **[convention]** Cover cart, checkout and payment flows with end-to-end tests, in classic and block checkout, using Playwright in `wp-env`. Never hit a live gateway; use its sandbox.
@@ -189,5 +194,5 @@ Target: WCAG 2.2 AA.
 - **[convention]** Adding classic checkout hooks to a store that uses block checkout has no effect. Use the Store API and block integrations.
 - **[convention]** Using the `woocommerce_` prefix for your own hooks or functions collides with core. Use your own prefix.
 - **[convention]** Calling `save()` repeatedly inside a loop is slow. Batch the setters and save once.
-- **[convention]** Running code on `init` that needs `WC()->cart` or `WC()->session` fails in admin and cron. Check `WC()->cart` is set, or use `woocommerce_init`.
+- **[convention]** Code that assumes `WC()->cart` or `WC()->session` exists fails in admin, cron and REST requests, because WooCommerce loads them only for front-end requests (before `woocommerce_init`). Check `WC()->cart` is set first, and call `wc_load_cart()` (after `woocommerce_init`) only when a non-front-end request truly needs the cart.
 - **[convention]** Loading WooCommerce classes before WooCommerce is active is a fatal error. Check and wait for `plugins_loaded`.
