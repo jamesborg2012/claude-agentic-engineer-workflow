@@ -671,7 +671,7 @@ qa_failures_complete() {
 ```
 
 **qa-engineer invocation.** The `ALLOW` line follows `agents/qa-engineer.md` Guardrails (the prompt is the source).
-Set it after `smoke_shop`, so `$P` and `$P_REAL` are this project's. `ls`, `find`, `grep`, `head`, `wc` and the
+Set it after `smoke_shop` (or `smoke_use`, as E3 does), so `$P` is this project's; the block recomputes `$P_REAL`. `ls`, `find`, `grep`, `head`, `wc` and the
 `find test-results ...` read are auto-allowed read-only commands, so they have no rule. The port and issue are the
 fixture's 4173 and 201. The `ready_check` is a URL, so the `for i in $(seq 1 60)` loop form is not allowed. The
 `--disallowedTools` rules stop `git add *` reaching `-A` and `.`, and block `reset`, `checkout`, pushes and `gh`
@@ -680,13 +680,13 @@ fixture's 4173 and 201. The `ready_check` is a URL, so the `for i in $(seq 1 60)
 ```sh
 # phase A (run 941): ls and find are auto-allowed read-only commands, and phase A has no browser, so no rule at all
 ALLOW=()
-# phase B (run 951 and later); set after smoke_shop
-T=mcp__plugin_aew_playwright__browser
+# phase B (run 951 and later); set after smoke_shop or smoke_use (smoke_use does not set P_REAL, so recompute it)
+T=mcp__plugin_aew_playwright__browser; P_REAL=$(cd "$P" && pwd -P)
 ALLOW=(--allowedTools
   "Bash(npm install *)" "Bash(node --test *)" "Bash(npx playwright *)" "Bash(pnpm add -D -E *)" "Bash(yarn add -D -E *)"
-  "Bash(curl *)" "Bash(nohup sh -c *)" "Bash(tail -n 20 *)" "Bash(lsof -ti tcp:4173 -sTCP:LISTEN)" "Bash(kill *)"
+  "Bash(curl *)" "Bash(nohup sh -c *)" "Bash(sh -c *)" "Bash(tail -n 20 *)" "Bash(lsof -ti tcp:4173 -sTCP:LISTEN)" "Bash(kill *)"
   "Bash(rm -rf $P/docs/qa/201/screenshots)" "Bash(rm -rf $P_REAL/docs/qa/201/screenshots)"
-  "Bash(AEW_EVIDENCE_DIR=* npx playwright test *)"
+  "Bash(AEW_EVIDENCE_DIR=* npx playwright test)" "Bash(AEW_EVIDENCE_DIR=* npx playwright test *)"
   "Bash(mkdir -p *)" "Bash(file -b *)" "Bash(jq *)"
   "Bash(git status *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git rev-parse *)" "Bash(git add *)" "Bash(git commit *)"
   "${T}_navigate" "${T}_snapshot" "${T}_click" "${T}_type" "${T}_press_key" "${T}_select_option"
@@ -694,8 +694,11 @@ ALLOW=(--allowedTools
   --disallowedTools "Bash(gh *)" "Bash(git add -A*)" "Bash(git add .)" "Bash(git reset *)" "Bash(git checkout *)" "Bash(git push *)")
 ```
 
-The `AEW_EVIDENCE_DIR=` env-prefixed rule is **unverified**: Claude Code strips only a fixed set of env vars before
-matching, so the prefix may need its own pattern. A denial of the evidence run or of the `kill` stop in C6 is a
+The `AEW_EVIDENCE_DIR=` env-prefixed rules are **unverified**: Claude Code strips only a fixed set of env vars before
+matching, so the prefix may need its own pattern. There are two because a trailing ` *` matches the bare command only
+when it is the rule's only wildcard, and the §8 evidence run is the bare `commands.test_e2e` (`npx playwright test`).
+`nohup` is a wrapper Claude Code strips before matching, so `Bash(sh -c *)` is the documented match for the app start
+(the `&` is a separator and the `app.log` redirect is checked as a write inside the project). A denial of the evidence run or of the `kill` stop in C6 is a
 harness fault: add the narrowest matching rule and record the denied command verbatim in the Notes. Dispatch fields:
 
 ```sh
