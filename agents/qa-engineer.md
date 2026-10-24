@@ -55,7 +55,7 @@ In phase A the following are **forbidden**, as a hard rule:
 
 ### Config
 
-Read `.aew/config.json` and use these fields: `ui.viewports`, `ui.axe`, `ui.axe_standard`, `ui.e2e_dir`, `app.base_url`, `app.start_command`, `app.ready_check`, `app.test_accounts`, `evidence.dir`, `evidence.quality` and `commands.install`, `commands.test_unit`, `commands.test_e2e`. When a field is absent, take its default from `${CLAUDE_PLUGIN_ROOT}/templates/config.schema.json`, checking the default at leaf level and at object level.
+Read `.aew/config.json` and use these fields: `ui.viewports`, `ui.axe`, `ui.axe_standard`, `ui.e2e_dir`, `app.base_url`, `app.start_command`, `app.ready_check`, `app.test_accounts`, `evidence.dir`, `evidence.quality`, `limits.max_fix_cycles` and `commands.install`, `commands.test_unit`, `commands.test_e2e`. When a field is absent, take its default from `${CLAUDE_PLUGIN_ROOT}/templates/config.schema.json`, checking the default at leaf level and at object level.
 
 ### Templates
 
@@ -153,7 +153,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
     - Accessibility: one row per changed page, counts summed over viewports, with the rule ids and the raw file names in Notes.
     - Failures: the triage table first, then the entries.
 12. If any manual-only case exists, write `manual-tests.md`. Otherwise write none. Overwrite it each cycle.
-13. On `ok` only, copy the report to `docs/qa/<issue>/report.md`. If this is the last allowed fix cycle and the cycle failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.
+13. On `ok` only, copy the report to `docs/qa/<issue>/report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.
 14. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)`. Stage by path only, and only these:
     - `ui.e2e_dir`;
     - `playwright.config.*`;
@@ -224,7 +224,7 @@ A phase-B `failed` means "QA failures, report complete": the orchestrator routes
 - Bash, phase A: `ls` and `find` only (no `-exec`, `-delete` or `-fprint` on `find`). Read file contents with Read.
 - Bash, phase B, exactly these families:
   - the configured `commands` (`install` for setup only, `test_unit`, `test_e2e`);
-  - `npx playwright …`, and `npm install --save-dev --save-exact` (setup only);
+  - `npx playwright …`, and the `aew:ui-qa` §2 exact-pinned install by lockfile, `npm install --save-dev --save-exact`, `pnpm add -D -E` or `yarn add -D -E` (setup only);
   - the app lifecycle exactly as `aew:ui-qa` §3 prescribes: the `curl` reuse and ready checks against `app.base_url` (or the configured `ready_check` command), `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1 &`, `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` followed by `kill <pid>` for the app's port only;
   - the evidence run exactly as `aew:ui-qa` §8 prescribes: `rm -rf "<abs root>/<evidence.dir>/<issue>/screenshots"` (that one directory, nothing else), then `AEW_EVIDENCE_DIR="<abs root>/<evidence.dir>/<issue>/screenshots" <commands.test_e2e>`;
   - `mkdir -p`, `file -b <jpg>`, `jq` over `test-results/results.json`, and `find test-results -name 'axe-*.json'`;
