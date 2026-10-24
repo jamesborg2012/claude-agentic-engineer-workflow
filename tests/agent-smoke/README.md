@@ -61,6 +61,9 @@ jq -r 'select(.type=="result") | .total_cost_usd' "$O/stream.jsonl"
 | 912 brief-compiler prompt | 912 | 0.61 | 8.21 | no |
 | 921 attempt 1 standards-setter (agent fault: Bash `cat` loop denied) | 921 | 0.47 | 8.69 | no |
 | 921 attempt 2 after the Bash-guardrail `fix(agents)` | 921 | 0.47 | 9.16 | no |
+| 921 re-run on a fresh `$P` after the find/grep `fix(agents)` (72497e2) | 921 | 0.42 | 9.58 | no |
+| 922 standards-setter reuse | 922 | 0.24 | 9.82 | no |
+| 931 senior-engineer plan | 931 | 1.06 | 10.88 | no |
 
 ## 2. Setup per case
 
@@ -213,9 +216,9 @@ array is an unbound-variable error in bash 3.2 under `set -u`, and the guarded f
 ```sh
 # spec-analyser, brief-compiler: no Bash (no --allowedTools)
 ALLOW=()
-# standards-setter (Bash: detect-stack.sh and date only)
+# standards-setter (Bash: detect-stack.sh and date, plus auto-allowed read-only find/grep/ls/head/wc, so no extra rule)
 ALLOW=(--allowedTools "Bash($REPO/scripts/detect-stack.sh *)" "Bash(date *)" "mcp__plugin_context7_context7__*")
-# senior-engineer (Bash is read-only: git diff, log, show, status, rev-parse --verify, ls)
+# senior-engineer (Bash is read-only: git diff, log, show, status, rev-parse --verify, ls; find/grep/head/wc are auto-allowed read-only, so no extra rule)
 ALLOW=(--allowedTools "Bash(git diff *)" "Bash(git log *)" "Bash(git show *)" "Bash(git status *)" "Bash(git rev-parse --verify *)" "Bash(ls *)" "mcp__plugin_context7_context7__*")
 ```
 
@@ -443,24 +446,25 @@ Every row starts as `pending`. Cost goes in the notes (and the ledger in section
 | 921 `03-standards.md` follows template, ends in valid return block, both rows `generated`, section rows name existing sections | pass | Heading diff empty; both rows `generated`; all 12 section rows resolve to an existing `## ` heading in the named doc. |
 | 921 `STATUS: ok` | pass | Final message and artefact. |
 | 921 AC-18: no skip warning for `aew:stack-standards`; context7 tool names called recorded verbatim | pass (names not observable) | No skip warning; `aew:stack-standards` and `aew:run-protocol` preloaded. context7 was never called: in this headless session the server is `plugin:context7:context7` with status `needs-auth` (no `CONTEXT7_API_KEY`), so the debug log warns `Agent tools entry "mcp__plugin_context7_context7__*" takes no tool`. The agent fell back as designed ("context7 unavailable" in the docs). The server key matches the `mcp__plugin_context7_context7__` form, so no `tools:` change; the call names stay unverified for E6. |
-| 921 Preload, permission denials, final.txt return block, E-2 | pass | Attempt 1 failed here (agent fault): a `for f in ...; do cat $f; done` Bash loop was denied, and `ls` / `git ls-files` were used. Fix `dcac6f4` (Guardrails name them off limits); attempt 2 denials `[]`, E-2 clean: only the README (and the committed fix) differ. Cost 0.47 each. |
-| 921 post-pass: `git -C $P add -A && git -C $P commit -qm standards` done | pass | `git commit -qm standards` in `$P` (commit `62d5ac3`): clean tree for E4. |
+| 921 Preload, permission denials, final.txt return block, E-2 | pass | Attempt 1 failed here (agent fault): a `for f in ...; do cat $f; done` Bash loop was denied. Fix `dcac6f4` (Guardrails name them off limits) told it to use Glob/Grep, which do not exist for an agent with Bash (see notes); fix `72497e2` replaced that with `find`/`grep`. Re-run on a fresh `$P` after `72497e2`: denials `[]`, no `No such tool` line, `valid_return_block` ok on final.txt and the artefact, E-2 clean (nothing differs in `$REPO`). Cost 0.42. |
+| 921 re-check after `72497e2` (fresh `$P`): fingerprint calls, headers, README, line counts, `Overlay on: nextjs`, `03-standards.md` rows `generated`, section rows resolve, `STATUS: ok`, no Glob error | pass | Fingerprints equal the recorded values (`nextjs ... cfg:388ef4ff81b7`, `tailwind ... cfg:3f0744e5bcde`); headers match the format; docs 140 and 91 lines; all 11 section rows resolve to existing `## ` headings; the agent searched with `find docs/standards -type f` and `find . -path ./node_modules -prune ...`, both allowed. |
+| 921 post-pass: `git -C $P add -A && git -C $P commit -qm standards` done | pass | `git commit -qm standards` in the fresh `$P` (commit `e64c740`, replacing `62d5ac3`): clean tree for E4. |
 | **E4 run 922, standards-setter reuse** | | |
-| 922 fingerprint calls from the project root equal the setup values (setup values equal run 921's: the setup `diff` prints nothing) | pending | |
-| 922 `STATUS: ok`, SUMMARY contains "reused" | pending | |
-| 922 `03-standards.md` Status `reused` on both rows | pending | |
-| 922 checksums after the run byte-identical to before | pending | |
-| 922 `git -C $P status --porcelain docs/standards` empty | pending | |
-| 922 artefact follows template, both return blocks valid | pending | |
-| 922 Preload, permission denials, E-2 | pending | |
+| 922 fingerprint calls from the project root equal the setup values (setup values equal run 921's: the setup `diff` prints nothing) | pass | Setup `diff` printed nothing. Agent calls: `"$REPO/scripts/detect-stack.sh" fingerprint nextjs .` and `... tailwind .`, output equal to the setup values. |
+| 922 `STATUS: ok`, SUMMARY contains "reused" | pass | `STATUS: ok`; SUMMARY "nextjs: reused; tailwind: reused. Both fingerprints matched exactly, so nothing under docs/standards/ was written." |
+| 922 `03-standards.md` Status `reused` on both rows | pass | Both rows `reused`; the 11 section rows resolve to existing headings. |
+| 922 checksums after the run byte-identical to before | pass | `shasum -a 256 docs/standards/*` diff prints nothing. |
+| 922 `git -C $P status --porcelain docs/standards` empty | pass | Empty. |
+| 922 artefact follows template, both return blocks valid | pass | Heading diff empty; both blocks valid. |
+| 922 Preload, permission denials, E-2 | pass | Preload ok (`aew:run-protocol`, `aew:stack-standards`); denials `[]`; E-2 clean. Cost 0.24. The agent used `ls` and a `grep -n "^## "` of both docs (read-only, allowed). |
 | **E5 run 931, senior-engineer plan** | | |
-| 931 `05-plan.md` follows template, both return blocks valid; STATUS `ok` or `needs_input` with a listed material challenge (record which) | pending | |
-| 931 "Alternatives considered" has at least one alternative with a rejection reason | pending | |
-| 931 AC to WP matrix covers every AC; every WP id in the matrix has a `### WP-<n>` block | pending | |
-| 931 at least one WP `parallelisable: yes`; every WP's value correct under PD-7; no file in two WPs unless the later depends on the earlier (per-WP reasoning in notes) | pending | |
-| 931 every WP has standards references that exist in `docs/standards/`, and unit tests listed | pending | |
-| 931 Preload: none skipped for `aew:run-protocol`, `aew:stack-standards`, `superpowers:systematic-debugging` | pending | |
-| 931 permission denials empty, E-2 | pending | |
+| 931 `05-plan.md` follows template, both return blocks valid; STATUS `ok` or `needs_input` with a listed material challenge (record which) | pass | Heading diff against the template empty (`### WP-<n>` pattern); both blocks valid; `STATUS: ok` (no material challenge; 7 non-material ones listed). |
+| 931 "Alternatives considered" has at least one alternative with a rejection reason | pass | 4 alternatives, each with a reason: Server Action instead of Route Handler, native browser validation, separate error element plus hidden live region, one WP for everything. |
+| 931 AC to WP matrix covers every AC; every WP id in the matrix has a `### WP-<n>` block | pass | `grep -oE 'AC-[0-9]+' 02-brief.md | sort -u` (AC-1..AC-7) equals the matrix AC column; WP-1, WP-2, WP-3 all have blocks. |
+| 931 at least one WP `parallelisable: yes`; every WP's value correct under PD-7; no file in two WPs unless the later depends on the earlier (per-WP reasoning in notes) | pass | WP-1 `no`: foundation, both others depend on it, nothing runs alongside it. WP-2 `yes` and WP-3 `yes`: each `depends_on` only WP-1, neither depends on the other, and files are disjoint (`app/api/newsletter/route*.ts` against `components/newsletter-form*.tsx` and `app/layout.tsx`). `package.json` is owned by WP-1 alone. Matches the fixture's designed split (shared validator, then server and client in parallel). |
+| 931 every WP has standards references that exist in `docs/standards/`, and unit tests listed | pass | 17 references; every doc file exists and every section name (`tooling-and-commands`, `framework-conventions`, `error-handling`, `security`, `accessibility`, `testing-conventions`) is an existing `## ` heading in that doc. Unit-test table has WP-1, WP-2 and WP-3 rows. |
+| 931 Preload: none skipped for `aew:run-protocol`, `aew:stack-standards`, `superpowers:systematic-debugging` | pass | Debug: `[Agent: aew:senior-engineer] Preloaded skill` for all three; no skip line. |
+| 931 permission denials empty, E-2 | pass | `[]`; E-2 clean. No `No such tool`. The agent used `ls`, and `find ... -type f` (allowed). Cost 1.06. |
 
 ## 7. Notes
 
@@ -485,5 +489,7 @@ are logged here, newest last.
   to `--settings`.
 - E3 batch (Claude Code 2.1.308): five runs launched concurrently from one wrapper per run, about 3 minutes wall clock; all five `result` events `success`. Runs a to d passed first time.
 - E3 agent fault (prompt fix `dcac6f4`): standards-setter attempt 1 broke its two-command Bash allowlist (a `cat` loop, denied; `ls` and `git ls-files` ran because read-only commands are auto-allowed). Guardrails now forbid `cat`, `ls`, `git`, loops and pipes. Attempt 2 clean. standards-setter had no earlier passing case to re-run; spec-analyser was untouched.
-- E3 environment facts for E6: (1) in this headless session `Glob` and `Grep` are not in the tool list (`No such tool available: Glob ... find files with find via the Bash tool`), although the agents list them in `tools:`; an agent with a restricted Bash cannot list files and must Read known paths (`git ls-files` and `ls` still run as auto-allowed read-only commands). (2) context7 is `needs-auth` here (see the AC-18 row). (3) The fingerprint and `date +%Y-%m-%d` calls were allowed under the `Bash(date *)` and quoted-path rules, including in a `;`-joined command.
+- E3 environment facts for E6: (1) in this headless session `Glob` and `Grep` are not in the tool list (`No such tool available: Glob ... find files with find via the Bash tool`), although the agents list them in `tools:`. The docs explain it (see the E4 note below): corrected in DESIGN section 3 by `72497e2`. (2) context7 is `needs-auth` here (see the AC-18 row). (3) The fingerprint and `date +%Y-%m-%d` calls were allowed under the `Bash(date *)` and quoted-path rules, including in a `;`-joined command.
 - Run 921's `$P` (`$SMOKE/smoke-standards-setter-newsletter`) is committed (`standards`) and untouched for E4 and E5; attempt 1's stream is kept as `$SMOKE/out-921-attempt1`.
+- E4 agent and DESIGN fault (prompt fix `72497e2`): the docs (tools-reference, sub-agents, permissions, fetched 2026-10-24) say `Glob` and `Grep` are absent by default on macOS/Linux/WSL, that a subagent gets them back only if it lists them **and leaves out `Bash`**, and that read-only Bash commands (`ls`, `cat`, `head`, `tail`, `grep`, `find`, `wc`, `diff`, `stat`, read-only `git`) run without a prompt in every mode (`find` with `-exec`, `-delete` or `-fprint` prompts). So `dcac6f4` was wrong to tell standards-setter to use Glob/Grep. Now standards-setter and senior-engineer (both have Bash) drop `Glob, Grep` from `tools:` and use read-only `find`, `grep`, `ls`, `head`, `wc` (Read for contents); spec-analyser and brief-compiler (no Bash) keep `Glob, Grep`. DESIGN section 3 has a new "Search tools" bullet in the same commit. Run 921 re-run on a fresh `$P` and passed all rows; it is the only passing case of standards-setter, so no further re-runs.
+- E4/E5 ran sequentially in the same `$P`; run 931 seeded `03-standards.md` from 922 and did not seed `spec-final.md` (optional context for plan mode). The headless `ALLOW` lines needed no change for `find`/`grep`/`head`/`wc` because they are auto-allowed read-only commands.
