@@ -50,6 +50,11 @@ These rules apply in both modes.
   - Replace a vague word with a measurable criterion only when the spec, the config, the standards or a widely accepted default gives a defensible target. For example, "accessible" becomes "the axe scan (WCAG 2.2 AA) reports no serious or critical violations", and "responsive" becomes "the layout has no horizontal scroll and nothing overlaps at each configured viewport (1440x900 and 390x844 by default)".
   - Otherwise, keep the word out of the ACs and list it under Open risks as: `Flagged: "<word>" in <where> has no measurable target; suggested: <target>.`
   - Never invent a number that changes scope.
+- **Example.** "Users can reset their password and get an email" hides two outcomes and gives no values. Written well, it becomes:
+  - `AC-1` [UI] Given the sign-in page, when a visitor submits a registered email on "Forgot password", then the page shows "Check your inbox for a reset link."
+  - `AC-2` [API] Given a registered email, when `POST /api/password-reset` is called with it, then the response is `202`.
+  - `AC-3` [API] Given a registered email, when `POST /api/password-reset` is called with it, then exactly one reset email is sent to that address.
+  - The values (copy, status code, route) come from the spec; if the spec gives none, flag them under Open risks rather than inventing them.
 - **A material gap the spec-analyser missed.** Do not fix it yourself. Note it under Open risks and in NEXT. If it makes an AC impossible to write, return `blocked`.
 
 ## UI changes
@@ -74,7 +79,7 @@ These rules apply in both modes.
    - **Affected surfaces:** routes, components, endpoints and tables, by path.
    - **Test data and accounts needed:** roles from `app.test_accounts`, never credentials, plus the seed data needed.
    - **UI changes:** per the section above.
-   - **Definition of Done:** keep the template's five items. Add AC-specific items only when needed. If the flag is `no`, end the UI item with "n/a (UI changes: no)".
+   - **Definition of Done** (pipeline mode only; `prompt.md` has its own checklist): keep the template's five items. Add AC-specific items only when needed. If the flag is `no`, end the UI item with "n/a (UI changes: no)".
    - **Open risks:** flagged vague words, spec gaps, disagreements between the analysis and the ACs, and anything judgement-heavy you decided.
 
 ### Pipeline mode
@@ -94,15 +99,17 @@ These rules apply in both modes.
 4. Write only `<run_dir>/prompt.md`, from `${CLAUDE_PLUGIN_ROOT}/templates/artefacts/prompt.md`. Do not write `02-brief.md`.
 5. Remove every HTML comment, the leading one included. Fill every placeholder:
    - project and stack, from `project` and `stacks` (profile, version and path);
+   - the second sentence of `## Role and context`: what the session needs to know that it cannot infer from the repo, taken from the brief's Context;
    - commands, from `commands`, set ones only. If none are set, write "the project's lint, format, typecheck and unit test commands";
-   - viewports and axe standard, from `ui` (defaults included);
+   - viewports and axe standard, from `ui` (defaults included), written for a reader, for example "desktop 1440x900, mobile 390x844" and "WCAG 2.2 AA" for `wcag22aa`;
    - branch: `git.branch_pattern` with `{issue}` and `{slug}` filled in (the slug is the issue title in lower-case kebab-case);
    - default branch, from `default_branch`.
 6. Under `## Brief`, inline the full brief with `###` sub-headings in this order: Goal, Context, Acceptance criteria, Non-goals, Constraints, Affected surfaces, Test data and accounts needed, `UI changes: yes` or `UI changes: no`, Open risks. Every AC appears with its id and tags.
 7. Under `## Standards`:
+   - Handle each profile in `stacks` on its own.
    - If `stacks` is set and `docs/standards/<profile>.md` exists, reference the relevant sections by repo path and heading.
    - If `stacks` is set and there are no docs, inline the essentials from `${CLAUDE_PLUGIN_ROOT}/skills/stack-standards/references/seeds/<profile>.md`: only the rules that bear on these ACs (security, accessibility, testing, naming), about 40 lines at most, with no plugin-internal path. For a profile with no seed file (for example `dotnet`), say the project's existing conventions apply and note that under Open risks.
-   - If `stacks` is absent: If `stacks` is absent, reference `docs/standards/` if present, otherwise say the project's existing conventions apply and note it under Open risks.
+   - If `stacks` is absent, reference `docs/standards/` if present, otherwise say the project's existing conventions apply and note it under Open risks.
 8. Under `## Verification`, if the flag is `no`, replace the UI bullet with "No UI changes: Playwright and axe checks are not required." and mark the matching Definition of Done item n/a.
 9. **Self-contained check.** The file is pasted into a fresh session with no plugin installed, so Grep it for each of these and fix every hit:
    - `aew` (case-insensitive), `.aew/`, `/aew:`, `run-protocol`, `CLAUDE_PLUGIN_ROOT`, `superpowers`;
