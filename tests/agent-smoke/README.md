@@ -495,3 +495,121 @@ are logged here, newest last.
 - Run 921's `$P` (`$SMOKE/smoke-standards-setter-newsletter`) is committed (`standards`) and untouched for E4 and E5; attempt 1's stream is kept as `$SMOKE/out-921-attempt1`.
 - E4 agent and DESIGN fault (prompt fix `72497e2`): the docs (tools-reference, sub-agents, permissions, fetched 2026-10-24) say `Glob` and `Grep` are absent by default on macOS/Linux/WSL, that a subagent gets them back only if it lists them **and leaves out `Bash`**, and that read-only Bash commands (`ls`, `cat`, `head`, `tail`, `grep`, `find`, `wc`, `diff`, `stat`, read-only `git`) run without a prompt in every mode (`find` with `-exec`, `-delete` or `-fprint` prompts). So `dcac6f4` was wrong to tell standards-setter to use Glob/Grep. Now standards-setter and senior-engineer (both have Bash) drop `Glob, Grep` from `tools:` and use read-only `find`, `grep`, `ls`, `head`, `wc` (Read for contents); spec-analyser and brief-compiler (no Bash) keep `Glob, Grep`. DESIGN section 3 has a new "Search tools" bullet in the same commit. Run 921 re-run on a fresh `$P` and passed all rows; it is the only passing case of standards-setter, so no further re-runs.
 - E4/E5 ran sequentially in the same `$P`; run 931 seeded `03-standards.md` from 922 and did not seed `spec-final.md` (optional context for plan mode). The headless `ALLOW` lines needed no change for `find`/`grep`/`head`/`wc` because they are auto-allowed read-only commands.
+
+## 8. Build agents (prompt 04)
+
+Smoke runs for `aew:developer`, `aew:qa-engineer` and `aew:doc-writer`, and the Playwright MCP probe they rely on.
+The conventions of sections 1 to 4 apply (`$SMOKE` outside the repo, `--settings` `enabledPlugins` disabling only
+`dev-workflow` and `figma`, `--debug-file`, the after-run `git -C "$REPO" status --porcelain`).
+
+### 8.1 Spend ledger (prompt 04, stop at $60)
+
+Separate from the prompt-03 ledger in section 1. Take each cost from the stream's final `result` event. Caps
+(Assumption 27): $5 per run, $8 for QA phase B, $10 for the fan-out run, $2 for gate checks, one raise to exactly 2x
+per run, **stop at $60 total**. Before each paid run add its cap to the total below; if the sum would exceed $60, do
+not start the run (record its checks as `open`). Apply the same test before any 2x raise.
+
+| run | id | cost (USD) | running total | cap raised? |
+|---|---|---|---|---|
+| 940 Playwright MCP probe (haiku) | 940 | 0.01 | 0.01 | no |
+
+### 8.2 Playwright MCP tool names (AC-2, probe 940)
+
+One Haiku session, `--plugin-dir "$REPO"`, in an empty git project under `$SMOKE`. It records the init tool list
+and drives the bundled server once, so it also settles the browser, files written into the cwd and the focus marker.
+Claude Code 2.1.308. Cap `--max-budget-usd 1`.
+
+```sh
+setopt interactivecomments 2>/dev/null || true
+REPO=$(git rev-parse --show-toplevel)
+SMOKE="${TMPDIR:-/tmp}"; SMOKE="${SMOKE%/}/aew-smoke"; mkdir -p "$SMOKE"
+PROBE="$SMOKE/probe-playwright"; O="$SMOKE/out-940"
+rm -rf "$PROBE" "$O" && mkdir -p "$PROBE" "$O"
+git -C "$PROBE" init -q && git -C "$PROBE" commit -q --allow-empty -m probe
+claude --version > "$O/claude-version.txt"
+URL='data:text/html,<title>aew-probe</title><button>One</button><button>Two</button>'
+T=mcp__plugin_aew_playwright__browser
+cd "$PROBE" && claude --plugin-dir "$REPO" -p "Use only the Playwright MCP tools, in this order: 1) browser_navigate to $URL 2) browser_press_key Tab 3) browser_snapshot 4) browser_console_messages with level error 5) browser_close. Then print four lines: TITLE: the page title; FOCUS: the snapshot line for the button that has focus, verbatim; CONSOLE: the console errors, or none; ERRORS: the exact text of any failed tool call, or none." \
+  --model haiku --output-format stream-json --verbose --max-budget-usd 1 --debug-file "$O/debug.log" \
+  --settings '{"enabledPlugins":{"dev-workflow@jamesborg":false,"figma@claude-plugins-official":false}}' \
+  --allowedTools "${T}_navigate" "${T}_press_key" "${T}_snapshot" "${T}_console_messages" "${T}_close" \
+  > "$O/stream.jsonl"
+cd "$REPO"
+```
+
+Checks:
+
+```sh
+S='select(.type=="system" and .subtype=="init")'
+jq -r "$S | .mcp_servers[] | select(.name|test(\"playwright\")) | \"\(.name) \(.status)\"" "$O/stream.jsonl"
+jq -r "$S | .tools[] | select(startswith(\"mcp__plugin_aew_playwright__\"))" "$O/stream.jsonl" | LC_ALL=C sort > "$O/playwright-tools.txt"
+wc -l < "$O/playwright-tools.txt"
+for t in navigate snapshot click type press_key select_option hover resize console_messages wait_for close; do
+  grep -qx "mcp__plugin_aew_playwright__browser_$t" "$O/playwright-tools.txt" || echo "MISSING browser_$t"
+done
+jq -r 'select(.type=="user") | .message.content[]? | select(.type=="tool_result") | "\(.is_error // false) \(.content|tostring|.[0:160])"' "$O/stream.jsonl"
+jq -r 'select(.type=="result") | .result' "$O/stream.jsonl"
+jq -r 'select(.type=="result") | .total_cost_usd' "$O/stream.jsonl"
+git -C "$PROBE" status --porcelain --untracked-files=all    # anything here = the server writes into the project cwd
+git -C "$REPO" status --porcelain                           # only this task's edits
+grep -i 'playwright' "$O/debug.log" | head -20
+```
+
+| check | result | notes |
+|---|---|---|
+| Server entry and status | pass | `plugin:aew:playwright connected` (init `mcp_servers`); debug: connected over stdio in 1309 ms, server version `1.64.0-alpha-1790635538000` (the bundled playwright). |
+| Tool count | pass | 25 `mcp__plugin_aew_playwright__*` names in init (expected at least 11). |
+| The eleven expected names present | pass | No `MISSING` line; no renamed tool (fallback 5e not needed). |
+| Tool results | pass | Five results, all `is_error` false. The first is a `tool_reference` result (the tools were deferred and loaded by ToolSearch before the first call). |
+| Title, focus, console | pass | `TITLE: aew-probe`; `FOCUS: - button "One" [active] [ref=e2]`; `CONSOLE: none`; `ERRORS: none`. |
+| Focus marker | `[active]` | After one `Tab`, `browser_snapshot` marks the focused element with `[active]` in its YAML line. No `browser_evaluate` needed (fallback 5c not needed). |
+| Browser | default channel (installed Google Chrome) | Navigation succeeded with no browser-not-found error and Google Chrome is installed on this machine (so this does not prove the server works without Chrome). Playwright's own chromium builds also exist in `~/Library/Caches/ms-playwright`. Fallback 5a not taken. |
+| Files written to the project cwd | **yes: `.playwright-mcp/`** | `browser_navigate` wrote `.playwright-mcp/page-<timestamp>.yml` into the probe project (its result links it). The probe git status showed only that file. Fallback 5d applies: `ui-qa` setup and the fixture `.gitignore` must ignore `.playwright-mcp/`. |
+| Repo `git status --porcelain` after the run | pass | Empty before the docs edits: the server's cwd is the session cwd, not the plugin root. |
+| Cost | 0.007 | Ledger row 940. |
+
+Full `mcp__plugin_aew_playwright__*` list (init, 0.0.83):
+
+```
+mcp__plugin_aew_playwright__browser_click
+mcp__plugin_aew_playwright__browser_close
+mcp__plugin_aew_playwright__browser_console_messages
+mcp__plugin_aew_playwright__browser_drag
+mcp__plugin_aew_playwright__browser_drop
+mcp__plugin_aew_playwright__browser_emulate_media
+mcp__plugin_aew_playwright__browser_evaluate
+mcp__plugin_aew_playwright__browser_file_upload
+mcp__plugin_aew_playwright__browser_fill_form
+mcp__plugin_aew_playwright__browser_find
+mcp__plugin_aew_playwright__browser_handle_dialog
+mcp__plugin_aew_playwright__browser_hover
+mcp__plugin_aew_playwright__browser_navigate
+mcp__plugin_aew_playwright__browser_navigate_back
+mcp__plugin_aew_playwright__browser_network_request
+mcp__plugin_aew_playwright__browser_network_requests
+mcp__plugin_aew_playwright__browser_press_key
+mcp__plugin_aew_playwright__browser_resize
+mcp__plugin_aew_playwright__browser_run_code_unsafe
+mcp__plugin_aew_playwright__browser_select_option
+mcp__plugin_aew_playwright__browser_snapshot
+mcp__plugin_aew_playwright__browser_tabs
+mcp__plugin_aew_playwright__browser_take_screenshot
+mcp__plugin_aew_playwright__browser_type
+mcp__plugin_aew_playwright__browser_wait_for
+```
+
+**qa-engineer Playwright tools**
+
+```
+mcp__plugin_aew_playwright__browser_navigate
+mcp__plugin_aew_playwright__browser_snapshot
+mcp__plugin_aew_playwright__browser_click
+mcp__plugin_aew_playwright__browser_type
+mcp__plugin_aew_playwright__browser_press_key
+mcp__plugin_aew_playwright__browser_select_option
+mcp__plugin_aew_playwright__browser_hover
+mcp__plugin_aew_playwright__browser_resize
+mcp__plugin_aew_playwright__browser_console_messages
+mcp__plugin_aew_playwright__browser_wait_for
+mcp__plugin_aew_playwright__browser_close
+```
