@@ -1,6 +1,6 @@
 # WordPress (themes and plugins) standards seed
 
-Versions covered: WordPress 7.1 (7.1.3 current), PHP 8.3 recommended with 7.4 as the legacy floor, MariaDB 10.11+ or MySQL 8.0+ (researched 2026-10-24; sources: context7 unavailable, official docs only: https://wordpress.org/download/releases/, https://wordpress.org/about/requirements/, https://developer.wordpress.org/coding-standards/wordpress-coding-standards/php/, https://developer.wordpress.org/themes/advanced-topics/security/, https://developer.wordpress.org/themes/global-settings-and-styles/, https://developer.wordpress.org/block-editor/getting-started/devenv/get-started-with-wp-scripts/, https://make.wordpress.org/core/handbook/testing/automated-testing/phpunit/)
+Versions covered: WordPress 7.1 (7.1.3 current), PHP 8.3 recommended with 7.4 as the legacy floor, MariaDB 10.11+ or MySQL 8.0+; WPCS 3.4, @wordpress/scripts 37, @wordpress/env 12 (researched 2026-10-24; sources: context7 unavailable, official docs only: https://wordpress.org/download/releases/, https://github.com/WordPress/WordPress-Coding-Standards (3.4.1 rulesets), https://www.npmjs.com/package/@wordpress/scripts (37.0.0 README), https://www.npmjs.com/package/@wordpress/env (12.0.0 README), https://developer.wordpress.org/coding-standards/wordpress-coding-standards/accessibility/, https://developer.wordpress.org/plugins/internationalization/how-to-internationalize-your-plugin/, https://wordpress.org/about/requirements/, https://developer.wordpress.org/coding-standards/wordpress-coding-standards/php/, https://developer.wordpress.org/themes/advanced-topics/security/, https://developer.wordpress.org/themes/global-settings-and-styles/, https://developer.wordpress.org/block-editor/getting-started/devenv/get-started-with-wp-scripts/, https://make.wordpress.org/core/handbook/testing/automated-testing/phpunit/)
 
 Seed for hand-written WordPress themes and plugins. The repo's own conventions and tooling win over this seed.
 
@@ -8,8 +8,8 @@ Seed for hand-written WordPress themes and plugins. The repo's own conventions a
 
 - **[tool]** Lint PHP with PHP_CodeSniffer and the WordPress ruleset: `composer require --dev wp-coding-standards/wpcs`, then `vendor/bin/phpcs` with a committed `.phpcs.xml.dist` (WordPress, WordPress-Extra, WordPress-Docs).
 - **[tool]** Auto-fix PHP style with `vendor/bin/phpcbf` before committing (WPCS).
-- **[tool]** Lint JS, CSS and format with `@wordpress/scripts`: `npm run lint-js`, `npm run lint-style`, `npm run format`, and `npm run build` for production assets (`wp-scripts`).
-- **[tool]** Set `testVersion` in `.phpcs.xml.dist` to the plugin's declared minimum PHP so PHPCompatibilityWP flags newer syntax (PHPCompatibilityWP).
+- **[tool]** Lint JS and CSS, format and build with `@wordpress/scripts`: `wp-scripts lint-js`, `lint-style`, `format` and `build`, wired as `package.json` scripts (conventionally `npm run lint:js`, `lint:style`, `format`, `build`) (`wp-scripts`).
+- **[convention]** Add PHPCompatibilityWP (`phpcompatibility/phpcompatibility-wp`, not part of WPCS) and set `testVersion` in `.phpcs.xml.dist` to the declared minimum PHP (for example `7.4-`) so newer syntax is flagged.
 - **[convention]** Declare `Requires at least`, `Requires PHP` and `Tested up to` in the plugin header and `readme.txt` (or `style.css` for themes), and keep them truthful.
 - **[convention]** Develop against a local `wp-env` (`npx wp-env start`) so everyone runs the same WordPress, PHP and database versions.
 - **[convention]** Pin PHP dev tools in `composer.json` and JS tools in `package-lock.json`; commit both lock files.
@@ -25,21 +25,23 @@ Seed for hand-written WordPress themes and plugins. The repo's own conventions a
 
 ## Naming
 
-- **[tool]** Functions, variables and hooks use `lowercase_with_underscores`; constants are `UPPERCASE` (WordPress.NamingConventions.ValidFunctionName, ValidVariableName).
-- **[tool]** Classes, interfaces and traits use `Capitalised_Words_With_Underscores`, with acronyms in capitals (`WP_HTTP`) (WordPress.NamingConventions).
+- **[tool]** Functions, variables and hook names use `lowercase_with_underscores` (WordPress.NamingConventions.ValidFunctionName, ValidVariableName, ValidHookName).
+- **[tool]** Classes, interfaces, traits and enums use `Capitalised_Words_With_Underscores` (PEAR.NamingConventions.ValidClassName); acronyms stay in capitals (`WP_HTTP`).
+- **[convention]** Constants are `UPPER_CASE_WITH_UNDERSCORES`.
 - **[tool]** Class files are `class-my-thing.php`: lowercase, hyphens, `class-` prefix, one class per file (WordPress.Files.FileName).
-- **[convention]** Prefix every global (functions, classes, options, hooks, post meta keys, script handles) with a unique 4+ character slug, or use one namespace such as `Vendor\Project_Name`. Never use the reserved `wp`, `WordPress` or `__` prefixes.
+- **[tool]** Prefix every global (functions, classes, constants, hooks, global variables) with a unique slug, or use one namespace such as `Vendor\Project_Name`; set the `prefixes` property in `.phpcs.xml.dist` (WordPress.NamingConventions.PrefixAllGlobals). Namespaces do not prefix hook names, `define()` constants, options or meta keys, so prefix those too. `wp` and `WordPress` are reserved.
 - **[convention]** Prefix option names, transients and custom post type, taxonomy and REST namespace slugs (for example `acme_settings`, `acme/v1`).
 
 ## Language idioms
 
 - **[tool]** Use Yoda conditions: `if ( 'draft' === $status )` (WordPress.PHP.YodaConditions).
-- **[tool]** Use long array syntax `array( 1, 2 )`, always use braces, `elseif` not `else if`, and full `<?php` tags (WordPress-Core).
-- **[tool]** Indent with tabs; put spaces inside parentheses and around operators; no assignments in conditions (WordPress-Core).
-- **[tool]** Compare strictly (`===`) and pass `true` as the strict argument to `in_array()` (WordPress.PHP.StrictInArray).
-- **[convention]** JS follows the WordPress JS standards (ESLint via `@wordpress/eslint-plugin`): tabs, single quotes, spaces inside brackets, `const`/`let` only.
-- **[tool]** CSS follows the WordPress CSS standards via Stylelint (`@wordpress/stylelint-config`): tabs, lowercase hyphenated classes, one selector per line, no ID selectors for styling.
-- **[convention]** Declare `declare( strict_types=1 );` only in new code that does not call untyped WordPress APIs loosely; use type declarations and return types within the declared minimum PHP.
+- **[tool]** Use long array syntax `array( 1, 2 )`, always use braces, `elseif` not `else if`, and full `<?php` tags (Universal.Arrays.DisallowShortArraySyntax, Generic.ControlStructures.InlineControlStructure, PSR2.ControlStructures.ElseIfDeclaration, Generic.PHP.DisallowShortOpenTag).
+- **[tool]** Indent with tabs; put spaces inside parentheses and around operators; no assignments in conditions (WordPress-Core whitespace sniffs, Generic.CodeAnalysis.AssignmentInCondition).
+- **[tool]** Compare strictly (`===`) and pass `true` as the strict argument to `in_array()` (Universal.Operators.StrictComparisons, WordPress.PHP.StrictInArray).
+- **[tool]** JS follows the WordPress JS standards: tabs, single quotes, spaces inside parentheses and brackets, `const`/`let` (ESLint with `@wordpress/eslint-plugin` via `wp-scripts lint-js`; Prettier with `@wordpress/prettier-config` via `wp-scripts format`).
+- **[tool]** CSS follows the WordPress CSS standards: tabs, lowercase hyphenated selectors, one selector per line (Stylelint with `@wordpress/stylelint-config` via `wp-scripts lint-style`).
+- **[convention]** Avoid over-qualified selectors: `.container`, not `div.container`.
+- **[convention]** The WordPress PHP standard is silent on `declare( strict_types=1 );`; follow the repo. Hook callbacks often receive strings (IDs from meta or requests), so cast at the boundary before typed code. Use type declarations only as far as the declared minimum PHP allows.
 
 Do:
 ```php
@@ -55,10 +57,10 @@ if ($post->post_status == 'publish' && !empty($items)) $ids = [1, 2, 3];
 ## Framework conventions
 
 - **[convention]** Extend WordPress through hooks (`add_action`, `add_filter`) and the public API. Never edit WordPress core, bundled plugins or a parent theme; the change is lost on update.
-- **[convention]** Register hooks in one bootstrap per feature, named callbacks or class methods, with an explicit priority only when order matters. Unhook with `remove_action` using the same priority.
-- **[convention]** Load assets only through `wp_enqueue_script()` and `wp_enqueue_style()` on `wp_enqueue_scripts` or `admin_enqueue_scripts`, with a handle, dependencies, a version, and `strategy`/`in_footer` arguments. Never print `<script>` or `<link>` tags by hand.
+- **[convention]** Register hooks in one bootstrap per feature, with named functions or class methods as callbacks (the handbook advises against closures because other code cannot unhook them; keep them to one-off bootstrap code) and an explicit priority only when order matters. Unhook with `remove_action` using the same priority.
+- **[tool]** Load assets only through `wp_enqueue_script()` and `wp_enqueue_style()` on `wp_enqueue_scripts` or `admin_enqueue_scripts`, with a handle, dependencies, a version, and `strategy`/`in_footer` arguments. Never print `<script>` or `<link>` tags by hand (WordPress.WP.EnqueuedResources, WordPress.WP.EnqueuedResourceParameters).
 - **[convention]** Pass data to scripts with `wp_add_inline_script()` or `wp_localize_script()`/script modules data, never by echoing inline JS.
-- **[convention]** Make every user-facing string translatable with a literal text domain matching the plugin or theme slug; load it with `load_plugin_textdomain()`/`load_theme_textdomain()` where required.
+- **[convention]** Make every user-facing string translatable with a literal text domain matching the plugin or theme slug; plugins translated on translate.wordpress.org need no `load_plugin_textdomain()` call (WordPress 4.6+); self-hosted translations load with `load_plugin_textdomain()`/`load_theme_textdomain()`.
 - **[tool]** The text domain argument must be a string literal, never a variable or constant (WordPress.WP.I18n).
 - **[tool]** Use translator comments for placeholders and `_n()` for plurals, and number placeholders (`%1$s`) when there are several (WordPress.WP.I18n).
 - **[convention]** Store settings with the Settings API (`register_setting`, `add_settings_field`) and expose data with REST routes via `register_rest_route` with a `permission_callback`.
@@ -107,7 +109,7 @@ $label = __( 'Save changes', $text_domain );
 - **[tool]** Build SQL with `$wpdb->prepare()` and placeholders `%s`, `%d`, `%f`; use `$wpdb->insert()`/`update()` where they suffice; `%i` for identifiers (WordPress.DB.PreparedSQL).
 - **[convention]** Never store secrets in the repo or in options in plain text; read them from `wp-config.php` constants or environment variables.
 - **[convention]** Validate uploads with `wp_check_filetype_and_ext()` and handle them through `wp_handle_upload()`.
-- **[convention]** Redirect with `wp_safe_redirect()` and `exit` after it; validate redirect targets with `wp_validate_redirect()`.
+- **[tool]** Redirect with `wp_safe_redirect()` and `exit` after it; validate redirect targets with `wp_validate_redirect()` (WordPress.Security.SafeRedirect).
 - **[convention]** Keep Composer and npm dependencies patched; run `composer audit` and `npm audit`.
 
 Do:
@@ -158,14 +160,14 @@ Don't:
 
 ## Testing conventions
 
-- **[tool]** PHP tests use PHPUnit with the WordPress test scaffold: `WP_UnitTestCase`, the Yoast PHPUnit Polyfills (`WP_TESTS_PHPUNIT_POLYFILLS_PATH`), and a separate test database (wp-tests-config).
-- **[convention]** Run PHP tests inside `wp-env` (`npx wp-env run tests-cli --env-cwd=wp-content/plugins/my-plugin vendor/bin/phpunit`) so the environment matches CI.
+- **[convention]** PHP tests use PHPUnit on the WordPress core test library: classes extend `WP_UnitTestCase`, the Yoast PHPUnit Polyfills load through `WP_TESTS_PHPUNIT_POLYFILLS_PATH`, and the suite uses its own database. `wp scaffold plugin-tests` generates the bootstrap; `wp-env` ships the library and sets `WP_TESTS_DIR`.
+- **[convention]** Run PHP tests inside `wp-env` (`npx wp-env run cli --env-cwd=wp-content/plugins/my-plugin vendor/bin/phpunit`) so the environment matches CI. For an isolated test site, start a second environment with `--config=.wp-env.test.json`; wp-env 12 deprecates the built-in `tests-cli` environment.
 - **[convention]** Keep PHP tests in `tests/phpunit/`, named `test-*.php` or `*Test.php` per `phpunit.xml.dist`, class `Acme_Feature_Test`, methods `test_<behaviour>`.
 - **[convention]** Use the factory (`self::factory()->post->create()`) and `set_up()`/`tear_down()` (calling the parent) instead of hand-made data; tests must not depend on order.
 - **[convention]** Test multisite code with a separate `multisite.xml` configuration and tag slow groups with `@group`.
-- **[tool]** JS unit tests run with `npm run test-unit-js` (`wp-scripts`) and live beside the source as `*.test.js` or in `__tests__/`.
-- **[tool]** End-to-end tests use `npm run test-e2e` with Playwright and `@wordpress/e2e-test-utils-playwright`, under `tests/e2e/`.
-- **[convention]** CI runs `phpcs`, PHPUnit on the minimum and latest supported PHP, `lint-js`, `lint-style`, JS tests and `build` before merge.
+- **[tool]** JS unit tests run with `wp-scripts test-unit-js` (as `npm run test:unit`), which runs the project's own Vitest: install `vitest` as a dev dependency, import its APIs explicitly, and name files `*.test.js` or `*.spec.js` beside the source. Existing Jest suites use `wp-scripts test-unit-jest` (`wp-scripts`).
+- **[tool]** End-to-end tests run with `wp-scripts test-e2e` (Playwright, alias `test-playwright`) and `@wordpress/e2e-test-utils-playwright`; specs live in the root `specs/` folder by default, named `*.spec.js` or `*.test.js` (`wp-scripts`).
+- **[convention]** CI runs `phpcs`, PHPUnit on the minimum and latest supported PHP, `lint:js`, `lint:style`, JS tests and `build` before merge.
 
 ## Documentation and comment standards
 
