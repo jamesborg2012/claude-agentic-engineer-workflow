@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Usage: detect-stack.sh [path]
+#        detect-stack.sh fingerprint <profile> [path]
 #
 # Detects the stacks in a project tree (default: the current directory) and
 # prints one JSON array of {profile, path, version, evidence} on one line:
@@ -14,8 +15,14 @@
 # range operators stripped, or "unknown". Each evidence string starts with the
 # path that triggered the rule.
 #
+# fingerprint: scans [path] the same way, takes the first <profile> entry and
+# prints "<profile> <dep>@<major>... cfg:<hash12>". cfg is the first 12 hex
+# characters of SHA-256 over the profile's tool configs in that entry's dir
+# and the scanned root (sorted relative path NUL content NUL). Manifests are
+# not hashed; tracked majors are listed instead.
+#
 # Exit 1 with error: on stderr for a missing or unreadable directory, an
-# unknown option or extra arguments.
+# unknown option, extra arguments, or a fingerprint profile not detected.
 # Limits: heuristic; nothing deeper than depth 3 is seen; paths containing a
 # tab or newline are not supported.
 # Options: -h, --help
@@ -33,6 +40,18 @@ case "${1:-}" in
 esac
 
 # --- arguments -------------------------------------------------------------
+MODE=detect
+PROFILE=
+if [ "${1:-}" = fingerprint ]; then
+  MODE=fingerprint
+  shift
+  [ "$#" -gt 0 ] || die "fingerprint needs a profile"
+  case "$1" in
+    -?*) die "unknown option: $1" ;;
+  esac
+  PROFILE=$1
+  shift
+fi
 NPOS=0
 ROOT=.
 for a in "$@"; do
@@ -71,15 +90,6 @@ norm_version() {
     esac
   done
   if [[ $v =~ $re ]]; then printf '%s' "${BASH_REMATCH[0]}"; else printf 'unknown'; fi
-  return 0
-}
-
-# dir_of <rel>: the directory of a path relative to the root ("." for top level).
-dir_of() {
-  case "$1" in
-    */*) printf '%s' "${1%/*}" ;;
-    *) printf '.' ;;
-  esac
   return 0
 }
 
@@ -179,7 +189,7 @@ manifest() {
 while IFS= read -r rel || [ -n "$rel" ]; do
   [ -n "$rel" ] || continue
   base=${rel##*/}
-  dir=$(dir_of "$rel")
+  case "$rel" in */*) dir=${rel%/*} ;; *) dir=. ;; esac
   if [ -d "$rel" ]; then
     if [ "$base" = "wp-content" ]; then
       add 1 wordpress "$dir" "$(wp_core_version "$dir")" "$rel/"
@@ -262,12 +272,12 @@ HOOK_RE='add_(action|filter)[[:space:]]*\([[:space:]]*["'"'"']woocommerce_'
 
 # Header pass: Plugin Name / Theme Name files, with their version headers.
 if [ -s "$TMP/hdrin" ]; then
-  sed 's|^|./|' "$TMP/hdrin" | tr '\n' '\0' | LC_ALL=C xargs -0 awk "$HDR_AWK" > "$TMP/hdrs"
+  sed 's|^|./|' "$TMP/hdrin" | tr '\n' '\0' | LC_ALL=C xargs -0 awk "$HDR_AWK" > "$TMP/hdrs" || true
   # rp (Requires PHP) is read for the field count; the fingerprint uses it later.
   # shellcheck disable=SC2034
   while IFS=$'\t' read -r f ra rp wr wt; do
     [ -n "$f" ] || continue
-    d=$(dir_of "$f")
+    case "$f" in */*) d=${f%/*} ;; *) d=. ;; esac
     case "$f" in
       *.php)
         what="Plugin Name"
@@ -291,7 +301,8 @@ if [ -s "$TMP/css" ]; then
   sed 's|^\./||' "$TMP/twcss.raw" > "$TMP/twcss"
   while IFS= read -r f || [ -n "$f" ]; do
     [ -n "$f" ] || continue
-    add 1 tailwind "$(nearest_root "$(dir_of "$f")")" unknown "$f: @import \"tailwindcss\""
+    case "$f" in */*) d=${f%/*} ;; *) d=. ;; esac
+    add 1 tailwind "$(nearest_root "$d")" unknown "$f: @import \"tailwindcss\""
   done < "$TMP/twcss"
 fi
 
@@ -326,7 +337,9 @@ if [ -s "$TMP/plugins" ] && [ -s "$TMP/php" ]; then
 fi
 
 # --- merge and print ---------------------------------------------------------
-jq -n -c --rawfile rec "$TMP/rec" '
+# detect_json: the merged records as one compact JSON array on stdout.
+detect_json() {
+  jq -n -c --rawfile rec "$TMP/rec" '
   ($rec | split("\n") | map(select(length > 0) | split("\t")
     | {rank: (.[0] | tonumber), profile: .[1], path: .[2], version: .[3], evidence: .[4]})) as $r
   | ($r | group_by([.path, .profile]) | map({
@@ -340,3 +353,123 @@ jq -n -c --rawfile rec "$TMP/rec" '
       or (.path as $p | any($wp[]; . == $p or $p == "." or startswith($p + "/")))))
   | sort_by([(.path != "."), .path, (if .profile == "tailwind" or .profile == "woocommerce" then 1 else 0 end), .profile])
   | map({profile, path, version, evidence})'
+}
+
+if [ "$MODE" = detect ]; then
+  detect_json
+  exit 0
+fi
+
+# --- fingerprint -------------------------------------------------------------
+# major <version>: the leading digit run, or unknown.
+major() {
+  case $1 in
+    unknown) printf 'unknown' ;;
+    *) printf '%s' "${1%%.*}" ;;
+  esac
+  return 0
+}
+
+# pkg_dep <dir> <dep>: the declared spec from <dir>/package.json, or nothing.
+pkg_dep() {
+  jq -r --arg k "$2" '(.dependencies // {})[$k] // (.devDependencies // {})[$k] // empty | tostring' \
+    "./$1/package.json" 2> /dev/null || true
+  return 0
+}
+
+JSON=$(detect_json) || die "detection failed"
+FIRST=$(printf '%s' "$JSON" | jq -r --arg p "$PROFILE" \
+  'map(select(.profile == $p)) | first // empty | [.path, .version] | @tsv') || die "detection failed"
+[ -n "$FIRST" ] || die "profile not detected: $PROFILE"
+IFS=$'\t' read -r EPATH EVER <<< "$FIRST"
+
+# Tracked deps: the primary comes from the entry version, the rest from manifests.
+LINE="$PROFILE"
+dep() { LINE="$LINE $1@$2"; return 0; }
+secondary() { # <name> <spec>: omitted when undeclared
+  [ -z "$2" ] || dep "$1" "$(major "$(norm_version "$2")")"
+  return 0
+}
+php_spec() {
+  local spec="" f rp
+  if [ -f "./$EPATH/composer.json" ]; then
+    spec=$(jq -r '(.require // {}).php // empty | tostring' "./$EPATH/composer.json" 2> /dev/null || true)
+  fi
+  if [ -z "$spec" ] && [ "$PROFILE" = wordpress ]; then
+    f=$(awk -F'\t' -v d="$EPATH" '$1 == d { print $2; exit }' "$TMP/headers")
+    if [ -n "$f" ]; then
+      rp=$(awk -F'\t' -v f="$f" '$1 == f { print $3; exit }' "$TMP/hdrs")
+      if [ "$rp" != "-" ]; then spec=$rp; fi
+    fi
+  fi
+  printf '%s' "$spec"
+  return 0
+}
+case "$PROFILE" in
+  nextjs)
+    dep next "$(major "$EVER")"
+    secondary react "$(pkg_dep "$EPATH" react)"
+    secondary typescript "$(pkg_dep "$EPATH" typescript)"
+    CFGS='eslint.config.* .eslintrc* .prettierrc* prettier.config.* tsconfig.json .editorconfig'
+    ;;
+  react)
+    dep react "$(major "$EVER")"
+    secondary typescript "$(pkg_dep "$EPATH" typescript)"
+    CFGS='eslint.config.* .eslintrc* .prettierrc* prettier.config.* tsconfig.json .editorconfig'
+    ;;
+  tailwind)
+    dep tailwindcss "$(major "$EVER")"
+    CFGS='tailwind.config.* .stylelintrc* stylelint.config.* .editorconfig'
+    ;;
+  laravel)
+    dep laravel/framework "$(major "$EVER")"
+    secondary php "$(php_spec)"
+    CFGS='pint.json phpstan.neon phpstan.neon.dist phpcs.xml phpcs.xml.dist .editorconfig'
+    ;;
+  wordpress)
+    dep wordpress "$(major "$EVER")"
+    secondary php "$(php_spec)"
+    CFGS='phpcs.xml phpcs.xml.dist .phpcs.xml .phpcs.xml.dist phpstan.neon phpstan.neon.dist eslint.config.* .eslintrc* .stylelintrc* stylelint.config.* .editorconfig'
+    ;;
+  woocommerce)
+    dep woocommerce "$(major "$EVER")"
+    CFGS='phpcs.xml phpcs.xml.dist .phpcs.xml .phpcs.xml.dist phpstan.neon phpstan.neon.dist .editorconfig'
+    ;;
+  dotnet)
+    dep dotnet "$(major "$EVER")"
+    CFGS='Directory.Build.props .csharpierrc* .editorconfig'
+    ;;
+  *) die "profile not detected: $PROFILE" ;;
+esac
+
+# Config files: the set's matches in the entry dir and the scanned root.
+: > "$TMP/cfgs.raw"
+shopt -s nullglob
+for d in "$EPATH" .; do
+  for pat in $CFGS; do
+    # shellcheck disable=SC2206  # the glob is the point
+    m=(./"$d"/$pat)
+    for f in ${m[@]+"${m[@]}"}; do
+      [ -f "$f" ] && [ -r "$f" ] || continue
+      if [ "$d" = . ]; then printf '%s\n' "${f##*/}"; else printf '%s/%s\n' "$d" "${f##*/}"; fi
+    done >> "$TMP/cfgs.raw"
+  done
+done
+shopt -u nullglob
+if [ "$PROFILE" = tailwind ]; then
+  while IFS= read -r f || [ -n "$f" ]; do
+    [ -n "$f" ] || continue
+    if [ "$EPATH" = . ]; then under=1; else
+      case "$f" in "$EPATH"/*) under=1 ;; *) under=0 ;; esac
+    fi
+    if [ "$under" -eq 1 ] && [ -f "$f" ] && [ -r "$f" ]; then printf '%s\n' "$f" >> "$TMP/cfgs.raw"; fi
+  done < "$TMP/twcss"
+fi
+LC_ALL=C sort -u "$TMP/cfgs.raw" > "$TMP/cfgs"
+
+if command -v shasum > /dev/null 2>&1; then SHA='shasum -a 256'
+elif command -v sha256sum > /dev/null 2>&1; then SHA=sha256sum
+else die "need shasum or sha256sum"; fi
+# shellcheck disable=SC2086  # SHA is a command plus its fixed argument
+HASH=$({ while IFS= read -r rel; do printf '%s\0' "$rel"; cat -- "$rel"; printf '\0'; done < "$TMP/cfgs"; } | $SHA | cut -c1-12)
+printf '%s cfg:%s\n' "$LINE" "$HASH"

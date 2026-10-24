@@ -351,3 +351,171 @@ EOF
   assert_success
   assert_equal "$(shape)" '[{"profile":"wordpress","path":"p","version":"6.4"}]'
 }
+
+# --- fingerprint (task A4) -----------------------------------------------------
+
+# fp <args…>: run the fingerprint subcommand; assert success; the line is in $FP.
+fp() {
+  run --separate-stderr "$DS" fingerprint "$@"
+  assert_success
+  FP=$output
+}
+
+# copy <fixture> <name>: a fresh copy of a stack fixture under $T.
+copy() {
+  rm -rf "${T:?}/$2"
+  cp -R "$STACKS/$1" "$T/$2"
+}
+
+# setjson <file> <jq filter>: rewrite a JSON file.
+setjson() { jq "$2" "$1" > "$1.tmp" && mv "$1.tmp" "$1"; }
+
+refute_equal() {
+  if [ "$1" = "$2" ]; then printf 'expected a change; both: %s\n' "$1" >&2; return 1; fi
+}
+
+@test "every fixture profile fingerprints in the documented format" {
+  local name profile re bad=""
+  while IFS='|' read -r name profile re; do
+    run --separate-stderr "$DS" fingerprint "$profile" "$STACKS/$name"
+    if [ "$status" -ne 0 ] || ! [[ $output =~ $re ]]; then bad="$bad  $name $profile: [$output] status=$status"$'\n'; fi
+  done <<'FIXTURES'
+nextjs-tailwind|nextjs|^nextjs next@16 react@19 typescript@5 cfg:[0-9a-f]{12}$
+nextjs-tailwind|tailwind|^tailwind tailwindcss@4 cfg:[0-9a-f]{12}$
+react-vite|react|^react react@19 typescript@5 cfg:[0-9a-f]{12}$
+laravel|laravel|^laravel laravel/framework@12 php@8 cfg:[0-9a-f]{12}$
+wordpress-theme|wordpress|^wordpress wordpress@6 php@8 cfg:[0-9a-f]{12}$
+woocommerce-plugin|wordpress|^wordpress wordpress@6 php@8 cfg:[0-9a-f]{12}$
+woocommerce-plugin|woocommerce|^woocommerce woocommerce@9 cfg:[0-9a-f]{12}$
+dotnet-api|dotnet|^dotnet dotnet@9 cfg:[0-9a-f]{12}$
+monorepo|nextjs|^nextjs next@16 react@19 typescript@5 cfg:[0-9a-f]{12}$
+monorepo|laravel|^laravel laravel/framework@12 php@8 cfg:[0-9a-f]{12}$
+FIXTURES
+  if [ -n "$bad" ]; then printf '%s' "$bad" >&2; return 1; fi
+}
+
+@test "cfg is the first 12 hex of SHA-256 over sorted relative-path NUL content NUL" {
+  local want
+  want=$(cd "$STACKS/react-vite" && for f in eslint.config.js tsconfig.json; do printf '%s\0' "$f"; cat "$f"; printf '\0'; done | shasum -a 256 | cut -c1-12)
+  fp react "$STACKS/react-vite"
+  assert_equal "${FP##*cfg:}" "$want"
+}
+
+@test "a fingerprint is stable across runs, copies and the calling directory" {
+  fp nextjs "$STACKS/nextjs-tailwind"
+  local a=$FP
+  fp nextjs "$STACKS/nextjs-tailwind"
+  assert_equal "$FP" "$a"
+  copy nextjs-tailwind app
+  fp nextjs "$T/app"
+  assert_equal "$FP" "$a"
+  cd "$T/app"
+  fp nextjs
+  assert_equal "$FP" "$a"
+}
+
+@test "changing or adding a relevant config changes cfg for that profile only" {
+  copy nextjs-tailwind app
+  fp nextjs "$T/app"; local n0=$FP
+  fp tailwind "$T/app"; local t0=$FP
+  printf '\n' >> "$T/app/tsconfig.json"
+  fp nextjs "$T/app"; local n1=$FP
+  refute_equal "$n1" "$n0"
+  assert_equal "${n1% cfg:*}" "${n0% cfg:*}"
+  fp tailwind "$T/app"
+  assert_equal "$FP" "$t0"
+  printf '{}\n' > "$T/app/.prettierrc"
+  fp nextjs "$T/app"; local n2=$FP
+  refute_equal "$n2" "$n1"
+  printf '@theme { --color-accent: #a50; }\n' >> "$T/app/app/globals.css"
+  fp tailwind "$T/app"
+  refute_equal "$FP" "$t0"
+  fp nextjs "$T/app"
+  assert_equal "$FP" "$n2"
+}
+
+@test "repo-root configs count for a nested stack, and so do the stack's own" {
+  copy monorepo mono
+  fp nextjs "$T/mono"; local n0=$FP
+  fp laravel "$T/mono"; local l0=$FP
+  printf 'indent_size = 4\n' >> "$T/mono/.editorconfig"
+  fp nextjs "$T/mono"
+  refute_equal "$FP" "$n0"
+  fp laravel "$T/mono"; local l1=$FP
+  refute_equal "$l1" "$l0"
+  printf '{"preset":"psr12"}\n' > "$T/mono/apps/api/pint.json"
+  fp laravel "$T/mono"
+  refute_equal "$FP" "$l1"
+}
+
+@test "a major bump changes the line; a minor bump does not" {
+  copy nextjs-tailwind app
+  fp nextjs "$T/app"; local n0=$FP
+  setjson "$T/app/package.json" '.dependencies.next = "^16.2.0"'
+  fp nextjs "$T/app"
+  assert_equal "$FP" "$n0"
+  setjson "$T/app/package.json" '.dependencies.next = "^17.0.0"'
+  fp nextjs "$T/app"
+  assert_equal "$FP" "${n0/next@16/next@17}"
+}
+
+@test "unrelated changes leave the fingerprint unchanged" {
+  copy nextjs-tailwind app
+  fp nextjs "$T/app"; local n0=$FP
+  fp tailwind "$T/app"; local t0=$FP
+  printf '// edit\n' >> "$T/app/app/page.tsx"
+  printf '# Readme\n' > "$T/app/README.md"
+  setjson "$T/app/package.json" '.scripts.dev = "next dev --turbopack"'
+  put "app/dist/out.css" '@import "tailwindcss";'
+  put "app/node_modules/x/tsconfig.json" '{}'
+  fp nextjs "$T/app"
+  assert_equal "$FP" "$n0"
+  fp tailwind "$T/app"
+  assert_equal "$FP" "$t0"
+}
+
+@test "an undeclared tracked dependency is omitted; an unparseable version is unknown" {
+  copy react-vite r
+  setjson "$T/r/package.json" 'del(.devDependencies.typescript)'
+  fp react "$T/r"
+  assert_match "$FP" '^react react@19 cfg:[0-9a-f]{12}$'
+  setjson "$T/r/package.json" '.dependencies.react = "latest"'
+  fp react "$T/r"
+  assert_match "$FP" '^react react@unknown cfg:[0-9a-f]{12}$'
+}
+
+@test "php comes from composer.json require.php before the Requires PHP header" {
+  copy wordpress-theme th
+  printf '%s\n' '{"require":{"php":">=7.4"}}' > "$T/th/composer.json"
+  fp wordpress "$T/th"
+  assert_match "$FP" '^wordpress wordpress@6 php@7 cfg:[0-9a-f]{12}$'
+}
+
+@test "a profile at several paths is fingerprinted from the first in detection order" {
+  put "apps/a/package.json" '{"dependencies":{"next":"^15.3.0"}}'
+  put "apps/b/package.json" '{"dependencies":{"next":"^16.0.1"}}'
+  fp nextjs "$T"
+  assert_match "$FP" '^nextjs next@15 cfg:[0-9a-f]{12}$'
+}
+
+@test "a profile that is not detected exits 1 with error: and empty stdout" {
+  local p
+  for p in laravel cobol; do
+    run --separate-stderr "$DS" fingerprint "$p" "$STACKS/nextjs-tailwind"
+    assert_failure 1
+    assert_equal "$output" ""
+    assert_contains "$stderr" "error:"
+  done
+}
+
+@test "fingerprint with no profile, a bad path or extra arguments exits 1" {
+  run --separate-stderr "$DS" fingerprint
+  assert_failure 1
+  assert_contains "$stderr" "error:"
+  run --separate-stderr "$DS" fingerprint nextjs "$T/missing"
+  assert_failure 1
+  assert_contains "$stderr" "error:"
+  run --separate-stderr "$DS" fingerprint nextjs "$STACKS/nextjs-tailwind" extra
+  assert_failure 1
+  assert_contains "$stderr" "error:"
+}
