@@ -219,9 +219,17 @@ dev_stage() { "$SCRIPTS/state.sh" stage develop; }
   local ms
   ms=$(elapsed_ms bash -c "'$SCRIPTS/hooks/gate-subagent.sh' < '$BATS_TEST_TMPDIR/p.json'")
   [ "$ms" -lt 1000 ]
+  # elapsed_ms ignores the exit status: prove the timed run took the full
+  # allow path (exit 0, no output, no fail-open warning).
+  run_hook gate-subagent.sh "@$BATS_TEST_TMPDIR/p.json"
+  assert_allow
+  assert_equal "$stderr" ""
   "$SCRIPTS/state.sh" stage qa_test_plan
   cp "$HOOKS_FIX/qa-test-plan-ok.md" "$RD/04-qa-test-plan.md"
   payload aew:qa-engineer > "$BATS_TEST_TMPDIR/p.json"
   ms=$(elapsed_ms bash -c "'$SCRIPTS/hooks/gate-subagent.sh' < '$BATS_TEST_TMPDIR/p.json'")
   [ "$ms" -lt 1000 ]
+  run_hook gate-subagent.sh "@$BATS_TEST_TMPDIR/p.json"
+  assert_allow
+  assert_equal "$stderr" ""
 }
