@@ -370,9 +370,9 @@ No code beyond short illustrative signatures.
 - Code is readable, simple and documented: doc comments on public functions, and comments that explain why rather than what.
 - **Fan-out.** If at least two work packages are marked parallelisable and own disjoint files, it spawns sub-developers:
   - the same agent type, in "package mode", one work package each;
-  - each in an isolated worktree;
+  - each in its own git worktree;
   - at most `max_parallel_developers` at once;
-  - then it merges their branches into the feature branch one at a time and reruns all checks.
+  - then it integrates their commits into the feature branch one at a time and reruns all checks.
 
   Otherwise it works sequentially.
 
