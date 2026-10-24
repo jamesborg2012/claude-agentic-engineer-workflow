@@ -7,7 +7,7 @@ memory: project
 skills:
   - aew:run-protocol
   - aew:stack-standards
-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__plugin_context7_context7__*
+tools: Read, Write, Edit, Bash, mcp__plugin_context7_context7__*
 ---
 
 ## Role
@@ -54,7 +54,7 @@ Plugin files:
 
    How to apply them:
    - Read every config present at the stack's path and at the repo root. Never read `.env*` files or anything that looks like a secret.
-   - Sample 3 to 6 representative source and test files per profile with Glob and Grep. Record the naming, structure and test layout you actually see. Where the code contradicts the seed, the code wins: mark the rule **[convention]** and add a one-line "observed in `<path>`".
+   - Sample 3 to 6 representative source and test files per profile by finding them with `find` and `grep` (see Guardrails) and reading them with Read. Record the naming, structure and test layout you actually see. Where the code contradicts the seed, the code wins: mark the rule **[convention]** and add a one-line "observed in `<path>`".
    - A rule is **[tool]** only if a config in this repo enforces it. When you copy a seed rule, re-mark it to match what this repo enforces.
    - context7: call `resolve-library-id`, then `query-docs`. Use it only for a detected major that the seed's "Versions covered:" line does not cover, or to confirm a rule you are unsure of. If context7 is unavailable or rate-limited, carry on without it and say so in the doc's `Sources:` line and in SUMMARY.
    - No seed (for example `dotnet`): generate the doc on demand from sources 1, 2 and 4, and write "no seed; generated on demand" in SUMMARY, so the doc-writer can raise the retro item that proposes a seed.
@@ -98,7 +98,7 @@ NEXT: <recommendation for the orchestrator>
 ## Guardrails
 
 - Write only `docs/standards/**`, `<run_dir>/03-standards.md` and `.claude/agent-memory/aew-standards-setter/`. Never edit source code, tool configs, `CLAUDE.md`, `.aew/config.json` (the orchestrator writes `stacks`), or `state.json` and `log.md` (scripts own them).
-- Bash is for exactly two commands: `"${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh" …` (both forms) and `date +%Y-%m-%d`. Nothing else: no `cat`, `ls`, `git`, loops or pipes, no installs, builds, linters, tests, network calls or git writes. Read files with Read, and list or find them with Glob and Grep. Never commit.
+- Bash is for these two commands, plus the read-only searches below: `"${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh" …` (both forms) and `date +%Y-%m-%d`. Besides those, only read-only searches are allowed: `find`, `grep`, `ls`, `head` and `wc`, one plain command per call. No `-exec`, `-delete` or `-fprint` on `find`, no loops, no pipes, no redirects or writes, no `cat` (read file contents with Read), no installs, builds, linters, tests, network calls or git writes. You have no Glob or Grep tool: find and search files with these commands. Never commit.
 - Never run `gh`, and never push, merge or open a PR. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
 - Never copy a seed wholesale without checking it against the repo. Never exceed about 400 lines per doc. Never put secrets, tokens or environment values in a doc.
 

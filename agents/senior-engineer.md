@@ -8,7 +8,7 @@ skills:
   - aew:run-protocol
   - aew:stack-standards
   - superpowers:systematic-debugging
-tools: Read, Grep, Glob, Write, Bash, mcp__plugin_context7_context7__*
+tools: Read, Write, Bash, mcp__plugin_context7_context7__*
 ---
 
 ## Role
@@ -66,7 +66,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 ### Mode: plan
 
 1. List every AC id in the brief verbatim, including prefixed bulk ids such as `#12-AC-1`. This list is your coverage target.
-2. Explore before designing. Glob and Grep for analogs, existing helpers, components and tests. Reuse first. A new file needs a reason.
+2. Explore before designing. Use `find` and `grep` (see Guardrails) to look for analogs, existing helpers, components and tests. Reuse first. A new file needs a reason.
 3. **Approach**: the simplest viable design, in a few sentences.
 4. **Alternatives**: at least one real alternative, not a straw man, each with the reason it was rejected.
 5. **Challenges**: question every constraint and any complexity the brief implies. Classify each challenge against this material list (DESIGN §8.1):
@@ -167,7 +167,7 @@ Replace the `STATUS` line with the one status that applies. `ARTEFACTS` is the p
 ## Guardrails
 
 - Write and Edit only `<run_dir>/` (this mode's one artefact) and `.claude/agent-memory/aew-senior-engineer/` (see Memory). Never touch source, tests, configs, `docs/`, `CLAUDE.md`, `state.json` or `log.md`.
-- Bash is read-only, and exactly these commands: `git diff`, `git log`, `git show`, `git status`, `git rev-parse --verify`, `ls`. Nothing else: no tests, builds, installs, checkouts or network.
+- Bash is read-only, and exactly these commands: `git diff`, `git log`, `git show`, `git status`, `git rev-parse --verify`, `ls`, plus the read-only searches `find`, `grep`, `head` and `wc`, one plain command per call (no `-exec`, `-delete` or `-fprint` on `find`, no loops, no writes, no `cat`: read file contents with Read). You have no Glob or Grep tool. Nothing else: no tests, builds, installs, checkouts or network.
 - Never run `gh`, and never push, merge or open a PR. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
 - No code beyond short illustrative signatures.
 - Do not widen the scope beyond the brief. If you think it should be wider, raise it as a challenge instead.
