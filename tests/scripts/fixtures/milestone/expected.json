@@ -1,0 +1,108 @@
+[
+  {
+    "number": 20,
+    "title": "Self reference",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": [
+      2
+    ]
+  },
+  {
+    "number": 101,
+    "title": "Single phrase",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": [
+      3
+    ]
+  },
+  {
+    "number": 102,
+    "title": "List phrase",
+    "labels": [
+      "feature"
+    ],
+    "state": "CLOSED",
+    "depends_on": [
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "number": 103,
+    "title": "Upper colon ampersand",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": [
+      6,
+      7
+    ]
+  },
+  {
+    "number": 104,
+    "title": "Task lists",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": [
+      8,
+      9,
+      10
+    ]
+  },
+  {
+    "number": 105,
+    "title": "Native array",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": [
+      13
+    ]
+  },
+  {
+    "number": 106,
+    "title": "Native connection",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": [
+      14
+    ]
+  },
+  {
+    "number": 107,
+    "title": "Union",
+    "labels": [
+      "bug",
+      "p1"
+    ],
+    "state": "OPEN",
+    "depends_on": [
+      3,
+      5
+    ]
+  },
+  {
+    "number": 108,
+    "title": "CRLF",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": [
+      4
+    ]
+  },
+  {
+    "number": 109,
+    "title": "Null body",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": []
+  },
+  {
+    "number": 110,
+    "title": "Qualified",
+    "labels": [],
+    "state": "OPEN",
+    "depends_on": []
+  }
+]

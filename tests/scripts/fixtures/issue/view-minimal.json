@@ -1,0 +1,17 @@
+{
+  "number": 5,
+  "title": "Minimal issue",
+  "state": "OPEN",
+  "url": "https://github.com/acme/widgets/issues/5",
+  "author": {"id": "U_1", "is_bot": false, "login": "octo", "name": "Octo Cat"},
+  "body": "",
+  "labels": [],
+  "comments": [],
+  "milestone": null,
+  "assignees": [],
+  "blockedBy": {"nodes": [], "totalCount": 0},
+  "blocking": {"nodes": [], "totalCount": 0},
+  "parent": null,
+  "subIssues": {"nodes": [], "totalCount": 0},
+  "closedByPullRequestsReferences": []
+}

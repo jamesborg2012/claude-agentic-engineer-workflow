@@ -1,0 +1,15 @@
+{
+  "description": "aew safety guards (Bash, Edit/Write), subagent artefact gates and the active-run hint",
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/guard-bash.sh\"", "timeout": 5 }] },
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/guard-edit.sh\"", "timeout": 5 }] }
+    ],
+    "SubagentStop": [
+      { "matcher": "^aew:(developer|qa-engineer)$", "hooks": [{ "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/gate-subagent.sh\"", "timeout": 5 }] }
+    ],
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session-start.sh\"", "timeout": 5 }] }
+    ]
+  }
+}

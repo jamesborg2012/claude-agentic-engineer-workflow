@@ -1,0 +1,125 @@
+# expect	branch	cwd	command
+# Tab-separated. branch: main | feat (feat is feat/x). cwd is relative to the project: . | sub | tests.
+# The command column goes through @PROJECT@ substitution, then printf '%b' (so \n is a newline and \\ a backslash).
+block	feat	.	git push origin main
+block	main	.	git push
+block	feat	.	git push -f
+block	feat	.	git push --force-with-lease
+block	feat	.	gh pr merge 3
+block	feat	.	gh repo delete
+block	main	.	git reset --hard
+block	feat	.	rm -rf /
+block	feat	.	rm -rf ~
+block	feat	.	rm -rf ..
+block	feat	.	git clean -fdx
+allow	feat	.	git push origin feat/x
+allow	feat	.	rm -rf node_modules
+allow	feat	.	rm -rf tests/tmp
+allow	feat	.	npm test
+allow	feat	.	git reset --hard
+allow	feat	.	gh issue view 3
+block	feat	.	cd sub && git push origin main
+block	feat	.	npm test && git push -f
+block	main	sub	git -C .. push
+block	feat	.	git push origin +feat/x
+block	feat	.	git push origin HEAD:main
+block	feat	.	git push origin feat/x:refs/heads/main
+block	feat	.	sudo rm -r /etc
+block	feat	.	git clean -xdf
+block	feat	.	git clean -f -d -x
+block	feat	.	rm -r -f /
+block	feat	.	git push -uf origin feat/x
+block	feat	.	git push --force origin feat/x
+block	feat	.	git push --force-with-lease=feat/x origin feat/x
+block	feat	.	git push origin --delete main
+block	feat	.	git push origin :main
+block	main	.	git push origin HEAD
+block	feat	.	git push --all
+block	main	.	git push 2>&1
+block	feat	.	FOO=1 git push -f
+block	feat	.	env GIT_TRACE=1 git push origin main
+block	feat	.	/usr/bin/git push origin main
+block	feat	.	(git push -f)
+block	feat	.	if true; then git push -f; fi
+block	feat	.	git push -f &
+block	feat	.	rm -rf "$HOME"
+block	feat	.	rm -rf $TMPDIR/x
+block	feat	.	rm -rf ./*
+block	feat	.	rm -rf /tmp/build
+block	feat	.	rm -rf @PROJECT@
+block	feat	sub	rm -rf ../..
+block	feat	.	rm --recursive --force /
+block	main	.	git reset --hard origin/main
+block	feat	.	gh pr merge 3 --squash --auto
+block	feat	.	gh repo delete acme/widgets --yes
+block	feat	.	git push origin 'main'
+block	feat	.	sleep 1 & git push -f
+block	feat	.	( git push -f )
+block	feat	.	{ git push -f; }
+block	feat	.	> out.log && git push -f
+block	feat	.	git status &&\ngit push -f
+block	feat	.	git push \\\n  --force
+block	main	.	git push origin >/dev/null 2>&1
+block	feat	.	git checkout main && git push
+block	feat	.	git switch main && git reset --hard origin/main
+allow	feat	.	git checkout feat/x && git push
+allow	feat	.	git checkout main -- README.md && git push
+allow	feat	.	git push
+allow	feat	.	git push -u origin feat/x
+allow	feat	.	git push origin HEAD
+allow	main	.	git push origin feature-main
+allow	feat	.	git push --follow-tags origin feat/x
+allow	feat	.	rm -rf dist/*
+allow	feat	.	cd tests && rm -rf tmp
+allow	feat	.	rm -rf ./node_modules
+allow	feat	.	rm -f /tmp/x
+allow	feat	.	rm file.txt
+allow	main	.	git reset --soft HEAD~1
+allow	feat	.	git clean -fd
+allow	feat	.	git clean -fdX
+allow	feat	.	git commit -m "main"
+allow	feat	.	echo "git push -f"
+allow	feat	.	gh pr view 3
+allow	feat	.	gh pr create --fill
+allow	feat	.	git status
+allow	feat	.	ls -la
+block	feat	.	rm -rf .git
+block	feat	.	rm -rf sub/.git
+allow	feat	.	rm -f .git/index.lock
+allow	feat	.	rm -rf .github/old
+allow	feat	.	git checkout main && git checkout -b feat/y && git push -u origin HEAD
+block	feat	.	git push origin main>/dev/null
+block	feat	.	git push origin main&
+block	feat	.	true&git push -f
+block	feat	.	rm -rf .*
+block	feat	.	rm -rf .g*
+block	feat	.	rm -rf {.git,dist}
+block	feat	.	rm -rf .{git,x}
+block	feat	.	rm -rf **
+block	feat	.	\\git push -f
+block	feat	.	\\rm -rf /
+block	feat	.	command -p git push -f
+block	feat	.	time -p git push -f
+block	feat	.	timeout 60 git push origin main
+block	feat	.	timeout -s KILL 60 git push -f
+block	feat	.	nice -n 5 git push -f
+block	feat	.	git --git-dir .git push -f
+block	feat	.	git push --repo origin main
+block	feat	.	git push --force-w origin feat/x
+block	main	.	git reset --har
+block	feat	.	git clean --forc -dx
+block	feat	.	rm --rec -f /
+block	feat	.	cd $HOME && rm -rf Documents
+block	feat	.	pushd ~ && rm -rf Documents
+allow	feat	.	git checkout main && git switch --create feat/y && git push -u origin HEAD
+allow	feat	.	cd $HOME && ls
+allow	feat	.	timeout 60 npm test
+allow	feat	.	rm -rf *.egg-info
+allow	feat	.	rm -rf {build,dist}
+allow	feat	.	rm -rf build dist
+allow	feat	.	rm -rf .cache
+allow	feat	sub	rm -rf *
+allow	feat	.	git push origin main-fix
+allow	feat	.	git commit -m "push to main"
+allow	feat	.	npm run build 2>&1 | tail -5
+allow	feat	.	git log --oneline main

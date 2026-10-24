@@ -119,7 +119,7 @@ on the delta, and the stages after it run again.
 | QA failures once `fix_cycle` = `max_fix_cycles` | `blocked` |
 | UI brief with an automatable UI test still failing | Not done. It counts as a QA failure. |
 | James chooses stop at a gate | `failed` (terminal) |
-| SubagentStop gate hook blocks (artefact or return block missing) | The agent continues until the artefact is valid. Claude Code overrides the hook after eight consecutive blocks; the return is then checked as usual, and a missing artefact or return block counts as `failed`. |
+| SubagentStop gate hook blocks (artefact or return block missing) | The gate blocks once, and its reason becomes the agent's next instruction. If the agent stops again (`stop_hook_active` true), the gate allows the stop. The return is then checked as usual: a missing or invalid artefact or return block counts as `failed` (retry once, then `blocked`). |
 
 On `blocked`, the orchestrator posts a report comment with `gh-issue.sh comment`, sets
 `aew:blocked` and stops. `resume` re-checks the branch and working tree, then continues from the
