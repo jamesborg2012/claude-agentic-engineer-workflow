@@ -60,7 +60,7 @@ Step 0, for every mode:
 1. Resolve the dispatch fields. An unknown mode, or a missing field with no fallback, is `blocked`.
 2. Check the preconditions.
    - Full and fix: `git rev-parse --abbrev-ref HEAD` must equal `state.json` `branch` when that is set, and must never be the config `default_branch` (`main` when absent). `git status --porcelain` must be empty. Otherwise return `blocked` and name the problem. Worktrees are created from HEAD, so uncommitted work would be missing from them.
-   - Package: `cd <worktree> && git rev-parse --abbrev-ref HEAD` must equal `branch`, and `cd <worktree> && git status --porcelain` must be empty.
+   - Package: `git -C <worktree> rev-parse --abbrev-ref HEAD` must equal `branch`, and `git -C <worktree> status --porcelain` must be empty.
 3. Read the required inputs for the mode.
 4. Take the issue number from the brief's H1 (`# Brief: #<n> …`). In a bulk run, a WP belongs to the issue whose prefixed AC ids it covers (`#12-AC-1` gives `#12`).
 5. In full mode, also find the already-integrated work packages (see Mode: full, step 3).
@@ -112,7 +112,7 @@ A plan step that is impossible or clearly wrong stops the WP with `STATUS: block
 You are a sub-developer for one work package.
 
 1. Check `wp`, `worktree`, `branch` and an absolute `run_dir`, and that the worktree is on `branch` and clean (Step 0).
-2. Prefix every Bash command, git included, with `cd <worktree> && ` followed by one allowed command. Read, Edit and Write code by absolute path inside the worktree only. Read your run inputs (`05-plan.md`, `02-brief.md`, `03-standards.md`) from `run_dir`. Never change the main checkout, except to write your report into `run_dir`.
+2. Run every git command as `git -C <worktree> <subcommand> …`. Run every other command (the configured `commands.*`) as `cd <worktree> && <command>`. A `cd <worktree> && git …` command is refused by the Bash tool, because it changes directory before a version-control command. Read, Edit and Write code by absolute path inside the worktree only. Read your run inputs (`05-plan.md`, `02-brief.md`, `03-standards.md`) from `run_dir`. Never change the main checkout, except to write your report into `run_dir`.
 3. Apply "Every work package" to your WP only.
 4. Make exactly one commit on `branch`.
 5. Write `<run_dir>/06-dev-report-WP<n>.md` with `Mode: package` and your WP-branch sha (`wp: WP-1` writes `06-dev-report-WP1.md`).
@@ -165,7 +165,7 @@ SUMMARY says which WPs ran sequentially and which fanned out, the commits, and t
 - Touch only the allowed files: each WP's listed files, and in fix mode the files described in Mode: fix. Write only the report in `run_dir`.
 - Bash is limited to exactly these commands, and nothing else:
   - `git` with `status`, `diff`, `log`, `show`, `add`, `commit`, `worktree`, `cherry-pick`, `branch` and `rev-parse`;
-  - in a worktree, `cd <absolute worktree path> && <one allowed command>`. Never use `git -C`;
+  - in a worktree, git only as `git -C <absolute worktree path> <subcommand> …` with `status`, `diff`, `log`, `show`, `add`, `commit` or `rev-parse`, and any other command only as `cd <absolute worktree path> && <command>`. Never put `cd` before a git command;
   - the configured `commands.*` (`install`, `lint`, `format`, `typecheck`, `test_unit`; `test_e2e` narrowed, fix mode only), with `node`, `npm` and `npx` only as those commands need them;
   - in fix mode with e2e only, the app lifecycle exactly as `aew:ui-qa` §3 prescribes: `curl` for the reuse and ready checks, `app.start_command` as `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1` (one Bash call with `run_in_background: true`, no trailing `&`), `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` then `kill <pid>` for the instance you started;
   - read-only `ls`, `find`, `grep`, `head` and `wc` for search (no `-exec`, `-delete` or `-fprint` on `find`). You have no Glob or Grep tool.
