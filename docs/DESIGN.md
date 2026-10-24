@@ -38,7 +38,19 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
 - **Dependencies.** Each `dependencies` entry in `plugin.json` is `"name"`, `"name@marketplace"` or `{ name, marketplace, version }`. A `version` range resolves only against git tags named `<plugin>--v<version>` on the dependency's repo; with no matching tag, installing a dependency that has its own repo fails. Cross-marketplace dependencies need `allowCrossMarketplaceDependenciesOn` (an array of marketplace names) in the root marketplace's `marketplace.json`.
 - **Skill visibility.** `user-invocable: false` hides a skill from the `/` menu while Claude and agents can still use it. `disable-model-invocation: true` is the reverse: the user can invoke it, but Claude won't load it on its own.
 - **Validation.** `claude plugin validate <path>` checks a plugin or marketplace manifest and its components.
-- **Blocking hooks.** `Stop` and `SubagentStop` hooks can block by returning `{"decision":"block","reason":…}`. Honour `stop_hook_active`. Claude Code overrides a hook after eight consecutive blocks.
+- **Blocking hooks.**
+  - `PreToolUse` denies with `hookSpecificOutput.permissionDecision: "deny"` and `permissionDecisionReason` on exit 0. Top-level `decision`/`reason` are deprecated for `PreToolUse`.
+  - `Stop` and `SubagentStop` block with `{"decision":"block","reason":…}` on exit 0. Exit 2 also blocks, but aew never uses it.
+  - `stop_hook_active` is true when a stop hook has already continued the agent.
+  - Documented cap: after 8 consecutive stop-hook continuations, the next block is overridden. The count resets on each tool call, and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` raises it. It is stated for `Stop`; the same protections apply to `SubagentStop`.
+- **Hook matching and environment.**
+  - `SubagentStop` matchers match `agent_type`, which for plugin agents is `aew:<agent>`.
+  - A matcher of only letters, digits, `_`, `-`, space, `,` and `|` is an exact list. Anything else is an unanchored regex, so anchor it (`^aew:developer$`).
+  - The default timeout is 600 s, so set explicit timeouts. A hook that reaches its timeout is cancelled and its output discarded, so it renders no decision. A timed-out `PreToolUse` hook does not block the tool call unless it sets `onFailure: "block"` (aew does not), and `onFailure` has no effect on `SubagentStop`. A timed-out hook therefore never blocks; a timed-out `SessionStart` hint is simply missing.
+  - Exit-0 stderr is never shown to Claude (debug log only).
+  - `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PROJECT_DIR` are exported. The hook's cwd is not documented, so use the payload `cwd` or `CLAUDE_PROJECT_DIR`.
+  - `SessionStart` adds context through `hookSpecificOutput.additionalContext`.
+  - Whether `Write` and `Edit` matchers cover `MultiEdit` and `NotebookEdit` is not documented, so the `Edit|Write` guard may miss them (known limitation).
 - **Screenshots.** GitHub has no official API for image attachments, so QA evidence is committed to the PR branch.
 
 ## 4. Dependencies
@@ -484,6 +496,8 @@ Otherwise it recommends **sequential**.
 
 ## 11. Hooks (`hooks/hooks.json` → `scripts/hooks/`)
 
+Matchers: `Bash`; `Edit|Write`; one `SubagentStop` entry with `^aew:(developer|qa-engineer)$`; `SessionStart` with no matcher. Every hook has a 5 s timeout.
+
 - **`PreToolUse` on Bash (guard).** Blocks:
   - a push to the default branch;
   - any force push (including `--force-with-lease`);
@@ -492,13 +506,16 @@ Otherwise it recommends **sequential**.
   - `git reset --hard` while on the default branch;
   - `rm -rf` on the repo root, home or system paths, or anything outside the repo;
   - `git clean -fdx`.
-- **`PreToolUse` on Edit and Write (guard).** Blocks writes to `.env*`, known secret files and `.git/`.
-- **`SubagentStop` for qa-engineer (gate).** Blocks unless the latest QA artefact for the current phase exists and ends with a valid return block.
-- **`SubagentStop` for developer (gate).** Blocks unless the dev report exists and lists the commands run with their results.
+
+  The guard is a heuristic (it does not unwrap `bash -c` or `eval`); its limits are documented in the script header.
+- **`PreToolUse` on Edit and Write (guard).** Blocks writes to `.env*`, known secret files and `.git/`. It may not cover `MultiEdit` or `NotebookEdit` (undocumented, see section 3).
+- **`SubagentStop` for qa-engineer (gate).** Blocks unless the latest QA artefact for the current stage exists (stage-to-artefact mapping) and ends with a valid return block.
+- **`SubagentStop` for developer (gate).** Blocks unless the newest `06-dev-report*.md` exists, is not older than `state.json`, and, when `STATUS: ok`, lists the commands run with their results.
+- **Gates block once.** The reason becomes the agent's next instruction. When `stop_hook_active` is true, the gate allows the stop and the orchestrator's normal return check decides.
 - **`SessionStart`.** If `.aew/runs/current` exists and that run is not `done`, it adds context: "Active aew run <id> at stage <stage> (<status>). Use /aew:resume."
 - **All hooks:**
-  - honour `stop_hook_active`;
-  - fail open with a stderr warning if jq or the state file is missing, so they never brick a session;
+  - inert and silent outside an aew project (no `.aew/`); they warn and stay inert when `.aew/` exists without `config.json`;
+  - fail open (exit 0, stderr warning, visible only in the debug log) when jq or the state is missing, or on any unexpected error, so they never brick a session;
   - finish in under a second.
 
 ## 12. Quality bar for the plugin itself
