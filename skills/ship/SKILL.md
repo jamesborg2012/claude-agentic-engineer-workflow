@@ -21,6 +21,7 @@ The plugin root is `${CLAUDE_PLUGIN_ROOT}`.
 ## Rules
 
 - Run every command from the project root and never `cd`.
+- Write each command so it can be pre-approved before it runs: one plain command per call, no `$VAR`, `$?` or `$(…)`, no backticks, no `VAR=x cmd` prefix, no brace expansion and no heredoc. A value one command prints and the next one needs is read first, then written into the next command as a literal. Free text in a double-quoted argument (a title, a `--note`, a commit message) has `"`, `$`, backtick and `\` escaped with a backslash. `jq` puts every `--arg name value` after the filter, with a plain-token value (a number or a run id), and reads several files with `-s`, never `--slurpfile`.
 - Never run `gh` except `gh auth status` in preflight.
 - Never run git's push, merge, rebase, reset or force forms. Push only with `git-branch.sh push`.
 - Stage explicit paths only (`git add -- <paths>`), never `-A` or `.`.
@@ -126,7 +127,7 @@ State is initialised before the fetch (a recorded deviation from DESIGN's order)
 - 3.2 `state.sh init <n> --issues <n> --mode single`, adding `--auto` when given.
 - 3.3 `gh-issue.sh fetch <n> .aew/runs/<n>`. On failure: `state.sh status failed --note "fetch failed: <first stderr line>"`, then `state.sh current clear`, then print `Could not fetch issue #<n>: <reason>. Fix it, then restart with /aew:ship <n> --from spec_analysis.` and stop.
 - 3.4 `jq -r .state .aew/runs/<n>/issue.json`. If it prints `CLOSED`, take the same three actions as in 3.3, with the reason `issue #<n> is closed`.
-- 3.5 `state.sh set title "$(jq -r .title .aew/runs/<n>/issue.json)"`.
+- 3.5 Read the title on its own: `jq -r .title .aew/runs/<n>/issue.json`. Then `state.sh set title "<that title>"`, with the printed text written into the command as a double-quoted literal (see `## Rules`, free text in a command). Never nest the first command inside the second.
 - 3.6 `gh-labels.sh stage <n> analysing`.
 - 3.7 The slug: `jq -r '.title | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | .[0:40] | rtrimstr("-") | if . == "" then "issue-<n>" else . end' .aew/runs/<n>/issue.json`. Then `git-branch.sh create <n> <slug>` (it prints the branch name), then `state.sh set branch <name>`.
 - 3.8 Go to `## Stage: spec_analysis` step 2 (Step 3 has done its Entry).

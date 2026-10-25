@@ -32,7 +32,7 @@ Run after a docs `ok`, in this order.
 2. Read `state.sh get pr`.
    - Empty or null: `gh-pr.sh create <id> .aew/runs/<id>/pr-body.md`. It prints the PR number. Then `state.sh set pr <number>`.
    - Set: `gh-pr.sh update <pr> .aew/runs/<id>/pr-body.md --run <id>`. Never create a second PR.
-3. The PR URL for the report: `jq -r --arg pr <pr> '.url | sub("/issues/[0-9]+$"; "/pull/" + $pr)' .aew/runs/<id>/issue.json`, for example `https://github.com/acme/static-shop/pull/12`.
+3. The PR URL for the report: `jq -r '.url | sub("/issues/[0-9]+$"; "/pull/" + $pr)' --arg pr <pr> .aew/runs/<id>/issue.json` (the `--arg` goes after the filter, and `<pr>` is the plain PR number), for example `https://github.com/acme/static-shop/pull/12`.
 4. The `ready-for-review` label is set in `## Finish`, not here.
 
 ## Manual tests

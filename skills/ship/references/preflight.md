@@ -44,9 +44,9 @@ followed by gh's own output, quoted as it printed it (newer `gh` can exit non-ze
 Preflight checks the branch and never fast-forwards it.
 
 1. `<default>` comes from config: `jq -r '.default_branch // "main"' .aew/config.json`.
-2. `git rev-parse --verify --quiet refs/heads/<default>`. If it fails, stop with `The default branch <default> does not exist locally: run git switch <default>, then retry.`
-3. `git fetch origin <default>`. On failure stop with `Could not fetch origin/<default>: <stderr>.`
-4. `git rev-list --left-right --count <default>...origin/<default>` prints `<ahead> <behind>`.
+2. `git fetch origin <default>`. On failure stop with `Could not fetch origin/<default>: <stderr>.`
+3. Ahead: `git rev-list --count origin/<default>..<default>`. Behind: `git rev-list --count <default>..origin/<default>`. If the first fails because `<default>` is unknown, stop with `The default branch <default> does not exist locally: run git switch <default>, then retry.`
+4. Compare the two counts (`<ahead>` and `<behind>`):
    - `behind` above 0 (only behind, or diverged): stop with `<default> is behind origin/<default> by <behind> commit(s), and ahead by <ahead>: run git switch <default> && git pull --ff-only (or reconcile the divergence), then retry.` Leave out ", and ahead by <ahead>" when `ahead` is 0.
    - `behind` 0 and `ahead` above 0: warn `<default> has <ahead> unpushed commit(s); the PR will include them.` and continue.
    - Both 0: pass.
