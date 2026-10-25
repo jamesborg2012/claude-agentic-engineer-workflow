@@ -156,7 +156,7 @@ Syntax: `/aew:ship <issue> [--auto] [--from <stage>]`
 Takes issue `<issue>` through the whole pipeline in the diagram above, on a branch named from the
 issue, and ends with a pull request ready for review. State lives in `.aew/runs/<issue>/`, which is
 gitignored. Preflight fails fast if the config is missing, the tree is dirty, `gh` is not
-authenticated or another run is active.
+authenticated, the default branch is behind or has diverged from `origin`, or another run is active.
 
 - `--auto` skips the plan-approval gate. The other gates still ask.
 - `--from <stage>` restarts a run at one of `spec_analysis`, `brief`, `standards`, `qa_test_plan`,
