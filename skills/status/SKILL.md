@@ -42,7 +42,7 @@ The argument is: `$ARGUMENTS`.
 
 ## Show one run
 
-1. Run `test -f .aew/runs/<id>/state.json`. Missing: print `aew status: no run <id>.` and stop.
+1. Run `test -f .aew/runs/<id>/state.json && echo yes || echo no`. On `no`, print `aew status: no run <id>.` and stop.
 2. State fields:
 
    ```sh

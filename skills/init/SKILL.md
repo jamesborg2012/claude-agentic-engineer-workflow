@@ -123,18 +123,15 @@ A new branch starts from the local default branch (no fetch or fast-forward). A 
 Do this before any scratch file is written.
 
 ```sh
-if grep -qxF '.aew/runs/' .gitignore 2> /dev/null; then echo "present .aew/runs/"; else
-  if tail -c 1 .gitignore 2> /dev/null | grep -q .; then printf '\n' >> .gitignore; fi
-  printf '%s\n' '.aew/runs/' >> .gitignore; echo "added .aew/runs/"
-fi
-if grep -qxF '.playwright-mcp/' .gitignore 2> /dev/null; then echo "present .playwright-mcp/"; else
-  if tail -c 1 .gitignore 2> /dev/null | grep -q .; then printf '\n' >> .gitignore; fi
-  printf '%s\n' '.playwright-mcp/' >> .gitignore; echo "added .playwright-mcp/"
-fi
+tail -c 1 .gitignore 2> /dev/null | grep -c . || true
+grep -qxF '.aew/runs/' .gitignore 2> /dev/null && echo "present .aew/runs/" || echo "missing .aew/runs/"
+grep -qxF '.playwright-mcp/' .gitignore 2> /dev/null && echo "present .playwright-mcp/" || echo "missing .playwright-mcp/"
 ```
 
-Each line is matched exactly, so it appears once, and a missing final newline is repaired before an append
-(the pattern for any gitignore line); §10 adds `.claude/settings.local.json` only on a yes.
+The first line prints 1 when `.gitignore` lacks a final newline. Lines are matched exactly, so each appears once.
+**The gitignore pattern** (§3, §8, §10) adds each `missing` line, in order: if the count (the snippet's first
+line) is 1, run `printf '\n' >> .gitignore` once, then `printf '%s\n' '<line>' >> .gitignore` per line, and
+report it added. §10 adds `.claude/settings.local.json` only on a yes.
 
 ## 4. Detect and discover
 
@@ -290,12 +287,12 @@ Add the workflow section once; an existing section is left as it is, even if edi
 ```sh
 [ -f CLAUDE.md ] || printf '# CLAUDE.md\n' > CLAUDE.md
 if grep -qxF '## Agentic workflow' CLAUDE.md; then echo "CLAUDE.md section present"; else echo "CLAUDE.md section missing"; fi
+tail -c 1 CLAUDE.md | grep -c . || true
 ```
 
-Only on "missing", append it:
+Only on "missing", append it, first running `printf '\n' >> CLAUDE.md` if the count printed 1 (no final newline):
 
 ```sh
-if tail -c 1 CLAUDE.md | grep -q .; then printf '\n' >> CLAUDE.md; fi
 cat >> CLAUDE.md << 'EOF'
 
 ## Agentic workflow
@@ -398,15 +395,13 @@ first if it already exists): the portable one (template 2 plus the config rules)
 `.aew/runs/init-permissions-local.json`. Then run the snippets below in order.
 
 The first makes sure `.claude/settings.local.json` is ignored before it is written: `git check-ignore` honours
-every ignore source, so a third `.gitignore` line is added (only on a yes) only when nothing ignores it yet.
+every ignore source, so a third `.gitignore` line is added (only on a yes) only when nothing ignores it yet:
+on `missing`, add it with the §3 gitignore pattern.
 
 ```sh
 if git ls-files --error-unmatch .claude/settings.local.json > /dev/null 2>&1; then echo "tracked .claude/settings.local.json"
 elif git check-ignore -q .claude/settings.local.json; then echo "ignored .claude/settings.local.json"
-else
-  if tail -c 1 .gitignore 2> /dev/null | grep -q .; then printf '\n' >> .gitignore; fi
-  printf '%s\n' '.claude/settings.local.json' >> .gitignore; echo "added .claude/settings.local.json"
-fi
+else echo "missing .claude/settings.local.json"; fi
 ```
 
 The second merges one file (a missing file starts as `{}`). Run it with `<settings_file>` =
@@ -446,11 +441,12 @@ git status --porcelain --untracked-files=all
 ```
 
 If it prints nothing, or any path outside `.claude/agent-memory/aew-standards-setter/`, the memory is kept.
-Otherwise run the next snippet, then `rm -f <path> …` with every path it printed, written out literally, and
-report "standards-setter memory update discarded (nothing else changed)".
+Otherwise run the next snippet. Its first line counts modified memory files: above 0, run
+`git restore -- .claude/agent-memory/aew-standards-setter/`. Then `rm -f <path> …` with every path printed after
+it, written out literally, and report "standards-setter memory update discarded (nothing else changed)".
 
 ```sh
-if git ls-files -m -- .claude/agent-memory/aew-standards-setter/ | grep -q .; then git restore -- .claude/agent-memory/aew-standards-setter/; fi
+git ls-files -m -- .claude/agent-memory/aew-standards-setter/ | grep -c . || true
 git ls-files --others --exclude-standard -- .claude/agent-memory/aew-standards-setter/
 ```
 

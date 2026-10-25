@@ -8,7 +8,7 @@ Read by `ship` at every stage. Read every literal `${CLAUDE_PLUGIN_ROOT}` in thi
 - The prompt is `key: value` lines only: one line per field, in the row's order, with nothing else (no prose, no artefact content). `answers:` is followed by its `Q<k>:` lines, one per answer.
 - `run_dir` is always `.aew/runs/<id>`.
 - Send one agent per Agent call. The single exception is D6 and D7: two Agent calls in one assistant message, with no other tool call in it. Concurrency is not guaranteed, and sequential execution is still correct.
-- Do the row's state write first, and check its required files with `test -f <rd>/<file>`. A missing file goes to `SKILL.md` `## Blocked path`, naming it.
+- Do the row's state write first, and check its required files with `test -f <rd>/<file> && echo yes || echo no`. A file that prints `no` goes to `SKILL.md` `## Blocked path`, naming it.
 
 Example prompt (verbatim form):
 
@@ -50,7 +50,7 @@ Field notes, taken from each agent's Inputs:
 
 ## Required inputs per stage
 
-Used by each stage's step 2, by `--from` and by resume. Check each file with `test -f <rd>/<file>`.
+Used by each stage's step 2, by `--from` and by resume. Check each file with `test -f <rd>/<file> && echo yes || echo no`; `no` means missing.
 
 | Stage | Required files in `<rd>` |
 |---|---|
@@ -65,12 +65,12 @@ Used by each stage's step 2, by `--from` and by resume. Check each file with `te
 | `docs` | `spec-final.md`, `issue.json`, and `08-qa-report-<fix_cycle+1>.md`, whose return block (`awk 'NF' <file> \| tail -n 4`) reads `STATUS: ok` |
 | `pr` | `pr-body.md`, `10-summary.md` |
 
-Develop mode is fix only when `review_cycle` is at least 1 and `test <rd>/07-review-<review_cycle>.md -nt <rd>/05-plan.md` succeeds. Otherwise it is full mode, which needs no review file.
+Develop mode is fix only when `review_cycle` is at least 1 and `test <rd>/07-review-<review_cycle>.md -nt <rd>/05-plan.md && echo newer || echo older` prints `newer`. Otherwise it is full mode, which needs no review file.
 
 ## Return check
 
 1. The last four non-blank lines of the Agent result must be, in order, `STATUS: <ok|needs_input|blocked|failed>` (exactly one of the four words), `ARTEFACTS: <non-empty>`, `SUMMARY: <non-empty>` and `NEXT: <non-empty>`. This is the rule of `valid_return_block` in `${CLAUDE_PLUGIN_ROOT}/scripts/hooks/gate-subagent.sh`. The template form `STATUS: ok | needs_input | blocked | failed` is invalid.
-2. Every comma-separated ARTEFACTS path must pass `test -f`. Paths are relative to the project root, or absolute for a sub-developer's report.
+2. Every comma-separated ARTEFACTS path must print `yes` from `test -f <path> && echo yes || echo no`. Paths are relative to the project root, or absolute for a sub-developer's report.
 3. Developer only: for each `06-dev-report.md` or `06-dev-report-WP<n>.md` named in ARTEFACTS, `awk 'NF' <file> | tail -n 4` must also pass rule 1. In fan-out the gate hook can pass on a sibling's report, so the orchestrator checks every named report itself (CTO-3b).
 4. If any rule fails, the return counts as `failed` (see `## Retries`). Do not open the artefact to fix it.
 5. Otherwise route on STATUS through `routing.md` `## Agent status routing`. SUMMARY and NEXT are the only parts of the result the orchestrator uses.

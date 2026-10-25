@@ -53,7 +53,7 @@ Read each value fresh before each use.
 | Read | When | How |
 |---|---|---|
 | The Agent return block | every dispatch | the last four non-blank lines of the result |
-| ARTEFACTS paths and required inputs | before and after each dispatch | `test -f <path>`; develop mode: `test <rd>/07-review-<review_cycle>.md -nt <rd>/05-plan.md` |
+| ARTEFACTS paths and required inputs | before and after each dispatch | `test -f <path> && echo yes \|\| echo no` (`no` is missing); develop mode: `test <rd>/07-review-<review_cycle>.md -nt <rd>/05-plan.md && echo newer \|\| echo older` |
 | Each named developer report | after a developer dispatch | `awk 'NF' <file> \| tail -n 4` |
 | `05-plan.md` | the plan gate | Read in full (the only full read) |
 | `## Questions` of `01-spec-analysis.md` | gate `spec` | bounded section read (`gates.md`) |
@@ -123,7 +123,7 @@ Then: `from` set, go to Step 4. Otherwise go to Step 3.
 
 State is initialised before the fetch (a recorded deviation from DESIGN's order), because `gh-issue.sh fetch` writes into an existing run dir.
 
-- 3.1 `test -e .aew/runs/<n>`. If it exists, stop with `Run <n> already exists: continue it with /aew:resume <n>, or restart a stage with /aew:ship <n> --from <stage>.`
+- 3.1 `test -e .aew/runs/<n> && echo exists || echo absent`. If it prints `exists`, stop with `Run <n> already exists: continue it with /aew:resume <n>, or restart a stage with /aew:ship <n> --from <stage>.`
 - 3.2 `state.sh init <n> --issues <n> --mode single`, adding `--auto` when given.
 - 3.3 `gh-issue.sh fetch <n> .aew/runs/<n>`. On failure: `state.sh status failed --note "fetch failed: <first stderr line>"`, then `state.sh current clear`, then print `Could not fetch issue #<n>: <reason>. Fix it, then restart with /aew:ship <n> --from spec_analysis.` and stop.
 - 3.4 `jq -r .state .aew/runs/<n>/issue.json`. If it prints `CLOSED`, take the same three actions as in 3.3, with the reason `issue #<n> is closed`.
@@ -191,7 +191,7 @@ Earlier stages are not redone, counters are kept, and a `done` run's PR is updat
 ## Stage: develop
 
 1. Entry: `state.sh stage develop` (note `--from`, `resume`, or the reason that sent you here), then `gh-labels.sh stage <n> building`. This write is the one the developer gate needs: dispatch straight after it.
-2. Choose the mode. Fix mode needs `review_cycle` k of at least 1 and `test .aew/runs/<id>/07-review-<k>.md -nt .aew/runs/<id>/05-plan.md` to succeed: dispatch row D10 with `fix_from: 07-review-<k>.md` and `n: <k>`. Otherwise dispatch row D8 (`mode: full`). Check required files first (`dispatch.md` `## Required inputs per stage`).
+2. Choose the mode. Fix mode needs `review_cycle` k of at least 1 and `test .aew/runs/<id>/07-review-<k>.md -nt .aew/runs/<id>/05-plan.md && echo newer || echo older` to print `newer`: dispatch row D10 with `fix_from: 07-review-<k>.md` and `n: <k>`. Otherwise dispatch row D8 (`mode: full`). Check required files first (`dispatch.md` `## Required inputs per stage`).
 3. Dispatch the row chosen.
 4. Return check: `dispatch.md` `## Return check`, which includes every `06-dev-report*.md` the developer names.
 5. Exit: `ok` goes to `## Stage: review`. `blocked` goes to `routing.md` `## Developer blocked`.

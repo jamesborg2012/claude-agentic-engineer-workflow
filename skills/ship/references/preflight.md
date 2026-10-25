@@ -4,9 +4,9 @@ Run the checks in order; the first failure stops with its message. Preflight wri
 
 ## Check 1. Config exists
 
-Command: `test -f .aew/config.json`.
+Command: `test -f .aew/config.json && echo yes || echo no`.
 
-Pass: it succeeds. Otherwise stop with:
+Pass: it prints `yes`. On `no` stop with:
 
 `No .aew/config.json in this project: run /aew:init first.`
 
@@ -80,6 +80,6 @@ Outcomes:
 
 Read-only. The writes (`current set`, `set auto`, `git switch`) are in `SKILL.md` `## Step 4. Restart at a stage (--from)`.
 
-1. `test -f .aew/runs/<n>/state.json`. If it is missing and the stage is `spec_analysis`, go back to `SKILL.md` `## Step 3. Start the run` (a fresh start). For any other stage stop with `No run <n> to restart: start it with /aew:ship <n>.`
+1. `test -f .aew/runs/<n>/state.json && echo yes || echo no`. If it prints `no` and the stage is `spec_analysis`, go back to `SKILL.md` `## Step 3. Start the run` (a fresh start). For any other stage stop with `No run <n> to restart: start it with /aew:ship <n>.`
 2. `jq -r .branch .aew/runs/<n>/state.json`. If it is `null` and the stage is not `spec_analysis`, stop with `Run <n> has no branch yet: restart it with /aew:ship <n> --from spec_analysis.`
-3. The stage's required inputs (`dispatch.md` `## Required inputs per stage`), each with `test -f`. If any is missing, stop with `Cannot restart run <n> at <stage>: missing <files>.`
+3. The stage's required inputs (`dispatch.md` `## Required inputs per stage`), each with `test -f .aew/runs/<n>/<file> && echo yes || echo no`. If any prints `no`, stop with `Cannot restart run <n> at <stage>: missing <files>.`

@@ -66,7 +66,7 @@ Then go to Step 4 at sub-step 2 (the entry is done).
 1. Entry: `state.sh stage brief` (D4's state write; add `--note "resume"` on resume). No label.
 2. Check the required files: `spec-final.md` and `issue.json`.
 3. Dispatch row D4, which sends `mode: prompt`.
-4. Return check on the Agent result only (`prompt.md` carries no return block in the file), then `test -f .aew/runs/<n>/prompt.md`.
+4. Return check on the Agent result only (`prompt.md` carries no return block in the file), then `test -f .aew/runs/<n>/prompt.md && echo yes || echo no`, which must print `yes`.
 5. `ok` goes to Step 6. Anything else after the retry goes to `## Stopping`.
 
 ## Step 6. Finish

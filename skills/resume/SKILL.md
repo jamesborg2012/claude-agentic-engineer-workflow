@@ -34,7 +34,7 @@ Split it on whitespace. Print each error below followed by `Usage: /aew:resume [
 - One token matching `^([1-9][0-9]*|m-[1-9][0-9]*)$`: it is the id. Any other single token stops with `aew resume: "<token>" is not a run id (an issue number, or m-<number> for a milestone run).`
 - More than one token: stop with `aew resume: unexpected argument "<token>".` (the second token).
 
-Then `test -f .aew/runs/<id>/state.json`. If it is missing, stop with `aew resume: no run <id> (.aew/runs/<id>/state.json is missing).`
+Then `test -f .aew/runs/<id>/state.json && echo yes || echo no`. If it prints `no`, stop with `aew resume: no run <id> (.aew/runs/<id>/state.json is missing).`
 
 ## Step 2. Read the state
 
