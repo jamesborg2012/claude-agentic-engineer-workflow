@@ -1696,19 +1696,19 @@ uses the same body; note it in 9.9.
 
 | run | check | result | notes |
 |---|---|---|---|
-| G2 | 1 gate state | pending | |
-| G2 | 2 pending note | pending | |
-| G2 | 3 run stays current | pending | |
-| G2 | 4 label | pending | |
-| G2 | 5 nothing after the gate | pending | |
-| G2 | 6 gate output | pending | |
-| G2 | 7 summary of 25 lines or fewer | pending | |
-| G2 | 8 plan path and resume hint | pending | |
-| G2 | 9 AskUserQuestion never attempted | pending | |
-| G2 | 10 QA phase A and plan in one message (AC-7) | pending | |
-| G2 | 11 reads hygiene (AC-19) | pending | |
-| G2 | 12 state valid, denials, config dir | pending | |
-| G2 | 13 `gh` calls | pending | |
+| G2 | 1 gate state | fail | Attempt G2.1 (cap 8, cost 1.2173, `claude-opus-5-5`, 37 turns): the fallback case. spec-analyser returned `needs_input` on AC-4 (the email) with four non-material changes; ship stopped at the spec gate: `spec_analysis`, `awaiting_input`, `false`. Correct behaviour, kept as `$SMOKE/ship-g2-g21`. Attempt G2.2 (cap 6.75, so G2 stays within its 8; cost 0.3488, 12 turns): fresh `ship-g2` project, AC-4 rewritten in `$GHM/issues/201/body` only (`4. Out of scope: the order service sends the email.`; the fixture's `issue.json` untouched). It stopped at step 3.1 with no run: no `state.json`. **Skill defect**: `skills/ship/SKILL.md:126` `test -e .aew/runs/<n>`. A false `test` gives the model `(Bash completed with no output)`, `is_error` false (the stream's `tool_use_result` has `returnCodeInterpretation: "Condition is false"`, which the model never sees), the same as a true one. The model read "exists" and printed `Run 201 already exists: continue it with /aew:resume 201, or restart a stage with /aew:ship 201 --from <stage>.` for a project with no `.aew/runs/201`. Every bare `test -f`/`test -e` check in ship, resume, status and prompt has the same blind spot (`skills/ship/SKILL.md:56`, `references/preflight.md:7,83,85`, `references/dispatch.md:11,53,73`, `skills/resume/SKILL.md:37`, `skills/status/SKILL.md:45`, `skills/prompt/SKILL.md:69`); init's `if [ -f … ]; then echo …` forms print and are unaffected. Not re-run: a fix-loop item. |
+| G2 | 2 pending note | open | G2.1 (spec gate): `gate:spec 01-spec-analysis.md`. G2.2: no run. |
+| G2 | 3 run stays current | open | G2.1: `201`. G2.2: no `current`. |
+| G2 | 4 label | open | G2.1: exactly `aew:awaiting-input` (`issue edit 201 --add-label aew:awaiting-input --remove-label aew:analysing`). G2.2: none. |
+| G2 | 5 nothing after the gate | open | G2.1: 0 dev reports; `main..HEAD` 0 commits on `feat/201-add-to-basket`; `main` unchanged; tree: only `.claude/agent-memory/aew-spec-analyser/` (2 files, PD-2). G2.2: nothing written, still on `main`, tree clean. |
+| G2 | 6 gate output | open | G2.1, the spec gate's line: `aew ship #201: waiting at the spec gate.`, then Q1 with the three options. G2.2: no gate. |
+| G2 | 7 summary of 25 lines or fewer | open | Not reached. |
+| G2 | 8 plan path and resume hint | open | G2.1: `Answer with /aew:resume 201` 1 (the spec gate's hint; the plan path 0, no plan). G2.2: 0 and 0. |
+| G2 | 9 AskUserQuestion never attempted | pass | G2.1 and G2.2: `smoke_main \| grep -c '^AskUserQuestion'` 0; `system/init` `.tools \| index("AskUserQuestion")` `null` in both. |
+| G2 | 10 QA phase A and plan in one message (AC-7) | open | Not reached. G2.1's only Agent call: `aew:spec-analyser` (`msg_011CgPNkterau2Jf3Hw7GokA`); `smoke_pair` 0 in both. |
+| G2 | 11 reads hygiene (AC-19) | pass, partial | G2.1 and G2.2: no main-thread Read under `.aew/runs/` (only `skills/ship/references/*.md`); G2.1 read the questions with the bounded `awk '/^## Questions$/…'`. The plan-gate read of `05-plan.md` was not reached. |
+| G2 | 12 state valid, denials, config dir | pass, partial | G2.1: `state.json` valid; denials `[]` in both (no `Permission for this tool use was denied` text); `$W/ghcfg` empty after both. G2.2 has no `state.json`. Launcher exit 0 and `audit clean` (31 and 10 Bash commands) for both, no guard files, plugin repo HEAD `a7180e0` and clean before and after; Write/Edit only under the project's `.aew/runs/201/` and `.claude/agent-memory/`. |
+| G2 | 13 `gh` calls | open | G2.1: `auth-status`, `auth-status`, `issue-fetch`, `issue-edit +aew:analysing`, `issue-edit +aew:awaiting-input`. The second `gh auth status` is the same defect: after step 3.1 the model wrote "The tool hides silent non-zero exits, so I'll re-verify the earlier silent checks explicitly" and re-ran `gh auth status && echo gh-ok \|\| echo gh-failed`, `test -f .aew/config.json && echo config-ok …` and `test -e .aew/runs/201 && echo exists \|\| echo absent`. G2.2: `auth-status` only. |
 
 ### 9.6 Run F1 and R2: kill during develop, resume to review
 
@@ -1819,25 +1819,38 @@ smoke_denials "$W/out/I2.1"; ls -A "$W/ghcfg"                                   
 
 | run | check | result | notes |
 |---|---|---|---|
-| I1 | 1 branch and one commit | pending | |
-| I1 | 2 pushed to the bare origin | pending | |
-| I1 | 3 config validates | pending | |
-| I1 | 4 config equals the reference | pending | |
-| I1 | 5 gitignore | pending | |
-| I1 | 6 CLAUDE.md section | pending | |
-| I1 | 7 standards docs | pending | |
-| I1 | 8 labels and PR calls | pending | |
-| I1 | 9 no settings written, Playwright skipped | pending | |
-| I1 | 10 tree clean, scratch removed | pending | |
-| I1 | 11 denials, config dir, AskUserQuestion | pending | |
-| I1 | 12 standards-setter init mode | pending | |
-| I2 | 1 no file diff | pending | |
-| I2 | 2 heads unchanged | pending | |
-| I2 | 3 config unchanged | pending | |
-| I2 | 4 calls since I1 | pending | |
-| I2 | 5 no push | pending | |
-| I2 | 6 report | pending | |
-| I2 | 7 denials, config dir | pending | |
+| I1 | 1 branch and one commit | pass | Attempt I1.1, cost 0.9736, 29 turns, model `claude-opus-5-5`, `acceptEdits`, project `$SMOKE/ship-init`. `chore/aew-init`; `1`; `chore: set up aew` (commit `65bde80` on the fixture commit `f3118f5`). |
+| I1 | 2 pushed to the bare origin | pass | Both `65bde80a86d5151c11b8f5533b8a4f5896e0c3d8`, through `git-branch.sh push`. |
+| I1 | 3 config validates | pass | `.aew/config.json valid`. |
+| I1 | 4 config equals the reference | pass | `diff` against the D2 reference proposal prints nothing (`retro.repo` is the plugin repo, Assumption 23). |
+| I1 | 5 gitignore | pass, with a deviation | `1`; `1`; no `.claude/settings.local.json` line. The file is `.aew/runs/` and `.playwright-mcp/`, one per line, but the model wrote it with the Write tool after the section 3 snippet was denied (check 11), not by running the snippet. |
+| I1 | 6 CLAUDE.md section | pass, with a deviation | `1`. The model created `CLAUDE.md` with the Write tool instead of running the section 9 snippets (it said it was avoiding another compound command after the denial). The file is byte-identical to the snippets' output (`# CLAUDE.md` plus the heredoc). |
+| I1 | 7 standards docs | pass | `README.md`, `nextjs.md`, `tailwind.md`. Headers: `nextjs next@16 react@19 typescript@5 cfg:388ef4ff81b7` and `tailwind tailwindcss@4 cfg:3f0744e5bcde`, `generated="2026-10-25"`. |
+| I1 | 8 labels and PR calls | pass | `11`; `1`; `1`; `1`. `calls.log` is 14 lines: `auth status`, the 11 `label create … --force`, `pr list --head chore/aew-init --state open --json number --jq .[0].number // empty`, `pr create --head chore/aew-init --title chore: set up aew --body-file .aew/runs/init-pr-body.md --base main`. The report names PR #7. |
+| I1 | 9 no settings written, Playwright skipped | pass | `absent`; `.claude/` holds only an empty `agent-memory/aew-standards-setter/`. The report prints the proposal: 25 portable rules (the 19 of template 2, then `npm install`, `npm run build *`, `npm run lint *`, `npx tsc --noEmit *`, `npx playwright test *`, `npx playwright install chromium`) and the 8 local script rules (as one path pattern plus the eight script names, not one rule per line), the not pre-approved list, "Playwright: skipped" and "Defaults used" (install, typecheck, app, `retro.repo`, Playwright, permissions). |
+| I1 | 10 tree clean, scratch removed | pass | `git status --porcelain` empty; `.aew/runs/` empty. |
+| I1 | 11 denials, config dir, AskUserQuestion | **fail** | `smoke_denials`: **one denial**, the section 3 gitignore snippet (`skills/init/SKILL.md` lines 125 to 134), verbatim in the stream: `What required approval: This Bash command contains multiple operations. The following parts require approval: grep -q .; then printf '\n' ; fi` … `if tail -c 1 .gitignore, grep -q .; then printf '\n' ; fi` …. `ls -A "$W/ghcfg"` empty; AskUserQuestion calls `0` (and absent from `system/init` tools). Skill fault: see the note below this table. |
+| I1 | 12 standards-setter init mode | pass | `1`; the prompt is exactly `mode: init`. The agent ran `detect-stack.sh .`, `fingerprint nextjs .`, `fingerprint tailwind .` and one `find`; nextjs and tailwind generated. No other denial on any thread; launcher exit 0, `audit clean (27 Bash commands)`, no guard files, `stderr.txt` empty. |
+| I2 | 1 no file diff | not run | The lane stopped after I1 check 11 (a denial stops the lane). |
+| I2 | 2 heads unchanged | not run | As above. |
+| I2 | 3 config unchanged | not run | As above. |
+| I2 | 4 calls since I1 | not run | As above. |
+| I2 | 5 no push | not run | As above. |
+| I2 | 6 report | not run | As above. |
+| I2 | 7 denials, config dir | not run | As above. |
+
+I1.1 finding (skill fault, not fixed here): under `--permission-prompts none`, Claude Code refuses init section 3's
+gitignore snippet as a compound command whose parts need approval, although every leading form in it (`grep`,
+`tail -c`, `printf`, `echo`) runs without a rule or has one. The section 2 branch snippet (a multi-line `if` with `||`
+and redirects but no pipe in a condition) ran in the same session. Likely cause, inferred and not verified: a
+pipeline inside an `if` condition (`if tail -c 1 .gitignore 2> /dev/null | grep -q .; then … >> .gitignore; fi`); the
+denial text shows the parts split at the pipe and lost their redirects. `tests/scripts/skills.bats` test 17 (H1 to
+H8, M1) does not catch this form. The same form appears in section 9's second snippet (line 298, which the model did
+not run) and section 10's first snippet (line 407, which runs only on a yes). After the denial the model also skipped
+section 6's first snippet (it ran its `else` branch, `jq . .aew/runs/init-config.json > .aew/runs/init-config-merged.json`,
+and printed no `config changed`) and section 12's push snippet (it ran `git rev-list --count main..HEAD` and printed
+no `unpushed`/`ahead` lines). It reached the right result both times, but not through the skill's text. I2 and G1 wait
+for the fix and an I1 re-run (I1.2) on a fresh `ship-init` project.
 
 ### 9.8 G1: spec-gate stop on init's output
 
@@ -1882,16 +1895,16 @@ smoke_denials "$O"; ls -A "$W/ghcfg"; git -C "$P" status --porcelain            
 
 | run | check | result | notes |
 |---|---|---|---|
-| G1 | 1 gate state | pending | |
-| G1 | 2 pending note | pending | |
-| G1 | 3 label | pending | |
-| G1 | 4 nothing after the gate | pending | |
-| G1 | 5 questions with recommended answers | pending | |
-| G1 | 6 gate lines | pending | |
-| G1 | 7 auto does not skip it (AC-8) | pending | |
-| G1 | 8 preflight passed on init's output | pending | |
-| G1 | 9 branch, current, state | pending | |
-| G1 | 10 hygiene | pending | |
+| G1 | 1 gate state | not run | The lane stopped at I1 check 11 (9.7). G1 runs on init's output, after I1 and I2 pass. |
+| G1 | 2 pending note | not run | As above. |
+| G1 | 3 label | not run | As above. |
+| G1 | 4 nothing after the gate | not run | As above. |
+| G1 | 5 questions with recommended answers | not run | As above. |
+| G1 | 6 gate lines | not run | As above. |
+| G1 | 7 auto does not skip it (AC-8) | not run | As above. |
+| G1 | 8 preflight passed on init's output | not run | As above. |
+| G1 | 9 branch, current, state | not run | As above. |
+| G1 | 10 hygiene | not run | As above. |
 
 ### 9.9 Notes (prompt 05)
 
