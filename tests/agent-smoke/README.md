@@ -1046,7 +1046,8 @@ the fixture commit (the nextjs fixture has no config until init writes one), ins
 before that commit as section 8.3 does, makes `$W/origin.git` a bare clone with `main` as HEAD and sets the upstream,
 and cans the replies the scripts parse. `smoke_ship_allow <kind>` prints one launcher argument per line (kinds `ship`,
 `p0`, `init`) and must be called with `$P` set to the project: (1) the orchestrator rules (Phase B I-8 and Phase C
-K-4, including the status corrupt-file fallback's `printf`); (2) for `ship` and `p0`, the agent lines already recorded
+K-4, plus every leading command form that 9.9's pre-check rules show is not auto-allowed: `git rev-parse`,
+`git rev-list --left-right`, `git check-ignore`, `git symbolic-ref`, `git ls-remote`, `command -v`, `node -p`); (2) for `ship` and `p0`, the agent lines already recorded
 in this README (961's developer line, 8.3's QA phase B line with this project's paths, the eleven Playwright MCP
 names), but not 8.3's `--disallowedTools "Bash(gh *)"`, because a deny beats every allow and would deny the canary;
 (3) for `p0`, the probe's commands; (4) for `init`, Phase D's list plus every further command of
@@ -1099,10 +1100,11 @@ smoke_ship_allow() {
   done
   printf '%s\n' "Bash(gh auth status)" "Bash(claude plugin list --json)" \
     "Bash(git status *)" "Bash(git fetch origin main)" "Bash(git rev-parse *)" \
-    "Bash(git rev-list --left-right --count main...origin/main)" "Bash(git branch *)" "Bash(git switch *)" \
+    "Bash(git rev-list --left-right *)" "Bash(git check-ignore *)" "Bash(git symbolic-ref *)" "Bash(git ls-remote *)" \
+    "Bash(command -v *)" "Bash(node -p *)" "Bash(git branch *)" "Bash(git switch *)" \
     "Bash(git add *)" "Bash(git commit *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git show *)" \
     "Bash(jq *)" "Bash(awk *)" "Bash(test *)" "Bash(tail -n *)" "Bash(grep -c *)" "Bash(cat .aew/runs/current)" \
-    "Bash(date *)" "Bash(ls *)" "Bash(printf 'corrupt\t%s\n' *)" \
+    "Bash(date *)" "Bash(ls *)" \
     "mcp__plugin_context7_context7__*"
   # 2. agent lines already recorded in this README (961 developer, 8.3 QA phase B, 951 developer additions)
   if [ "$k" != init ]; then
@@ -1117,17 +1119,17 @@ smoke_ship_allow() {
       "Bash(mkdir -p *)" "Bash(file -b *)" "Bash(cp *)"
     for s in navigate snapshot click type press_key select_option hover resize console_messages wait_for close; do echo "${T}_$s"; done
   fi
-  # 3. P0a probe commands (section 9.3; macOS printenv takes one name, so steps 3 and 4 use env and echo)
+  # 3. P0a probe commands (section 9.3; macOS printenv takes one name, so steps 3 and 4 pipe env through cut and grep)
   if [ "$k" = p0 ]; then
-    printf '%s\n' "Bash(command -v gh)" "Bash(type -a gh)" "Bash(env)" "Bash(cut -d= -f1)" "Bash(git remote get-url origin)" "Bash(echo *)"
+    printf '%s\n' "Bash(command -v gh)" "Bash(type -a gh)" "Bash(env)" "Bash(cut -d= -f1)" "Bash(git remote get-url origin)"
   fi
   # 4. init (Phase D cross-phase item 6), then every further command of skills/init/SKILL.md sections 1-13
   if [ "$k" = init ]; then
-    printf '%s\n' "Bash(git --version)" "Bash(jq --version)" "Bash(node --version)" "Bash(git symbolic-ref *)" "Bash(git ls-remote *)" \
+    printf '%s\n' "Bash(git --version)" "Bash(jq --version)" "Bash(node --version)" \
       "Bash(npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate *)" "Bash(touch *)" "Bash(grep *)" "Bash(tail *)" \
       "Bash(printf *)" "Bash(cat *)" "Bash(echo *)" "Bash(mkdir -p *)" "Bash(rm -f .aew/runs/init-*)" \
-      "Bash(command -v *)" "Bash(node -p *)" "Bash(pwd -P)" "Bash(git remote get-url origin)" \
-      "Bash(git merge-base --is-ancestor *)" "Bash(git check-ignore *)" "Bash(git ls-files *)" "Bash(git rev-list --count *)" \
+      "Bash(pwd -P)" "Bash(git remote get-url origin)" \
+      "Bash(git merge-base --is-ancestor *)" "Bash(git ls-files *)" "Bash(git rev-list --count *)" \
       "Bash(git restore -- *)" "Bash(rm -f \"\$f\")" "Bash(rm -f .claude/agent-memory/aew-standards-setter/*)" \
       "Bash(read -r f)" "Bash(cp .aew/runs/init-*)" "Bash([ *)" "Bash(true)" "Bash(exit 1)" "Bash(continue)"
   fi
@@ -1498,17 +1500,20 @@ smoke_ship_allow ship > "$W/allow-ship.txt"
 ```
 
 P0a prompt (verbatim). Steps 3 and 4 replace the plan's two `printenv` lines (see 9.2, platform facts); step 3's
-exact text is the one entry of `$SMOKE/audit-allow.json` (9.9).
+exact text is the one entry of `$SMOKE/audit-allow.json` (9.9); step 4 needs no entry (its text has no `GH_CONFIG_DIR=`
+or `GH_HOST=`, because `)=` follows the alternation). Save the prompt with `$REPO` replaced by its absolute path in
+step 8, and with no `$` anywhere else (the pre-check denies every `$VAR`, 9.9).
 
 ```text
 Run each of these Bash commands exactly as written, one Bash call per command, in this order, and do nothing else:
 1. command -v gh
 2. type -a gh
 3. env | cut -d= -f1 | grep -xE 'GH_TOKEN|GITHUB_TOKEN|GH_ENTERPRISE_TOKEN|GITHUB_ENTERPRISE_TOKEN|SSH_AUTH_SOCK'
-4. echo "$GH_CONFIG_DIR $GH_MOCK_DIR $GH_HOST $GIT_CONFIG_COUNT $GIT_TERMINAL_PROMPT $GIT_SSH_COMMAND"
+4. env | grep -E '^(GH_CONFIG_DIR|GH_MOCK_DIR|GH_HOST|GIT_CONFIG_COUNT|GIT_TERMINAL_PROMPT|GIT_SSH_COMMAND)='
 5. git remote get-url origin
 6. gh auth status
-7. echo "$(jq -r .project .aew/config.json)"
+7. jq -r .project .aew/config.json
+8. <REPO>/scripts/state.sh set title "Static shop probe"
 Then use the Write tool to write the single word probe to .aew/runs/p0-write.md.
 Finally print one line per step: the step number, the exit status and the output.
 ```
@@ -1519,9 +1524,11 @@ Checks (from tool results and `system/init`; record verbatim excerpts):
 smoke_bash_results "$W/out/P0a.1"
 #  1 steps 1-2: command -v gh is $REPO/tests/scripts/helpers/bin/gh; the first type -a gh line is the shim (record any real gh after it)
 #  2 step 3: empty output, exit 1 (no token variable and no SSH_AUTH_SOCK in the session)
-#  3 step 4: $W/ghcfg $W/gh aew-smoke.invalid 1 0 false
+#  3 step 4: six lines, any order: GH_CONFIG_DIR=$W/ghcfg, GH_MOCK_DIR=$W/gh, GH_HOST=aew-smoke.invalid, GIT_CONFIG_COUNT=1,
+#            GIT_TERMINAL_PROMPT=0, GIT_SSH_COMMAND=false (none is a secret; no token variable can match)
 #  4 step 5: $W/origin.git (the /var or the /private/var form)
-#  7 step 7: static-shop, with no denial
+#  7 steps 7-8: step 7 prints static-shop; step 8 (a literal double-quoted argument to state.sh, the form ship step 3.5 now
+#    uses) is NOT denied: it runs and exits 1 with a "no current run" style message (there is no run in P0), nothing written
 cat "$GHM/calls.log"                                     #  5 exactly one line: auth status
 cat "$P/.aew/runs/p0-write.md"                           #  8 probe (the Write form of the blocked comment, Decision 11)
 for r in P0a.1 P0b.1; do smoke_init_evt "$W/out/$r" '.tools | index("AskUserQuestion")'; done   #  9 null, null
@@ -1562,16 +1569,16 @@ strings win (E1 checks them statically). P1 also proves that a `disable-model-in
 |---|---|---|---|
 | P0a | 1 `gh` resolves to the shim | pass | Attempt P0a.1 (haiku, `claude-haiku-5-5`), cost 0.0092. `command -v gh`: `$REPO/tests/scripts/helpers/bin/gh`. `type -a gh`: `gh is $REPO/tests/scripts/helpers/bin/gh`, then `gh is /opt/homebrew/bin/gh` (the real `gh`, second). |
 | P0a | 2 token variables and `SSH_AUTH_SOCK` absent | pass | Step 3: `(Bash completed with no output)`, `is_error` false. Claude Code does not report grep's no-match exit 1 as an error, so the exit status is not visible; the empty output is the evidence. |
-| P0a | 3 config dir, mock dir, host, git env | **fail** | Step 4 was denied, never run: `Permission for this tool use was denied. … What required approval: A variable in this command can't be checked before it runs`. `Bash(echo *)` does not cover a command with a `$VAR` expansion under `--permission-prompts none`. Inside the session only `GH_MOCK_DIR` is proven, indirectly (the shim, which exits 99 without it, appended to `$W/gh/calls.log`); the other five values are proven only by 9.2's `--env-check`, outside the session. Harness fault in the probe text (9.9). Paid runs stop. |
+| P0a | 3 config dir, mock dir, host, git env | pending (P0a.2) | History, P0a.1: **fail**. Step 4 was denied, never run: `Permission for this tool use was denied. … What required approval: A variable in this command can't be checked before it runs`. `Bash(echo *)` does not cover a command with a `$VAR` expansion under `--permission-prompts none`. Inside the session only `GH_MOCK_DIR` is proven, indirectly (the shim, which exits 99 without it, appended to `$W/gh/calls.log`); the other five values are proven only by 9.2's `--env-check`, outside the session. Harness fault in the probe text (9.9). Paid runs stop. |
 | P0a | 4 origin is the local bare repo | pass | Step 5: `$SMOKE/ship-p0/origin.git` (the `/var` form). |
 | P0a | 5 the shim answered `gh auth status` | pass | Step 6: `(Bash completed with no output)`. `$GHM/calls.log` is exactly one line, `auth status`. |
-| P0a | 7 `$(jq …)` substitution | **fail** | Step 7 was denied, never run: `… What required approval: Quoted text in this command can't be checked before it runs`. So a `"$(…)"` command substitution is denied headless (and prompts interactively), whatever the allow rules; it bears on `skills/ship/SKILL.md` line 129 and `skills/init/SKILL.md` (9.9). |
+| P0a | 7 read-then-literal argument (replaces `$(jq …)`) | pending (P0a.2) | History, P0a.1: **fail**; the `$(jq …)` form is denied by design. Step 7 was denied, never run: `… What required approval: Quoted text in this command can't be checked before it runs`. So a `"$(…)"` command substitution is denied headless (and prompts interactively), whatever the allow rules; it bears on `skills/ship/SKILL.md` line 129 and `skills/init/SKILL.md` (9.9). |
 | P0a | 8 Write inside `.aew/runs/` | pass | `cat "$P/.aew/runs/p0-write.md"`: `probe`. The Write call went to the `/private/var` path, with no denial and no hook block. |
 | P0a, P0b | 9 AskUserQuestion absent | pass | `.tools \| index("AskUserQuestion")`: `null`, `null`. |
 | P0b | 10 agent names | pass | Attempt P0b.1, cost 0.2333. `system/init` `.agents`: `aew:brief-compiler`, `aew:developer`, `aew:doc-writer`, `aew:qa-engineer`, `aew:senior-engineer`, `aew:spec-analyser`, `aew:standards-setter`, plus the built-ins `claude`, `Explore`, `general-purpose`, `Plan`, `statusline-setup`. The same list in P0a. |
 | P0b | 11 skills, mode, model | pass | `aew:init`, `aew:prompt`, `aew:resume`, `aew:ship`, `aew:status`; `acceptEdits`; model `claude-opus-5-5` (P0a: `acceptEdits`, `claude-haiku-5-5`). |
-| P0b | 12 `/aew:status` ran in `-p` | **fail** (partial) | The skill expanded in `-p` and the result is `No aew runs in this project.`; no write; `calls.log` still one line. But the listing read (`skills/status/SKILL.md` line 32, `jq … .aew/runs/*/state.json`) was denied: `… What required approval: Shell expansion syntax in paths requires manual approval`. The model then ran `ls .aew/runs`, which the skill does not name. With a run present, status could not list it headless (9.9). |
-| P0a, P0b | 13 no denials | **fail** | P0a: 2 (steps 4 and 7). P0b: 1 (the status listing `jq`). |
+| P0b | 12 `/aew:status` ran in `-p` | pending (P0b.2) | History, P0b.1: **fail** (partial). The skill expanded in `-p` and the result is `No aew runs in this project.`; no write; `calls.log` still one line. But the listing read (`skills/status/SKILL.md` line 32, `jq … .aew/runs/*/state.json`) was denied: `… What required approval: Shell expansion syntax in paths requires manual approval`. The model then ran `ls .aew/runs`, which the skill does not name. With a run present, status could not list it headless (9.9). |
+| P0a, P0b | 13 no denials | pending (P0a.2, P0b.2) | History, P0.1: **fail**. P0a: 2 (steps 4 and 7). P0b: 1 (the status listing `jq`). |
 | P0a, P0b | 14 hygiene and launcher safety checks | pass | Both sessions: launcher exit 0, `audit clean` (7 and 3 Bash commands), no `git-guard.txt`, `repo-head.txt` or `ghcfg.txt`. After each: `ls -A "$W/ghcfg"` empty; `git -C "$REPO" status --porcelain` empty; HEAD `73c43cc` unchanged. The `Edit(//<repo>/**)` deny loaded with no startup warning: `stderr.txt` empty, and the debug log's only `[WARN]` lines are seven `Bash(git -C * …)` wildcard-position warnings and one `[Stall]` line for `cat .aew/runs/current` (exit 1). |
 | P1 | 1 unknown-stage message, stage list, usage line | open | Not run: P0 check 3 failed, so paid runs stop until P0 passes on a re-run. |
 | P1 | 2 no run dir, no `current` | open | Not run (as above). |
@@ -1924,3 +1931,26 @@ Cap raises, harness faults, fixes and deviations, newest last.
   `Bash(git -C * <sub> *)` allow rule (a wildcard before the subcommand also approves options such as `-c`). These
   are the harness-only developer rules of 961; they are not a startup error and the `Edit(//<repo>/**)` deny loads
   without one.
+- 2026-10-25 Task RW4, P0.1 outcome as a finding: under `--permission-mode acceptEdits --permission-prompts none` the
+  pre-check denies, whatever the allow rules, any `$VAR` / `"$VAR"` / `$?`, any `$(…)` or backtick substitution, any
+  glob in a non-`ls` path argument, and `jq --arg name value` placed before the filter or `jq --slurpfile`. The full
+  rule table (probe RULES.1, rewrites per form) is recorded in DESIGN §3 by F8; the skills are being rewritten to it
+  (RW1 to RW3). Rule misses are separate: a command whose leading form has no rule (an env prefix, `git rev-parse`,
+  `command -v`, `node -p`, …) is denied as "requires approval".
+- 2026-10-25 Task RW4, P0a probe rewritten (P0a.2 and P0b.2 re-run pending, paid, not run here): step 4 is now
+  `env | grep -E '^(GH_CONFIG_DIR|GH_MOCK_DIR|GH_HOST|GIT_CONFIG_COUNT|GIT_TERMINAL_PROMPT|GIT_SSH_COMMAND)='`, so
+  there is no `$` and no secret is printed (none of the six is one). Audit check: the CTO-4 patterns `GH_HOST=` and
+  `GH_CONFIG_DIR=` need the literal `=` right after the name, and here `)` sits between, so the command does not hit
+  and needs no `audit-allow.json` entry (it stays at the one step-3 string; verified with the launcher's own filter).
+  The step 4 output is a tool result, which the audit does not scan. Step 7 (`"$(jq …)"`, denied by design) becomes
+  two steps: 7 reads the value (`jq -r .project .aew/config.json`) and 8 passes a literal double-quoted argument to
+  `state.sh set title`, the form ship step 3.5 now uses (read, then a literal argument). In P0 there is no run, so
+  step 8 exits 1 and writes nothing; the evidence is the absence of a pre-check denial. The `p0` allow rules lose
+  `Bash(echo *)` (no longer used).
+- 2026-10-25 Task RW4, `smoke_ship_allow` (ship, p0, init) gained `git rev-list --left-right *`, `git check-ignore *`,
+  `git symbolic-ref *`, `git ls-remote *`, `command -v *` and `node -p *`; the status `for`-loop `printf` rule is gone.
+  TODO for the orchestrator to reconcile once RW1 to RW3 report (do not guess): further leading forms their rewrites
+  run that are not auto-allowed (candidates from RULES.2 M2: `exit`, `wc`, `x=` forms, anything RW2 adds for the
+  status listing, anything RW3 keeps in init sections 1 to 13); V-7 anchoring of the new rules (they are
+  `<cmd> *` wildcards, broader than a user-settings template should be); whether the init list's remaining entries
+  (`rm -f "$f"`, `read -r f`, `[ *`, `true`, `exit 1`, `continue`) still apply after RW3 removes `$var` and loops.
