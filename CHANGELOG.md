@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Agents `developer` (full, package and fix modes; manual worktree fan-out with cherry-pick integration), `qa-engineer` (blind phase A, phase B with Playwright, axe and MCP exploration, triage) and `doc-writer`.
 - Static-shop fixture with planted defects, with `run/` and `run-fanout/` run directories.
 - Prompt-04 smoke harness and recorded results in `tests/agent-smoke/README.md` §8.
+- Entry skills `init`, `ship`, `resume`, `status` and `prompt` (build prompt 05). `ship` is the orchestrator, with the references `preflight.md`, `dispatch.md`, `gates.md`, `routing.md`, `pr.md` and `final-report.md`; `resume` and `prompt` reuse it by Read.
+- `init` discovers the stack and commands, confirms the config once and validates it, ensures labels, offers Playwright, adds the `CLAUDE.md` section, proposes anchored permission rules (portable ones for `.claude/settings.json`, plugin scripts for the gitignored `.claude/settings.local.json`), generates standards and opens its PR idempotently.
+- `gh-pr.sh open` for run-less PRs: prints the PR number and reuses an open PR without a create call.
+- senior-engineer plan mode takes an optional `notes` field (plan-gate change requests or the developer's `blocked` reason); standards-setter has a run-less `mode: init`.
+- `tests/scripts/skills.bats`: 18 static checks of the entry skills (paths, agent names, stages and routing, citations, bad-argument messages, frontmatter YAML, pre-approvable commands, printed checks).
+- `README.md` command reference and a Mermaid diagram of the pipeline.
+- Orchestrator smoke harness (`ship-run.sh` launcher with real-GitHub rails, allowlists and a spend ledger) and the recorded prompt-05 runs P0, P1, S1, G2, run F1 and R2, I1 and I2, and G1 in `tests/agent-smoke/README.md` §9 ($26.82 of a $60 stop).
 
 ### Changed
 
@@ -42,3 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - run-protocol: a QA phase B `failed` with a complete report is routed by triage class instead of retried (`state-machine.md`, DESIGN §7.3).
 - `ui.axe_standard` is described as a cumulative conformance target (`wcag22aa` expands to WCAG 2.0 A/AA, 2.1 A/AA and 2.2 AA).
 - `docs/DESIGN.md` §3 adds the Playwright MCP tool names, worktree isolation and nested `SubagentStop`, the `SubagentStop` payload and Bash permission-rule facts.
+- `docs/DESIGN.md` §3 records the prompt-05 platform facts: skill arguments and the Skill-tool block, headless Manual mode and `--permission-prompts none`, AskUserQuestion on the main thread only, permission-rule matching, the headless permission pre-checks (rules H1 to H8, M1, M2), silent false `test` results, killed sessions without a `result` event, user-level MCP connectors in `-p` sessions, and subagent spend under `--max-budget-usd`. §9 records the orchestrator's deviations and the unanswered-gate rule.
+- run-protocol `state-machine.md` follows `ship`'s routing: one rule for a plan challenge, a developer `blocked` re-plans once (full mode only), spec-ambiguity re-enters at `brief`, and an unanswered gate stays pending.
+- Every Bash command the entry skills run is pre-approvable headless (no shell variables, substitutions or pipes in conditions), and every check prints its outcome.
+
+### Fixed
+
+- `scripts/git-branch.sh --help` no longer says preflight updates the base branch; preflight only checks it.
