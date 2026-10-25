@@ -1920,16 +1920,16 @@ smoke_denials "$O"; ls -A "$W/ghcfg"; git -C "$P" status --porcelain            
 
 | run | check | result | notes |
 |---|---|---|---|
-| G1 | 1 gate state | **fail** | Attempt G1.1 (cost 1.9678, 50 turns, `claude-opus-5-5`), after `g1-prep.sh` (`main` = `53838e1`, the harness commit with `retro.repo` set to `acme/aew-retro`, on top of `ffa8a46`; `rev-list --left-right` printed `0 0`): `plan`, `running`. No spec gate: spec-analyser returned `STATUS: ok` with 5 non-material changes and 0 material (see the note below this table). |
-| G1 | 2 pending note | **fail** | `null`: there is no `gate:` note. The last note is `standards ok; paused before dispatch (session budget)`. |
-| G1 | 3 label | **fail** | `aew:planning` and `aew:spec-revised`, with no `aew:awaiting-input`. |
-| G1 | 4 nothing after the gate | **fail** | `02-brief.md` and `03-standards.md` exist (brief with 28 ACs; standards reused). |
-| G1 | 5 questions with recommended answers | **fail** | `Q=0`: `## Questions` is "None."; the `recommended` count is `0`. |
-| G1 | 6 gate lines | **fail** | `0`; `0`. |
-| G1 | 7 auto does not skip it (AC-8) | unproven | `true`; AskUserQuestion `0`. With no material change there was no gate for `--auto` to keep, so this run does not prove AC-8. |
-| G1 | 8 preflight passed on init's output | pass | `test -f .aew/config.json`, `git status --porcelain --untracked-files=all`, `gh auth status`, `jq -r '.default_branch // "main"' .aew/config.json`, `git fetch origin main`, `git rev-list --count origin/main..main` and `main..origin/main`, `cat .aew/runs/current`, `claude plugin list --json \| jq …`; then "Preflight passed. Starting run 103." |
-| G1 | 9 branch, current, state | pass | `feat/103-let-readers-save-favourite-articles`; `103`; `state.json` valid. |
-| G1 | 10 hygiene | pass | `[]`, and no denial text in the stream; `ls -A "$W/ghcfg"` empty. Status shows only `?? .claude/agent-memory/aew-spec-analyser/MEMORY.md` and `?? .claude/agent-memory/aew-spec-analyser/issue_gap_patterns.md` (PD-2). Launcher exit 0, `audit clean (46 Bash commands)`, no guard files, plugin repo HEAD `b3684c1`. |
+| G1 | 1 gate state | pass | Attempt G1.2 (cap 4, cost 0.9741, 32 turns, `claude-opus-5-5`, plugin HEAD `eac8af4`), after `g1-reset.sh` (G1.1 undone, #103 re-seeded with mock AC 5, see 9.9): `spec_analysis`, `awaiting_input`. spec-analyser returned `STATUS: needs_input` with 5 non-material and 2 material changes. History, G1.1 (cost 1.9678): `plan`, `running` (spec-analyser `ok`, 0 material; see the G1.1 note). |
+| G1 | 2 pending note | pass | G1.2: `gate:spec 01-spec-analysis.md` (`log.md`: `spec_analysis awaiting_input — gate:spec 01-spec-analysis.md`). History, G1.1 (cost 1.9678): `null`. |
+| G1 | 3 label | pass | G1.2: exactly `aew:awaiting-input` (`issue edit 103 --add-label aew:awaiting-input --remove-label aew:analysing`). History, G1.1 (cost 1.9678): `aew:planning`, `aew:spec-revised`. |
+| G1 | 4 nothing after the gate | pass | G1.2: `none`. The run dir holds only `00-issue-original.md`, `01-spec-analysis.md`, `issue.json`, `log.md`, `spec-changes.json`, `spec-final.md` and `state.json`. Nothing was posted to the issue as a revision (`spec_revision` is still 1), and the session made 1 Agent call (`aew:spec-analyser`). History, G1.1 (cost 1.9678): `02-brief.md` and `03-standards.md` existed. |
+| G1 | 5 questions with recommended answers | pass | G1.2: `Q=2`; `recommended` count `2`. Q1: "Should AC 5 (cross-device sync) be replaced by per-device persistence in the reader's browser, with cross-device sync moved to a follow-up issue? (change #6)". Q2: "Should a "Favourites" link be added to the footer navigation next to About and Contact? (change #7)". Each is printed with "Yes (recommended)" and two alternatives. History, G1.1 (cost 1.9678): `Q=0`. |
+| G1 | 6 gate lines | pass | G1.2: `1`; `1` (`aew ship #103: waiting at the spec gate.` and `Answer with /aew:resume 103`). History, G1.1 (cost 1.9678): `0`; `0`. |
+| G1 | 7 auto does not skip it (AC-8) | pass | G1.2: `true`; AskUserQuestion `0`, and it is absent from `system/init` tools. `--auto` kept the material gate (AC-8); the result says "I don't have AskUserQuestion in this session, so the gate stays pending and the run stops here." History, G1.1 (cost 1.9678): unproven (no gate). |
+| G1 | 8 preflight passed on init's output | pass | G1.2: the same preflight as G1.1 (`gh auth status`, `git fetch origin main`, both `git rev-list --count` checks, `claude plugin list --json \| jq …`), with no stop. History, G1.1 (cost 1.9678): pass. |
+| G1 | 9 branch, current, state | pass | G1.2: `feat/103-let-readers-save-favourite-articles`; `103`; `state.json` valid. History, G1.1 (cost 1.9678): pass. |
+| G1 | 10 hygiene | pass | G1.2: `[]`, and no denial text in the stream; `ls -A "$W/ghcfg"` empty. Status shows only `?? .claude/agent-memory/aew-spec-analyser/MEMORY.md` and `?? …/project_gap_patterns.md` (PD-2). Launcher exit 0, `audit clean (26 Bash commands)`, no guard files, plugin repo HEAD `eac8af4` before and after. `system/init` tools have no `mcp__notion` or `mcp__claude_ai_*` entry (the only MCP tools are the 25 `mcp__plugin_aew_playwright__*`); `mcp_servers` still lists the user connectors as connected, but their tools are denied by server name. History, G1.1 (cost 1.9678): pass (`audit clean (46 Bash commands)`). |
 
 G1.1 finding (agent judgement, not fixed here): on #103 spec-analyser classified every change as non-material.
 Change 1 ("saved articles persist across reloads and return visits in the same browser") is "an implied AC made
@@ -1945,7 +1945,8 @@ left `plan` / `running` with no gate and no blocked label. That self-pause is no
 here (`/aew:resume 103` would continue at `plan`), but it is a deviation from the skill. G1 stays open. A G1.2
 re-run needs the project reset first: remove `.aew/runs/103` and `current`, switch to `main`, delete the
 `feat/103-…` branch, re-seed #103 in the mock, discard the spec-analyser memory. It also needs a decision on making
-#103 reliably material.
+#103 reliably material. Resolved by G1.2: #103's AC 5 was made material in the mock store only (9.9), and the run
+stopped at the spec gate.
 
 ### 9.9 Notes (prompt 05)
 
@@ -2072,3 +2073,21 @@ Cap raises, harness faults, fixes and deviations, newest last.
   snapshot for 9.6 is in `$SMOKE/ship-g2/out/` (`g2-artefacts.sha`, 8 files; `g2-log.lines` 5; `g2-status.txt` only
   `?? .claude/`, the agent-memory files of PD-2). The session's `system/init` also lists the user-level MCP servers of
   this machine (claude.ai connectors, notion); none was called.
+- 2026-10-25 Task F6, G1.2 mock body (the committed fixture `tests/fixtures/issues/material-guest-access.md` is
+  unchanged, the same policy as #201): in G1.1, spec-analyser classified #103 all non-material, with per-browser
+  storage counted as "an implied AC made explicit". So before G1.2, `$SMOKE/g1-reset.sh` re-seeded #103 and inserted
+  one line into the mock's `$GHM/issues/103/body`, directly after AC 4:
+  ``5. A reader's favourites sync across all of their devices: an article saved on their phone appears in
+  `/favourites` on their laptop.`` (`diff` against the rendered body: `16a17`, that line only). The app has no
+  accounts or data store, so storage scope is a real product decision. G1.2 asked it as Q1 (replace sync with
+  per-device browser storage, sync as a follow-up) and asked the footer link as Q2. The reset also removed
+  `.aew/runs/103`, `current` and `.claude/agent-memory/aew-spec-analyser/`, switched to `main`, deleted the local
+  `feat/103-…` branch (never pushed, so the bare origin was untouched) and started a fresh mock (G1.1's is kept as
+  `$W/gh-G1.1`). The tree was clean and `main...origin/main` was `0 0` before the launch.
+- 2026-10-25 Task F6, G1.1 self-pause (not a skill-text defect, recorded): with about $1.07 of its $3 cap left, the
+  main thread stopped at `plan` on its own, with the stage note `standards ok; paused before dispatch (session
+  budget)`. `skills/ship/` does not describe this. G1.2 (cap 4) stopped at the gate with $3.03 unused.
+- 2026-10-25 Task F6, G1.2 cosmetic: the result says "`gh auth status` produced no output; the docs expect real
+  `gh` to fail that check in this offline simulation". This paraphrases `skills/ship/references/preflight.md`
+  line 34 (the canary sentence) for the user. Harmless, but that sentence is simulation detail in a user-facing
+  reference.
