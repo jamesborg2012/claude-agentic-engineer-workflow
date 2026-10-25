@@ -131,3 +131,85 @@ remote-only branch). Then there are three cases:
 
 A new branch is created from the local default branch. Init doesn't fetch or fast-forward: if the PR shows
 conflicts, the user rebases. A switch failure stops init.
+
+## 3. Gitignore
+
+Do this before any scratch file is written, so `.aew/runs/` is ignored from here on.
+
+```sh
+touch .gitignore
+for l in '.aew/runs/' '.playwright-mcp/'; do
+  if grep -qxF "$l" .gitignore; then echo "present $l"; else
+    if [ -s .gitignore ] && [ -n "$(tail -c 1 .gitignore)" ]; then echo >> .gitignore; fi
+    echo "$l" >> .gitignore; echo "added $l"
+  fi
+done
+```
+
+The match is an exact line, so each line appears once. A missing final newline is repaired before appending.
+Nothing else in the file changes. `.claude/settings.local.json` is added by §10, only when that file is
+written.
+
+## 4. Detect and discover
+
+Detect the stacks. Drop `evidence` from the output.
+
+```sh
+"${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh" . | jq -c 'map(del(.evidence))'
+```
+
+A non-zero exit stops init: quote the script's `error:` line. `[]` also stops init: "no supported stack
+detected; aew needs at least one (nextjs, react, laravel, wordpress, dotnet, with tailwind and woocommerce
+overlays)". The config schema requires at least one stack, so it could never validate.
+
+Then build a discovery table: one row per source, giving the config field, the value, and whether it is
+certain or inferred. §5 asks about the inferred rows only.
+
+| Source | Field and value | Certainty |
+|---|---|---|
+| `package.json` scripts, in each stack path that has one | Each script maps to `<pm> run <script>`: `dev` is dev, `build` is build, `lint` is lint, `format` and `format:check` are format, `typecheck` and `type-check` are typecheck, `test` and `test:unit` are test_unit, `test:e2e` and `e2e` are test_e2e, `seed` and `db:seed` are seed | certain |
+| Lock file (package manager, the same rule as `${CLAUDE_PLUGIN_ROOT}/skills/ui-qa/SKILL.md` §2) | `pnpm-lock.yaml` is pnpm, `yarn.lock` is yarn, `bun.lock` or `bun.lockb` is bun, otherwise npm. `install` is `npm ci` with a `package-lock.json`, otherwise `<pm> install` | certain when a lock file names the manager, inferred with no lock file |
+| `tsconfig.json` and no typecheck script | typecheck `npx tsc --noEmit` | inferred |
+| `@playwright/test` in a `package.json` and no e2e script | test_e2e `npx playwright test` | certain |
+| `composer.json` scripts | `test` is test_unit `composer test`, `lint` is lint, `format` is format, `analyse` and `phpstan` are typecheck; install is `composer install` | certain |
+| `artisan` | test_unit `php artisan test` when there is no composer test script; seed `php artisan db:seed`; app start `php artisan serve`, `base_url` `http://127.0.0.1:8000`, `env_type` `native` | inferred |
+| `.wp-env.json` | `env_type` `wp-env`, start `npx wp-env start`, `base_url` `http://localhost:<port>` (default 8888), ready_check is the base_url | certain |
+| `.ddev/config.yaml` | `env_type` `ddev`, start `ddev start`, `base_url` `https://<name>.ddev.site` from its `name:` | certain |
+| `*.csproj` (depth 3 or less) | build `dotnet build`; test_unit `dotnet test` when a `*Tests.csproj` exists; format `dotnet format --verify-no-changes`; app start `dotnet run --project <web csproj>`, `base_url` from the first `http://` applicationUrl in `Properties/launchSettings.json`, else `http://localhost:5000`, `env_type` `native` | commands certain, app inferred |
+| `docker-compose.yml` or `compose.yaml`, with no wp-env or ddev | `env_type` `docker`, start `docker compose up -d` | inferred |
+| wordpress or woocommerce, with no `.wp-env.json`, no `.ddev/` and no compose file | `env_type` `local` (a Local-style site), `base_url` `http://<project>.local`, empty `start_command`, ready_check is the base_url | inferred |
+| nextjs, or react (Vite) | `base_url` `http://localhost:3000` (nextjs) or `http://localhost:5173` (react); start is the dev command, ready_check is the base_url, `env_type` `native` | inferred unless a script pins a port |
+| no app at all | `env_type` `none`, `base_url` `http://localhost`, empty `start_command` and `ready_check` | inferred |
+| `project` | the root `package.json` `name`, else the `composer.json` `name` after the `/`, else the first `.csproj` basename, else the directory name | certain when found in a manifest |
+| `default_branch` | from §2 | certain, or inferred when §2 marked it uncertain |
+| `retro.repo` | `jamesborg2012/claude-agentic-engineer-workflow` | inferred |
+
+Commands that are not found are left out of the proposal (the schema has no required command keys). To read the
+scripts for a stack path and its package manager, replace `<stack_path>`:
+
+```sh
+p=<stack_path>
+if [ -f "$p/pnpm-lock.yaml" ]; then echo pnpm; elif [ -f "$p/yarn.lock" ]; then echo yarn
+elif [ -f "$p/bun.lock" ] || [ -f "$p/bun.lockb" ]; then echo bun; else echo npm; fi
+jq -r '.scripts // {} | keys[]' "$p/package.json"
+```
+
+**Stack tools.** Warn, never stop. The tools to look for: nextjs, react and tailwind need the package
+manager's binary; laravel needs `php` and `composer`; wordpress and woocommerce need `php` and `composer`,
+plus `docker` when `.wp-env.json` or `.ddev/` exists; dotnet needs `dotnet`. Replace `<tools>` with the
+space-separated list.
+
+```sh
+for c in <tools>; do
+  if command -v "$c" > /dev/null 2>&1; then echo "ok $c"; else echo "missing $c"; fi
+done
+```
+
+A missing tool becomes a warning in the §13 report with an install hint. Nothing is installed and init goes on.
+
+**UI project** (used by §5 and §10): a detected nextjs, react, tailwind, wordpress or woocommerce profile, or a
+`pages/`, `app/`, `resources/views/` or `wp-content/themes/` directory.
+
+Put the proposal together in schema key order (`project`, `default_branch`, `stacks`, `commands`, `app`,
+`retro`; commands in schema order) with only these six keys. The optional sections (`ui`, `git`, `gates`,
+`limits`, `evidence`, `claude_md`) keep their schema defaults until someone edits the config.
