@@ -37,12 +37,12 @@ Add `ship-milestone` (DESIGN §10). It runs a whole milestone either in **bulk**
    - one combined brief, with AC ids prefixed by issue (`#12-AC-1`);
    - one standards pass, one plan, one branch (`milestone_branch_pattern`), and one development, review and QA cycle;
    - QA traceability per issue;
-   - one PR that closes every issue;
+   - one PR that closes every issue. Its plain-English introduction uses the bulk variant from prompt 05b: an opening paragraph on the milestone, then one short paragraph per issue.
    - stage labels updated on every issue.
 5. **Sequential mode:**
    - Order the issues topologically by `depends_on`. A dependency cycle stops the run and asks me.
    - Run the `ship` procedure for each issue as a `sequential-child` run.
-   - If an issue depends on an issue whose PR is still open, branch from that issue's branch (a stacked PR), set the PR base accordingly, and note it in the PR body.
+   - If an issue depends on an issue whose PR is still open, branch from that issue's branch (a stacked PR), set the PR base accordingly, and note it in the PR body. The plain-English introduction must say, in words, which PR it builds on and that it has to be merged after it (the stacked variant in prompt 05b).
    - The plan gate applies per issue unless `--auto`.
    - On `blocked`, stop the sequence and write a milestone report.
    - Keep an index at `.aew/runs/m-<milestone>/index.json` with each child's status, so `resume` and `status` work at milestone level.
@@ -54,7 +54,7 @@ Add `ship-milestone` (DESIGN §10). It runs a whole milestone either in **bulk**
   - three small, related issues → bulk;
   - five issues, including a large one → sequential;
   - three issues in a dependency chain → sequential, in the correct stacked order.
-- **Simulated bulk run** (mocked `gh`): completes, creates one PR with closing keywords for all three issues, and records a revision on each issue that needed one.
+- **Simulated bulk run** (mocked `gh`): completes, creates one PR with closing keywords for all three issues and an introduction that passes `check-pr-intro.sh`, and records a revision on each issue that needed one.
 - **Simulated sequential run:** respects the dependency order, creates stacked branches with the correct PR bases, and stops cleanly when one child is forced to `blocked`.
 - **Resume:** works for a milestone run interrupted in its second child.
 - Record the results in `tests/agent-smoke/README.md`.

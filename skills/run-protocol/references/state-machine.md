@@ -43,19 +43,19 @@ stateDiagram-v2
     }
 
     parallel_planning --> awaiting_input: plan needs_input (challenge implies material spec change)
-    awaiting_input --> spec_analysis: James accepts the spec change
-    awaiting_input --> parallel_planning: James declines, re-plan on the current spec
+    awaiting_input --> spec_analysis: plan challenge answered (any answer), revision recorded, the run continues from brief
 
     state plan_gate <<choice>>
     parallel_planning --> plan_gate
     plan_gate --> develop: --auto or gates.plan_approval false
     plan_gate --> awaiting_plan_approval: gate on
     awaiting_plan_approval --> develop: approve
-    awaiting_plan_approval --> parallel_planning: request changes (plan re-run with feedback)
+    awaiting_plan_approval --> parallel_planning: request changes, senior-engineer re-plans with notes, QA phase A kept
     awaiting_plan_approval --> failed: stop
 
     develop --> review: ok
-    develop --> parallel_planning: blocked (plan step impossible), senior revises the plan
+    develop --> parallel_planning: blocked (first in the run), senior-engineer re-plans with notes, plan gate unless auto
+    develop --> blocked: blocked a second time in the run, or blocked in fix mode
 
     state review_verdict <<choice>>
     review --> review_verdict
@@ -80,7 +80,8 @@ stateDiagram-v2
 
     qa --> docs: all pass
     qa --> awaiting_input: spec_ambiguity
-    awaiting_input --> qa: answered, no material change
+    qa --> awaiting_input: triage needs_input (material by definition)
+    awaiting_input --> spec_analysis: spec ambiguity or triage answered, revision recorded, then brief (a non-material spec ambiguity goes on to QA phase B after the brief, otherwise every stage from brief re-runs)
     qa --> blocked: failures, fix_cycle = max_fix_cycles
 
     docs --> pr: ok
@@ -105,9 +106,13 @@ stateDiagram-v2
 | Plan approval | `qa_test_plan` and `plan` both `ok` | approve / request changes / stop (plan summary of 25 lines or fewer, plus the file path) | `--auto` or `gates.plan_approval: false` |
 | Irreversible or destructive operation | Any stage | confirm / cancel | Never |
 
-An answer that confirms a material change is recorded first: a `spec-revision-v<N>.md` comment,
-the issue body revision, `aew:spec-revised`, and `spec_revision + 1`. Then spec analysis re-runs
-on the delta, and the stages after it run again.
+The answers go to spec-analyser first. When it returns `ok` with changes in `spec-changes.json`, the
+revision is recorded before the next stage: a `spec-revision-v<N>.md` comment, the issue body
+revision, `aew:spec-revised`, and `spec_revision + 1`. The stages after it then run again.
+
+**Unanswered gate.** If AskUserQuestion is unavailable (headless with `--permission-prompts none`),
+refused or empty, the gate stays pending (`gate:<id> <file>` note in `history`); ship prints the
+questions or plan summary and `Answer with /aew:resume <id>`, and stops. `/aew:resume` re-asks it.
 
 ## Failure paths
 
@@ -115,7 +120,7 @@ on the delta, and the stages after it run again.
 |---|---|
 | Agent returns `failed` (any case other than the next row) | Retry the same dispatch once. A second `failed` sets `blocked`. |
 | qa-engineer phase B returns `failed` with a complete report | "QA failures, report complete": route by triage class (the `qa` state above), counted against `max_fix_cycles`. Not retried. |
-| Agent returns `blocked` | The orchestrator routes it: developer → senior-engineer (plan revision); anything else → `blocked`. |
+| Agent returns `blocked` | Developer in full mode → senior-engineer plan revision with `notes`, once per run (a second full-mode `blocked` → `blocked`); developer in fix mode (review or QA fix) → `blocked`; anything else → `blocked`. |
 | `changes_required` once `review_cycle` = `max_review_cycles` | `blocked` |
 | QA failures once `fix_cycle` = `max_fix_cycles` | `blocked` |
 | UI brief with an automatable UI test still failing | Not done. It counts as a QA failure. |

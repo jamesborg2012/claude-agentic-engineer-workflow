@@ -9,6 +9,10 @@
 #       base_branch. Placeholder "Closes #<issue>" lines are removed and a
 #       "Closes #n" line is added for each run issue the body does not already
 #       close. Prints the PR number. The body file is never modified.
+#   open <branch> <title> <body-file> [--base <branch>]
+#       Run-less PR (init). Reads no run state or config; push the branch first.
+#       Reuses an open PR for the branch, else creates one (no --base: gh uses
+#       the repository default). The body is passed verbatim. Prints the PR number.
 #   update <pr> <body-file> [--run <run-id>]
 #       Replace the PR body. With --run, the same closing-line fix as create
 #       is applied first.
@@ -18,8 +22,8 @@
 #       Add a comment to the PR.
 #
 # Run state is read from .aew/runs/<run-id>/state.json (issues, title, branch,
-# base_branch) and never written. There is no "PR already exists" lookup: check
-# state.pr before calling create. Exit 1 on any invalid input, before any gh call.
+# base_branch) and never written. create has no "PR already exists" lookup (check
+# state.pr first); open does. Exit 1 on any invalid input, before any gh call.
 # Options: -h, --help
 
 # shellcheck source=lib/common.sh
@@ -126,11 +130,58 @@ cmd_create() {
   normalise_body "$file" "$ISSUES"
   local args=(--head "$BRANCH" --base "$base" --title "$TITLE" --body-file "$TMP")
   if [ "$draft" -eq 1 ]; then args+=(--draft); fi
+  pr_create "${args[@]}"
+}
+
+# pr_create <gh pr create args>: run gh pr create and print the PR number from its URL.
+pr_create() {
   local url num
-  url=$(gh pr create "${args[@]}") || exit 1
+  url=$(gh pr create "$@") || exit 1
   num=$(printf '%s\n' "$url" | sed -n 's#.*/pull/\([0-9][0-9]*\)[[:space:]]*$#\1#p' | tail -n 1) || exit 1
   [ -n "$num" ] || die "could not find a PR number in gh output: $url"
   printf '%s\n' "$num"
+}
+
+cmd_open() {
+  local branch="" title="" title_set="" file="" base="" arg usage="usage: gh-pr.sh open <branch> <title> <body-file> [--base <branch>]"
+  while [ $# -gt 0 ]; do
+    arg=$1
+    case "$arg" in
+      --base)
+        [ $# -ge 2 ] && [ -n "$2" ] || die "--base needs a value"
+        base=$2
+        shift 2
+        ;;
+      -*) die "unknown option: $arg" ;;
+      *)
+        if [ -z "$branch" ]; then branch=$arg
+        elif [ -z "$title_set" ]; then title=$arg; title_set=1
+        elif [ -z "$file" ]; then file=$arg
+        else die "unexpected argument: $arg"
+        fi
+        shift
+        ;;
+    esac
+  done
+  [ -n "$branch" ] && [ -n "$title_set" ] && [ -n "$file" ] || die "$usage"
+  require_cmd git
+  git check-ref-format --branch "$branch" > /dev/null 2>&1 || die "invalid branch name: $branch"
+  if [ -n "$base" ]; then
+    git check-ref-format --branch "$base" > /dev/null 2>&1 || die "invalid base branch name: $base"
+  fi
+  [ -n "$title" ] || die "title is empty"
+  case "$title" in *$'\n'*) die "title must be a single line" ;; esac
+  need_file "$file"
+  local existing re='^[1-9][0-9]*$'
+  existing=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty') || exit 1
+  if [ -n "$existing" ]; then
+    [[ $existing =~ $re ]] || die "unexpected gh pr list output: $existing"
+    printf '%s\n' "$existing"
+    return 0
+  fi
+  local args=(--head "$branch" --title "$title" --body-file "$file")
+  if [ -n "$base" ]; then args+=(--base "$base"); fi
+  pr_create "${args[@]}"
 }
 
 cmd_update() {
@@ -183,6 +234,7 @@ sub=$1
 shift
 case "$sub" in
   create) cmd_create "$@" ;;
+  open) cmd_open "$@" ;;
   update) cmd_update "$@" ;;
   ready) cmd_ready "$@" ;;
   comment) cmd_comment "$@" ;;

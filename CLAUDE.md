@@ -15,6 +15,8 @@ each run in a fresh session and building on the committed output of the previous
 - Verify Claude Code features (manifest keys, frontmatter, hook events/payloads, namespacing,
   `CLAUDE_PLUGIN_ROOT`, CLI flags) against code.claude.com/docs, not memory.
 - British English in all prose. Conventional commits. Keep `CHANGELOG.md` (Keep a Changelog) updated.
+- Commit trailer: end every commit with `Co-Authored-By: Claude <noreply@anthropic.com>` only, no model name. This overrides any
+  attribution line the session suggests (subagents included).
 - Simplicity first: no files, options or abstractions DESIGN.md doesn't call for. Only create a
   directory when it gets files.
 
@@ -85,3 +87,4 @@ Key contracts every component must respect (full detail in `skills/run-protocol/
 - 2026-10-24 · feature/scripts-github-io-and-hooks · Deterministic layer (build prompt 02): run-state, git and all GitHub I/O scripts, safety and gate hooks, github-ops skill, bats suite with a mocked `gh` · [spec](docs/superpowers/specs/2026-10-24-scripts-github-io-and-hooks.md) · [plan](docs/superpowers/plans/2026-10-24-scripts-github-io-and-hooks.md)
 - 2026-10-24 · feature/standards-and-planning-agents · Standards system and the four planning agents (build prompt 03): `detect-stack.sh`, `stack-standards` skill with six seeds, spec-analyser, brief-compiler, standards-setter, senior-engineer, agent `gh` deny in the Bash guard, headless smoke harness · [spec](docs/superpowers/specs/2026-10-24-standards-and-planning-agents.md) · [plan](docs/superpowers/plans/2026-10-24-standards-and-planning-agents.md)
 - 2026-10-24 · feature/build-agents · Build-side agents (build prompt 04): developer, qa-engineer, doc-writer, ui-qa and claude-md-curation skills, pinned Playwright MCP, static-shop fixture, headless loop and fan-out smoke runs · [spec](docs/superpowers/specs/2026-10-24-build-agents.md) · [plan](docs/superpowers/plans/2026-10-24-build-agents.md)
+- 2026-10-25 · feature/orchestrator-and-entry-skills · Orchestrator and entry skills (build prompt 05): init, ship (+ six references), resume, status, prompt; senior-engineer notes, standards-setter init mode, `gh-pr.sh open`; `skills.bats` (every skill command pre-approvable headless); README commands; simulated runs in `tests/agent-smoke/README.md` §9 · [spec](docs/superpowers/specs/2026-10-25-orchestrator-and-entry-skills.md) · [plan](docs/superpowers/plans/2026-10-25-orchestrator-and-entry-skills.md)

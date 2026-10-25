@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Usage: git-branch.sh <subcommand> [args]
 #
-# Creates and pushes the branch for an aew run. Local git only; the base
-# branch is updated by preflight, not here.
+# Creates and pushes the branch for an aew run. Local git only.
+# Preflight checks that the base branch is up to date with origin and never
+# updates it.
 #
 # Subcommands:
 #   create <run-id> <slug> [--base <branch>]

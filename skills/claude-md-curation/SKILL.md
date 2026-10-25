@@ -37,7 +37,8 @@ only when an entry needs one and no existing heading fits.
 - Run logs: test output, command transcripts, stack traces, anything from `.aew/runs/`.
 - Anything already in the standards docs.
 - Anything obvious from the code: file layouts, names, what a function does.
-- Anything time-bound: dates, "currently", ticket status, temporary workarounds with no removal condition.
+- Anything time-bound: "currently", "as of <date>", ticket status, temporary workarounds with no removal
+  condition, and any rule whose end date has passed (§6 step 2).
 
 ## 4. Size cap
 
@@ -72,8 +73,14 @@ Bad:
 Follow these steps in order. Every file is curated whole, including entries a human wrote.
 
 1. Read the whole file.
-2. Drop every item on the never-include list. An entry with a date or an expiry in it is time-bound, so drop
-   it; do not keep it with a note to delete it later.
+2. Drop every item on the never-include list. For dates:
+   - A rule with an end date ("until 2026-11-30", "expires 1 December 2026") stays while that date is still
+     after today, and is dropped once it has passed. Today is the date part of `updated_at` in the run's
+     `state.json`. If the end date has no year, or you cannot tell whether it has passed, keep the entry and
+     list it in your report (§7) as kept for a human to check.
+   - An entry tied to a moment with no end ("as of March", "currently") is time-bound, so drop it; do not keep
+     it with a note to delete it later.
+   - A date that only records when something happened, such as a dated changelog line, is not time-bound.
 3. Merge duplicates and near-duplicates into one entry. Check every merged or rewritten entry against the
    never-include list again: keep only the part that the standards docs and the code do not already say,
    and drop the entry if nothing is left.
@@ -85,7 +92,8 @@ Follow these steps in order. Every file is curated whole, including entries a hu
 ## 7. Reporting
 
 Never remove or rewrite silently. Return to the caller a list of every removed or rewritten entry: the
-original text, what happened to it (removed, merged, rewritten) and the reason. The doc-writer copies
+original text, what happened to it (removed, merged, rewritten, or kept for a human to check under §6 step 2)
+and the reason. The doc-writer copies
 this list into `10-summary.md`. Quote each original entry in full, exactly as written including its leading
 `- `, one item per entry; do not abbreviate or group entries. An entry that only moved to another section is
 reported as rewritten.
