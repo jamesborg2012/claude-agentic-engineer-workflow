@@ -26,18 +26,18 @@ The argument is: `$ARGUMENTS`.
 ## List every run
 
 1. Run `cat .aew/runs/current`. Missing or empty means there is no current run; `<cur>` is then empty.
-2. Run this one read (`<cur>` is step 1's id). The glob matches only directories that hold a `state.json`, and `test()` keeps only run-id names:
+2. Run this one read (`<cur>` is step 1's id, written bare after `--arg cur`, or `-` when there is no current run). The glob matches only directories that hold a `state.json`, and `test()` keeps only run-id names. `--arg` goes after the filter, never before it:
 
    ```sh
-   jq -r --arg cur '<cur>' 'input_filename as $f | ($f | split("/") | .[-2]) as $id | select($id | test("^([1-9][0-9]*|m-[1-9][0-9]*)$")) | [$id, .status, .stage, .updated_at, (if $id == $cur then "current" else "-" end), (.title // "-")] | @tsv' .aew/runs/*/state.json
+   jq -r 'input_filename as $f | ($f | split("/") | .[-2]) as $id | select($id | test("^([1-9][0-9]*|m-[1-9][0-9]*)$")) | [$id, .status, .stage, .updated_at, (if $id == $cur then "current" else "-" end), (.title // "-")] | @tsv' --arg cur <cur> .aew/runs/*/state.json
    ```
 
 3. Print a table with the columns `| Run | Status | Stage | Updated | Current | Title |`, one row per line of output.
 4. No output, `no matches found` (zsh) or `Could not open file` (bash) with no `.aew/runs/*/state.json` at all: print `No aew runs in this project.`
-5. A `jq: parse error` is not that case. jq reads the files as one stream, so the error names no file and can hide every run after the bad one. Run the same read once per file instead, and report each `corrupt` line as a corrupt `state.json`, naming it, above the table of the other runs:
+5. A `jq: parse error` is not that case. jq reads the files as one stream, so the error names no file and can hide every run after the bad one. Run `ls .aew/runs`, keep the names that match a run id, and run the same read once per kept name, with that run's literal path in place of the glob (no shell variables, no loop). Report each `corrupt` line as a corrupt `state.json`, naming it, above the table of the other runs:
 
    ```sh
-   for f in .aew/runs/*/state.json; do jq -r --arg cur '<cur>' 'input_filename as $f | ($f | split("/") | .[-2]) as $id | select($id | test("^([1-9][0-9]*|m-[1-9][0-9]*)$")) | [$id, .status, .stage, .updated_at, (if $id == $cur then "current" else "-" end), (.title // "-")] | @tsv' "$f" 2>/dev/null || printf 'corrupt\t%s\n' "$f"; done
+   jq -r 'input_filename as $f | ($f | split("/") | .[-2]) as $id | select($id | test("^([1-9][0-9]*|m-[1-9][0-9]*)$")) | [$id, .status, .stage, .updated_at, (if $id == $cur then "current" else "-" end), (.title // "-")] | @tsv' --arg cur <cur> .aew/runs/<run-id>/state.json 2>/dev/null || printf 'corrupt\t%s\n' .aew/runs/<run-id>/state.json
    ```
 
 ## Show one run
