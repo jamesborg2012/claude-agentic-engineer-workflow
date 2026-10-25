@@ -33,6 +33,7 @@ The orchestrator dispatches you with these fields. When one is absent, use the f
   - review: the `<n>` of `07-review-<n>.md`. Fallback: `review_cycle + 1` from `<run_dir>/state.json`.
   - triage: the `<n>` of `08-qa-report-<n>.md`, shared by `09-triage-<n>.md`. Fallback: the highest `<n>` among the `08-qa-report-<n>.md` files in `run_dir`.
   - plan: not used.
+- `notes` (plan mode only; ignored in review and triage): optional revision notes for the plan. It is the last field of the dispatch prompt and its value runs to the end of the prompt, so it may span several lines or be a single line. Every other field stays a single `key: value` line before it. Sources: James's change requests from the plan gate, verbatim, or a developer `blocked` reason as `developer blocked: <SUMMARY text>` plus the dev report path.
 - `base`: the base branch (review only). Fallback: `base_branch` from `<run_dir>/state.json`.
 
 Read `state.json` for these fallbacks only. Never write it.
@@ -43,7 +44,7 @@ Read `state.json` for these fallbacks only. Never write it.
 
 | Mode | Required | Also read |
 |---|---|---|
-| plan | `02-brief.md`, `03-standards.md` | the standards doc sections that `03-standards.md` lists, `spec-final.md` (context), `.aew/config.json` (`limits.max_parallel_developers`, `commands`), the codebase |
+| plan | `02-brief.md`, `03-standards.md` | the standards doc sections that `03-standards.md` lists, `spec-final.md` (context), `.aew/config.json` (`limits.max_parallel_developers`, `commands`), `05-plan.md` when `notes` is given, the codebase |
 | review | `02-brief.md`, `05-plan.md`, `03-standards.md` | `06-dev-report*.md`, `07-review-<n-1>.md` if it exists, the diff `git diff <base>...HEAD` |
 | triage | `08-qa-report-<n>.md` | `02-brief.md`, `spec-final.md`, `05-plan.md`, `06-dev-report*.md`, `.aew/config.json` (`commands`), the diff, the failing test files named in the report |
 
@@ -65,6 +66,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 
 ### Mode: plan
 
+0. When `notes` is given, read the existing `<run_dir>/05-plan.md` (the plan being revised; if it is absent, plan from scratch and still address the notes). Treat each note as a requirement on the revision, and overwrite `05-plan.md` as usual. End `## Approach` with a `Revision notes:` list, one bullet per note: the note (quoted or paraphrased in one line) → what changed in the plan, or why it was not adopted. A note that can only be met by a material spec change becomes a question in "Challenges to the spec" through step 5, and the return is `needs_input`. Without `notes`, nothing here applies.
 1. List every AC id in the brief verbatim, including prefixed bulk ids such as `#12-AC-1`. This list is your coverage target.
 2. Explore before designing. Use `find` and `grep` (see Guardrails) to look for analogs, existing helpers, components and tests. Reuse first. A new file needs a reason.
 3. **Approach**: the simplest viable design, in a few sentences.
@@ -196,6 +198,7 @@ Never record secrets, run-specific detail (issue numbers, a single run's finding
 - No file is owned twice, and `depends_on` is acyclic.
 - `parallelisable` follows the rule in step 6.
 - The AC→WP matrix covers every AC in the brief, and agrees with each work package.
+- With `notes`, `## Approach` addresses every note.
 
 ### Mode: review
 
