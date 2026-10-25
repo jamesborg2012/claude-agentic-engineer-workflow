@@ -221,3 +221,57 @@ captured_body() { gh_captured_file 'pr create'; }
   assert_failure 1; assert_contains "$stderr" "error:"
   [ "$(gh_call_count)" -eq 0 ]
 }
+
+@test "open creates a PR when none is open and prints its number" {
+  printf 'Set up aew.\n' > "$BATS_TEST_TMPDIR/body.md"
+  run --separate-stderr "$PR" open chore/aew-init "chore: set up aew" "$BATS_TEST_TMPDIR/body.md"
+  assert_success
+  assert_equal "$output" "7"
+  assert_gh_called "pr list --head chore/aew-init --state open"
+  assert_gh_called "pr create --head chore/aew-init --title chore: set up aew --body-file"
+  refute_gh_called "--base"
+  cmp "$BATS_TEST_TMPDIR/body.md" "$(captured_body)"
+  run --separate-stderr "$PR" open chore/aew-init "chore: set up aew" "$BATS_TEST_TMPDIR/body.md" --base main
+  assert_success
+  assert_equal "$output" "7"
+  assert_gh_called "--base main"
+}
+
+@test "open reuses an already-open PR without creating one" {
+  gh_mock_respond pr-list - 0 <<< "17"
+  printf 'Set up aew.\n' > "$BATS_TEST_TMPDIR/body.md"
+  run --separate-stderr "$PR" open chore/aew-init "chore: set up aew" "$BATS_TEST_TMPDIR/body.md"
+  assert_success
+  assert_equal "$output" "17"
+  refute_gh_called "pr create"
+  assert_equal "$(gh_call_count)" "1"
+}
+
+@test "open refusals make no gh call" {
+  local b="$BATS_TEST_TMPDIR/body.md" e="$BATS_TEST_TMPDIR/empty.md"
+  printf 'x\n' > "$b"
+  : > "$e"
+  local -a bad=(
+    "open"
+    "open br"
+    "open br title"
+    "open bad..branch title $b"
+    "open br '' $b"
+    "open br $'a\nb' $b"
+    "open br title $BATS_TEST_TMPDIR/missing.md"
+    "open br title $e"
+    "open br title $b --base"
+    "open br title $b --base bad..x"
+    "open br title $b --bogus"
+    "open br title $b extra"
+  )
+  local c
+  for c in "${bad[@]}"; do
+    run --separate-stderr bash -c "eval \"\$1\"" _ "\"$PR\" $c"
+    assert_failure
+    assert_equal "$status" "1"
+    assert_contains "$stderr" "error:"
+    assert_equal "$output" ""
+  done
+  assert_equal "$(gh_call_count)" "0"
+}
