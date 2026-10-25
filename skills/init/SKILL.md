@@ -129,8 +129,10 @@ grep -qxF '.playwright-mcp/' .gitignore 2> /dev/null && echo "present .playwrigh
 ```
 
 The first line prints 1 when `.gitignore` lacks a final newline. Lines are matched exactly, so each appears once.
-**The gitignore pattern** (§3, §8, §10) adds each `missing` line, in order: if the count (the snippet's first
-line) is 1, run `printf '\n' >> .gitignore` once, then `printf '%s\n' '<line>' >> .gitignore` per line, and
+**The gitignore pattern** (§3, §8, §10) adds each `missing` line, in order (§8 checks each of its lines like
+§3's last two lines). Take a fresh count first: §3 uses its snippet's first line; §8 and §10 run
+`tail -c 1 .gitignore 2> /dev/null | grep -c . || true` again, since an earlier append changes it. If the
+count is 1, run `printf '\n' >> .gitignore` once, then `printf '%s\n' '<line>' >> .gitignore` per line, and
 report it added. §10 adds `.claude/settings.local.json` only on a yes.
 
 ## 4. Detect and discover
