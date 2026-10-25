@@ -18,14 +18,13 @@ and list it in the report. A refused or empty answer also takes the default. The
 recommended config values, Playwright skipped, and permissions not written. All of them can be reviewed in
 the PR.
 
-**Idempotency.** Every step checks before it writes and says when it is a no-op. A second run on an
-unchanged repo changes no file and makes no commit, push or PR call.
+**Idempotency.** Every step checks before it writes and says when it is a no-op. A second run on an unchanged
+repo changes no file and makes no commit, push or new PR.
 
 **Init's files.** These are the only files init writes or stages:
 
-- `.gitignore`, `.aew/config.json`, `CLAUDE.md`
-- `.claude/settings.json` (only on a yes) and `.claude/settings.local.json` (only on a yes; gitignored, so
-  never committed or listed by §12)
+- `.gitignore`, `.aew/config.json`, `CLAUDE.md`, and on a yes `.claude/settings.json` and
+  `.claude/settings.local.json` (gitignored, so never committed or listed by §12)
 - `docs/standards/**` and `.claude/agent-memory/aew-standards-setter/**` (from the standards-setter)
 - only when the Playwright offer is accepted, the ui-qa §2 files (`package.json`, the lock file,
   `playwright.config.ts`, `<ui.e2e_dir>/aew.ts`, or the nested `tests/e2e/` package)
@@ -34,12 +33,9 @@ Scratch files live flat in the gitignored `.aew/runs/` and are removed in §13: 
 `init-config-merged.json`, `init-permissions.json`, `init-permissions-local.json`, `init-settings.json`,
 `init-pr-body.md`.
 
-Never install a global tool. Never touch GitHub except through `gh auth status` and the plugin scripts named
-here.
+Never install a global tool. Touch GitHub only through `gh auth status` and the plugin scripts named here.
 
 ## 1. Prerequisites
-
-Check the tools, each snippet in its own Bash call.
 
 ```sh
 for c in git jq node gh; do
@@ -61,7 +57,7 @@ git remote get-url origin
 gh auth status
 ```
 
-Any of these failures stops init, and nothing is written. Quote gh's own output when `gh auth status` fails.
+Any failure stops init with nothing written. Quote gh's own output when `gh auth status` fails.
 
 | Failure | Stop message and hint |
 |---|---|
@@ -73,8 +69,7 @@ Any of these failures stops init, and nothing is written. Quote gh's own output 
 | Not inside a git repo, or the top level differs from `pwd -P` | Run `/aew:init` from the repository root. |
 | No `origin` | Add the GitHub remote as `origin`, then re-run. |
 
-`gh auth status` stays a separate, exact call so the permission rule `Bash(gh auth status)` matches it and
-nothing broader is needed.
+`gh auth status` stays a separate, exact call so `Bash(gh auth status)` matches it.
 
 ## 2. Clean tree and branch
 
@@ -87,9 +82,8 @@ git ls-remote --symref origin HEAD || true
 git branch --show-current
 ```
 
-Use the existing config's value. Otherwise use `origin/HEAD` without the `origin/` prefix, then the
-`ref: refs/heads/<name>` line of `ls-remote`. If none of those gives a value, use the current branch and mark
-it uncertain (it is asked in §5).
+Use the existing config's value, else `origin/HEAD` without the `origin/` prefix, else the
+`ref: refs/heads/<name>` line of `ls-remote`, else the current branch, marked uncertain (asked in §5).
 
 Require a clean tree.
 
@@ -119,22 +113,19 @@ else
 fi
 ```
 
-If the branch already exists locally or on `origin`, init switches to it (git sets up tracking for a
-remote-only branch). Then there are three cases:
+An existing branch (local or on `origin`) is switched to, and then:
 
-- Its commits are all in the default branch (its PR was merged, or it never got a commit): init restarts it
-  at the default branch. `switch -C` only moves a branch whose work is already merged, so nothing is lost.
-- The default branch has moved on and the branch has commits of its own (for example a squash-merged or
-  closed PR): init stops on that branch with the message above and changes nothing else. The user decides;
-  init never deletes or rebases it.
-- Otherwise (the branch is ahead of the default branch, the usual re-run): init reuses it.
+- all its commits are in the default branch (merged, or never committed): restart it at the default branch,
+  which loses nothing;
+- the default branch has moved on and the branch has its own commits (for example a squash-merged or closed
+  PR): stop with the message above. The user decides; init never deletes or rebases it;
+- otherwise (ahead of the default branch, the usual re-run): reuse it.
 
-A new branch is created from the local default branch. Init doesn't fetch or fast-forward: if the PR shows
-conflicts, the user rebases. A switch failure stops init.
+A new branch starts from the local default branch (no fetch or fast-forward). A switch failure stops init.
 
 ## 3. Gitignore
 
-Do this before any scratch file is written, so `.aew/runs/` is ignored from here on.
+Do this before any scratch file is written.
 
 ```sh
 touch .gitignore
@@ -146,9 +137,7 @@ for l in '.aew/runs/' '.playwright-mcp/'; do
 done
 ```
 
-The match is an exact line, so each line appears once. A missing final newline is repaired before appending.
-Nothing else in the file changes. `.claude/settings.local.json` is added by §10, only when that file is
-written.
+Each line is matched exactly, so it appears once; §10 adds `.claude/settings.local.json` only on a yes.
 
 ## 4. Detect and discover
 
@@ -160,10 +149,9 @@ Detect the stacks. Drop `evidence` from the output.
 
 A non-zero exit stops init: quote the script's `error:` line. `[]` also stops init: "no supported stack
 detected; aew needs at least one (nextjs, react, laravel, wordpress, dotnet, with tailwind and woocommerce
-overlays)". The config schema requires at least one stack, so it could never validate.
+overlays)", since the schema requires one.
 
-Then build a discovery table: one row per source, giving the config field, the value, and whether it is
-certain or inferred. §5 asks about the inferred rows only.
+Then build a discovery table (source, field and value, certain or inferred); §5 asks about inferred rows only.
 
 | Source | Field and value | Certainty |
 |---|---|---|
@@ -184,8 +172,8 @@ certain or inferred. §5 asks about the inferred rows only.
 | `default_branch` | from §2 | certain, or inferred when §2 marked it uncertain |
 | `retro.repo` | `jamesborg2012/claude-agentic-engineer-workflow` | inferred |
 
-Commands that are not found are left out of the proposal (the schema has no required command keys). To read the
-scripts for a stack path and its package manager, replace `<stack_path>`:
+Commands not found are left out (the schema has no required command keys). To read a stack path's package
+manager and scripts, replace `<stack_path>`:
 
 ```sh
 p=<stack_path>
@@ -205,10 +193,10 @@ for c in <tools>; do
 done
 ```
 
-A missing tool becomes a warning in the §13 report with an install hint. Nothing is installed and init goes on.
+A missing tool is a §13 warning with an install hint. Nothing is installed.
 
-**UI project** (used by §5 and §10): a detected nextjs, react, tailwind, wordpress or woocommerce profile, or a
-`pages/`, `app/`, `resources/views/` or `wp-content/themes/` directory.
+**UI project** (§5, §10): a detected nextjs, react, tailwind, wordpress or woocommerce profile, or a `pages/`,
+`app/`, `resources/views/` or `wp-content/themes/` directory.
 
 Put the proposal together in schema key order (`project`, `default_branch`, `stacks`, `commands`, `app`,
 `retro`; commands in schema order) with only these six keys. The optional sections (`ui`, `git`, `gates`,
@@ -216,8 +204,7 @@ Put the proposal together in schema key order (`project`, `default_branch`, `sta
 
 ## 5. Confirm in one question round
 
-Write the detected proposal from §4 to `.aew/runs/init-config.json` with the Write tool first (read the file
-first if it already exists). `.aew/runs/` is ignored since §3, and the snippet below reads this file.
+First Write §4's proposal to `.aew/runs/init-config.json` with the Write tool (read it first if it exists).
 
 Print the whole proposal. Mark certain values "found in the repo" and inferred values "inferred".
 
@@ -236,18 +223,17 @@ jq -r --slurpfile p .aew/runs/init-config.json '. as $e | $p[0] as $q
        else empty end)' .aew/config.json
 ```
 
-Then ask **one** AskUserQuestion round. It covers only the inferred values that are not already in the existing
-config, plus the Playwright offer when §4 found a UI project and no `@playwright/test`. Each question puts the
-recommended answer first, with its label ending "(recommended)", and offers one or two alternatives. The user
-can always type their own through "Other".
+Then ask **one** AskUserQuestion round: only the inferred values not already in the existing config, plus the
+Playwright offer when §4 found a UI project and no `@playwright/test`. Each question puts the recommended
+answer first, its label ending "(recommended)", with one or two alternatives ("Other" is always available).
 
 The Playwright question is: "Set up Playwright and axe for UI QA now? This installs `@playwright/test` and
-`@axe-core/playwright` as dev dependencies and downloads Chromium." It recommends **skip**: QA sets Playwright
-up on first use (ui-qa §2), and nothing gets installed without a yes.
+`@axe-core/playwright` as dev dependencies and downloads Chromium." It recommends **skip** (QA sets Playwright
+up on first use, ui-qa §2).
 
-If the tool's schema caps questions or options per call, split the round over as many calls as needed. That
-still counts as one round. Nothing to ask means no call. Headless or no answer: use the recommended values
-(Playwright skipped) and list them under "Defaults used" in the §13 report.
+If the tool caps questions or options per call, split the round over several calls (still one round).
+Nothing to ask means no call. Headless or no answer: use the recommended values (Playwright skipped) and
+list them under "Defaults used" in the §13 report.
 
 Write the final proposal, with the answers or defaults, over `.aew/runs/init-config.json` with the Write tool.
 
@@ -269,52 +255,47 @@ else
 fi
 ```
 
-- `$p[0] * $e` is a recursive merge where the existing file wins. Missing fields from the proposal are added,
-  and nothing is removed or duplicated. `stacks` is a union keyed by `(profile, path)`: every existing entry is
-  kept as it is (its version included), and a newly detected stack is appended. Running the merge on its own
-  output gives the same result.
-- `==` compares JSON values, not text, so a hand-formatted config that already holds every value counts as
-  unchanged and is never rewritten.
-- `jq .` output (two-space indent, the proposal's key order) is the stable format.
+- `$p[0] * $e` is a recursive merge where the existing file wins: missing fields are added, nothing is removed
+  or duplicated. `stacks` is a union keyed by `(profile, path)`; existing entries (versions included) are kept
+  and a newly detected stack is appended. Merging its own output changes nothing.
+- `==` compares JSON values, not text, so a hand-formatted config that holds every value is never rewritten.
+  `jq .` output (two-space indent, the proposal's key order) is the stable format.
 
-Run the next snippet only on "config changed". It validates the scratch copy and only then replaces the live
-file.
+Run the next snippet only on "config changed". It validates the scratch copy, then replaces the live file.
 
 ```sh
 npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s "${CLAUDE_PLUGIN_ROOT}/templates/config.schema.json" -d .aew/runs/init-config-merged.json && cp .aew/runs/init-config-merged.json .aew/config.json && echo "config written"
 ```
 
-An invalid result stops init before §7 and quotes ajv's errors. The live `.aew/config.json` is untouched,
-because only the scratch copy was validated.
+An invalid result stops init before §7 and quotes ajv's errors; the live config is untouched.
 
 ## 7. Labels
 
-Create or update the aew labels. This is idempotent on GitHub's side and runs on every init.
+Create or update the aew labels (idempotent; runs on every init).
 
 ```sh
 "${CLAUDE_PLUGIN_ROOT}/scripts/gh-labels.sh" ensure
 ```
 
-A failure stops init before the commit. Quote the error and add: "is `origin` a GitHub repo you can write to?".
+A failure stops init before the commit: quote the error and ask "is `origin` a GitHub repo you can write to?".
 
 ## 8. Playwright setup
 
 Only when §5's Playwright offer was answered yes. Read `${CLAUDE_PLUGIN_ROOT}/skills/ui-qa/SKILL.md` `## 2. Setting up
 Playwright` with the Read tool and follow it: install with the lock file's package manager, exact-pinned, run
-`npx playwright install chromium`, append the missing gitignore lines with the §3 snippet's pattern, then write
-`playwright.config.ts` from ui-qa §4 and `<ui.e2e_dir>/aew.ts` from ui-qa §6 and §7. The versions live only in
-ui-qa, so don't restate them here. The files go into init's commit, not a QA cycle commit.
+`npx playwright install chromium`, append the missing gitignore lines with the §3 pattern, then write
+`playwright.config.ts` from ui-qa §4 and `<ui.e2e_dir>/aew.ts` from ui-qa §6 and §7 (versions live only in
+ui-qa). The files go into init's commit.
 
-For a root package, then add `commands.test_e2e` as `npx playwright test` to `.aew/runs/init-config.json` (Read it
-first, then Write it) and re-run §6.
+For a root package, then add `commands.test_e2e` as `npx playwright test` to `.aew/runs/init-config.json` (Read,
+then Write) and re-run §6.
 
-Otherwise (no, headless, no answer, not a UI project) report "Playwright: skipped (QA sets it up on first use)".
-When `@playwright/test` was already present, report "Playwright: present". Nothing is installed without a yes.
+Otherwise report "Playwright: skipped (QA sets it up on first use)", or "Playwright: present" when
+`@playwright/test` was already there. Nothing is installed without a yes.
 
 ## 9. CLAUDE.md section
 
-Add the workflow section once. The exact-heading check means it is never duplicated, and an existing section is
-left as it is, even if it was edited.
+Add the workflow section once; an existing section is left as it is, even if edited.
 
 ```sh
 [ -f CLAUDE.md ] || printf '# CLAUDE.md\n' > CLAUDE.md
@@ -340,15 +321,11 @@ fi
 ## 10. Permissions proposal
 
 Propose rules that cut down permission prompts for the commands aew runs. Nothing is written without a yes.
-Two files are involved, because plugin-script paths are machine-specific:
+`.claude/settings.local.json` holds the plugin scripts by absolute path (gitignored, so this machine's path
+never reaches other cloners); `.claude/settings.json` holds the portable rules (committed in the init PR).
 
-- `.claude/settings.local.json` holds the plugin scripts by absolute path. It is gitignored, so this
-  machine's plugin path never reaches other cloners.
-- `.claude/settings.json` holds the portable rules. It is committed in the init PR as a reviewable hunk.
-
-Every rule is an exact command, or a subcommand followed by a single trailing ` *`. No rule has a wildcard
-before the subcommand. `${CLAUDE_PLUGIN_ROOT}` is substituted when this skill loads, so the proposal carries
-the real installed path.
+Every rule is an exact command, or a subcommand plus a single trailing ` *`; none has a wildcard before the
+subcommand. `${CLAUDE_PLUGIN_ROOT}` is substituted when this skill loads, so the proposal carries the real path.
 
 Template 1 is `.claude/settings.local.json`:
 
@@ -379,57 +356,51 @@ Template 2 is `.claude/settings.json`. Replace `<default_branch>` with the defau
 ] } }
 ```
 
-The plugin path changes with each plugin version. Re-running init after an update adds the new rules to
-`.claude/settings.local.json`. The old ones stay, harmless, because nothing is ever removed.
+The plugin path changes with each version; re-running init adds the new rules and keeps the old, harmless ones.
 
 **Rules from the config**, added to the portable list:
 
-- `commands.install` becomes the exact command with no wildcard (for example `Bash(npm install)`), so it can't
-  install an arbitrary package.
-- `build`, `lint`, `format`, `typecheck`, `test_unit` and `test_e2e` become `Bash(<command> *)`.
-- A UI project also gets `Bash(npx playwright test *)` and `Bash(npx playwright install chromium)`.
+- `commands.install` becomes the exact command, no wildcard (for example `Bash(npm install)`).
+- `build`, `lint`, `format`, `typecheck`, `test_unit`, `test_e2e` become `Bash(<command> *)`; a UI project also
+  gets `Bash(npx playwright test *)` and `Bash(npx playwright install chromium)`.
 - A command becomes a rule only if it is one simple command: no `&`, `|`, `;`, `>`, `<`, `*`, `$(`,
   backtick or newline, and it doesn't start with `cd `, `sh `, `bash `, `env ` or a `NAME=` assignment.
   Anything else is listed as not pre-approved.
-- `dev` and `app.start_command` get no rule, because QA starts the app through ui-qa §3.
+- `dev` and `app.start_command` get no rule (QA starts the app through ui-qa §3).
 - `commands.seed` gets no rule, because it may reset data.
 
 **Deliberately not pre-approved.** These are listed as prose and never written as rules, and they prompt when
 used:
 
-- `git -C <dir> …`, the sub-developers' worktree form. A wildcard before the subcommand would also match
-  `-c core.fsmonitor=<cmd>`.
-- `git diff`, `git log`, `git show` and `git format-patch` with a wildcard, because `--output=<path>` writes
-  files. Their read-only forms already run without a prompt.
-- `git fetch` with a wildcard, because of `--upload-pack=<cmd>`. Only the exact preflight form is allowed.
-- `git push`, which goes through `git-branch.sh` only, and every other `gh` command, because only the
-  scripts call `gh`.
+- `git -C <dir> …`, the sub-developers' worktree form (a wildcard before the subcommand would also match
+  `-c core.fsmonitor=<cmd>`).
+- `git diff`, `git log`, `git show` and `git format-patch` with a wildcard (`--output=<path>` writes files);
+  their read-only forms already run without a prompt.
+- `git fetch` with a wildcard (`--upload-pack=<cmd>`); only the exact preflight form is allowed.
+- `git push` (it goes through `git-branch.sh` only) and every other `gh` command (only the scripts call `gh`).
 - `sh -c`, `nohup`, `cd <dir> && …`, `cp`, `curl`, `kill`, `rm -rf`, and bare `npx`, `npm` or `node`.
-- `commands.seed`, because it may reset data.
+- `commands.seed` (may reset data).
 
 These rules only cut down prompts. They are not a security boundary: the plugin's Bash guard hook is what
-blocks dangerous commands. Global git options sit before the subcommand, so an anchored rule can never match
-them, which is why no deny rules are proposed.
+blocks dangerous commands. An anchored rule can never match global git options (they sit before the
+subcommand), so no deny rules are proposed.
 
-**Ask.** Print both concrete lists, each under its target file (`.claude/settings.json`: portable, committed
-in the init PR; `.claude/settings.local.json`: this machine's plugin paths, gitignored), then the not
-pre-approved list. Then ask one AskUserQuestion, once, before writing either file: "Write these rules to
-`.claude/settings.json` and `.claude/settings.local.json`?" with **Write (recommended)** and Don't write.
-No answer, or a headless run, means don't write either file (the ask rule). Report both lists in §13 so the
-user can add them by hand. Skip the rest of this section in that case.
+**Ask.** Print both concrete lists, each under its target file (`.claude/settings.json`: portable, committed in
+the init PR; `.claude/settings.local.json`: this machine's plugin paths, gitignored), then the not pre-approved
+list. Then ask one AskUserQuestion, once, before writing either file: "Write these rules to
+`.claude/settings.json` and `.claude/settings.local.json`?" with **Write (recommended)** and Don't write. No
+answer or a headless run means write neither (the ask rule): report both lists in §13 for the user to add by
+hand, and skip the rest of this section.
 
 **On a yes.** Write the two concrete `{"permissions":{"allow":[…]}}` lists with the Write tool (read each file
 first if it already exists): the portable one (template 2 plus the config rules) to
 `.aew/runs/init-permissions.json`, and the plugin-script one (template 1) to
 `.aew/runs/init-permissions-local.json`. Then run the snippet.
 
-The snippet first makes sure `.claude/settings.local.json` is ignored. `git check-ignore` honours every ignore
-source (`.gitignore`, `.git/info/exclude`, the user's global excludes), so a line is added to `.gitignore`
-only when nothing ignores the file yet. That is a conditional third line beside §3's two, written only on a
-yes, so `.aew/runs/` and `.playwright-mcp/` stay exactly once each. If the user already tracks
-`.claude/settings.local.json`, it is left alone and the plugin-script rules are reported instead, so they
-never land in a commit. The ignore check runs before the local file is written, so that file is never
-untracked and unignored.
+The snippet first makes sure `.claude/settings.local.json` is ignored: `git check-ignore` honours every
+ignore source, so a third `.gitignore` line is added (only on a yes) only when nothing ignores the file yet.
+A file the user already tracks is left alone and its rules are reported instead. The check runs before the
+local file is written, so it is never untracked and unignored.
 
 ```sh
 l=.claude/settings.local.json; t=0
@@ -455,7 +426,74 @@ for pair in "init-permissions.json .claude/settings.json" "init-permissions-loca
 done
 ```
 
-In each file, existing rules keep their order and new ones are appended once. `deny`, `ask` and every other
-key are kept as they are, and an unchanged file is never rewritten, so a second run changes nothing. A file
-that isn't valid JSON (comments, a trailing comma) is left untouched: report "not merged" with its rules so the
-user can add them by hand.
+Existing rules keep their order, new ones are appended once, every other key is kept, and an unchanged file
+is never rewritten. A file that isn't valid JSON is left untouched: report "not merged" with its rules.
+
+## 11. Standards
+
+Dispatch the Agent tool with `subagent_type: aew:standards-setter` and the prompt exactly `mode: init`. The
+last four non-blank lines of the result must be `STATUS: <ok|needs_input|blocked|failed>`, `ARTEFACTS: …`
+(`none` allowed), `SUMMARY: …` and `NEXT: …`, each a single value, not the template placeholder. On `ok`, keep
+SUMMARY's `<profile>: reused|generated|updated` list for the report. On `blocked`, `failed` or an invalid
+block, dispatch once more, then stop before §12 and quote SUMMARY (§2's exception lets the next init finish).
+
+Init commits the agent's shared memory (`.claude/agent-memory/aew-standards-setter/`) too, except that when it
+holds the only change in the tree, it is dropped, so a re-run changes nothing.
+
+```sh
+m=.claude/agent-memory/aew-standards-setter/
+all=$(git status --porcelain --untracked-files=all)
+if [ -n "$all" ] && [ -z "$(printf '%s\n' "$all" | grep -vF " $m")" ]; then
+  if [ -n "$(git ls-files -m -- "$m")" ]; then git restore -- "$m"; fi
+  git ls-files --others --exclude-standard -- "$m" | while read -r f; do rm -f "$f"; done
+  echo "standards-setter memory update discarded (nothing else changed)"
+else echo "memory kept"; fi
+```
+
+## 12. Commit, push and PR
+
+```sh
+git status --porcelain --untracked-files=all
+for f in .claude/settings.json .claude/settings.local.json; do
+  if [ -f "$f" ] && ! git ls-files --error-unmatch "$f" > /dev/null 2>&1 && git check-ignore -q "$f"; then
+    echo "ignored $f (not committed)"
+  fi
+done
+```
+
+Every changed path must be one of Init's files, or stop, list the strangers and commit nothing. An
+`ignored …` line is not a change: don't force-add it, report it in §13. With changes, `git add -- <path>`
+each path (never `git add -A` or `git add .`), then `git commit -m "chore: set up aew"` (no issue ref, no
+trailer). Then decide the push and the PR.
+
+```sh
+if git rev-parse --verify --quiet refs/remotes/origin/chore/aew-init > /dev/null; then
+  echo "unpushed $(git rev-list --count origin/chore/aew-init..HEAD)"
+else
+  echo "unpushed $(git rev-list --count <default_branch>..HEAD)"
+fi
+echo "ahead $(git rev-list --count <default_branch>..HEAD)"
+```
+
+- `unpushed` above 0: run `"${CLAUDE_PLUGIN_ROOT}/scripts/git-branch.sh" push`.
+- `ahead` above 0, even when nothing was pushed: Write `.aew/runs/init-pr-body.md` (read it first if it
+  exists) saying what init did and which defaults need review, then run
+  `"${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr.sh" open chore/aew-init "chore: set up aew" .aew/runs/init-pr-body.md --base <default_branch>`
+  and keep the number. `open` reuses an open PR, so every run is safe and a failed call is retried; on
+  failure report the error.
+- `ahead` 0: no push, no PR call. Init never deletes a branch (§2 reuses or restarts it).
+
+## 13. Report
+
+```sh
+rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/init-permissions.json \
+  .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md
+```
+
+Print, in order: prerequisite and stack-tool warnings; stacks; config written or unchanged and the detected
+differences kept; "Defaults used"; labels; gitignore lines added or present; Playwright set up, skipped or
+present; CLAUDE.md section added or present; permissions for `.claude/settings.json` and
+`.claude/settings.local.json` each written, unchanged or proposed only (with the lists), the local file's
+`.gitignore` line, and any settings file that is gitignored and so not committed; standards per profile (and
+any discarded memory update); the commit sha or "nothing changed"; the PR number or none; next step: "merge
+the PR, then `/aew:ship <issue>`".
