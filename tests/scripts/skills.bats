@@ -82,6 +82,112 @@ headings_equal() {
   fi
 }
 
+# preapprovable_offenders <root> <file>…: one line per Rewrite-guide finding (H1-H8, M1) in the Bash commands
+# the files tell Claude to run: fenced sh/bash blocks (quoted-heredoc bodies skipped) and inline code spans whose
+# first word is a command word or a plugin script. Single-quoted text is ignored, ${CLAUDE_PLUGIN_ROOT} and
+# $ARGUMENTS are substituted before Claude sees the text, and prose spans such as `$ARGUMENTS` are not commands.
+preapprovable_offenders() {
+  local root=$1
+  shift
+  awk -v q="'" -v root="$root/" '
+    function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
+    function stripsq(s) { gsub(q "[^" q "]*" q, q q, s); return s }
+    # segs(s, a): split s on && || ; | and newlines outside single quotes; drop leading shell keywords.
+    function segs(s, a,   n, cur, inq, i, c, k) {
+      n = 0; cur = ""; inq = 0
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (c == q) inq = !inq
+        else if (!inq && (substr(s, i, 2) == "&&" || substr(s, i, 2) == "||")) { a[++n] = cur; cur = ""; i++; continue }
+        else if (!inq && (c == ";" || c == "|" || c == "\n")) { a[++n] = cur; cur = ""; continue }
+        cur = cur c
+      }
+      a[++n] = cur
+      for (k = 1; k <= n; k++) {
+        a[k] = trim(a[k])
+        while (match(a[k], /^(then|else|elif|if|do|while|until|!)([ \t]+|$)/)) a[k] = substr(a[k], RLENGTH + 1)
+      }
+      return n
+    }
+    function flag(rule) {
+      if ((ncmd, rule) in seen) return
+      seen[ncmd, rule] = 1
+      x = cmd; gsub(/[ \t]*\n[ \t]*/, " ", x)
+      out = out where ": " rule " [" kind "] " substr(x, 1, 100) "\n"
+    }
+    function check(   s, raw, n, i, j, a, t, nt, toks, rest, p) {
+      ncmd++
+      raw = cmd
+      gsub(/\$\{CLAUDE_PLUGIN_ROOT\}/, "ROOT", raw)
+      gsub(/\$ARGUMENTS/, "ARGS", raw)
+      s = stripsq(raw)
+      if (s ~ /(^|[^\\])\$[A-Za-z_{0-9?#@*!$-]/) flag("H1 variable expansion")
+      if (s ~ /\$\(/ || s ~ /(^|[^\\])`/) flag("H2 command substitution")
+      if (raw ~ /<<-?[[:space:]]*[A-Za-z_]/) flag("H6 unquoted heredoc delimiter")
+      if (s ~ /\{[^{}[:space:]]*,[^{}[:space:]]*\}/) flag("H7 brace expansion")
+      n = segs(raw, a)
+      for (i = 1; i <= n; i++) {
+        if (a[i] ~ /^jq([[:space:]]|$)/) {
+          if (a[i] ~ ("(^|[[:space:]])jq([[:space:]]+[^" q "[:space:]]+)*[[:space:]]+--(arg|argjson|args|jsonargs|indent|tab)([[:space:]]|$)")) flag("H3 jq --arg before the filter")
+          if (a[i] ~ ("--arg(json)?[[:space:]]+[^[:space:]]+[[:space:]]+(" q "[^" q "]*[$`]|[=~/]|[^[:space:]]*[.][.])")) flag("H4 jq --arg value is path-checked")
+          nt = split(a[i], toks, /[[:space:]]+/)
+          for (j = 1; j <= nt; j++)
+            if (toks[j] ~ /^(-[A-Za-z]*[fL]|--(from-file|rawfile|slurpfile|library-path)($|=))/) flag("H5 jq file or exec flag")
+          if (a[i] ~ /system[[:space:]]*\(/ || a[i] ~ /(^|[^A-Za-z0-9_])(include|import)($|[^A-Za-z0-9_])/) flag("H5 jq file or exec flag")
+        }
+        if (a[i] ~ /^awk([[:space:]]|$)/) {
+          rest = a[i]
+          while (match(rest, q "[^" q "]*" q)) {
+            p = substr(rest, RSTART + 1, RLENGTH - 2); rest = substr(rest, RSTART + RLENGTH)
+            if (p ~ /system[[:space:]]*\(/ || p ~ /(^|[^|])\|&?[^\/|%";#{}]*"/ || p ~ /(^|[^|])\|&?[[:space:]\\]*getline/ ||
+                p ~ /@[[:space:]]*(load|include)/ || p ~ /extension[[:space:]]*\(/ || p ~ /\/inet[46]?\//) flag("H8 awk runs a command")
+          }
+        }
+      }
+      n = segs(s, a)
+      for (i = 1; i <= n; i++)
+        if (a[i] ~ /^[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+[^[:space:]]/) flag("M1 VAR=value prefix")
+    }
+    FNR == 1 { fence = 0; sh = 0; hd = ""; rel = FILENAME; sub("^" root, "", rel) }
+    /^[ \t]*```/ {
+      if (!fence) {
+        fence = 1; t = $0; sub(/^[ \t]*```/, "", t)
+        sh = (trim(t) == "sh" || trim(t) == "bash"); cmd = ""; start = FNR + 1; hd = ""
+      } else {
+        if (sh) { nblock++; gsub(/\\\n/, " ", cmd); where = rel ":" start; kind = "block"; check() }
+        fence = 0; sh = 0
+      }
+      next
+    }
+    fence && sh {
+      if (hd != "") { if (trim($0) == hd) hd = ""; next }
+      if (match($0, "<<-?[[:space:]]*[" q "\"]?[A-Za-z_][A-Za-z0-9_]*")) {
+        hd = substr($0, RSTART, RLENGTH); gsub("[-<" q "\"[:space:]]", "", hd)
+      }
+      cmd = (cmd == "" ? $0 : cmd "\n" $0)
+      next
+    }
+    fence { next }
+    {
+      line = $0
+      while (match(line, /`[^`]+`/)) {
+        cmd = substr(line, RSTART + 1, RLENGTH - 2); line = substr(line, RSTART + RLENGTH)
+        t = cmd; while (match(t, /^[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+/)) t = substr(t, RLENGTH + 1)
+        sub(/^"/, "", t); w = t; sub(/[[:space:]].*/, "", w)
+        if (w ~ /^(jq|awk|grep|test|\[|cat|ls|head|tail|git|printf|echo|for|if|while|mkdir|rm|touch|node|command|npx|gh|claude)$/ ||
+            w ~ /^[a-z][a-z0-9-]*\.sh"?$/ || t ~ /^\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\//) {
+          nspan++; where = rel ":" FNR; kind = "span"; check()
+        }
+      }
+    }
+    END {
+      if (nblock == 0) printf "no fenced sh block found\n"
+      if (nspan == 0) printf "no inline command span found\n"
+      printf "%s", out
+    }
+  ' "$@"
+}
+
 @test "entry skills: name and description frontmatter, no allowed-tools" {
   local s f fm bad=""
   for s in $ENTRY; do
@@ -390,4 +496,14 @@ git-branch.sh')"
   done < <(find "$REPO_ROOT/skills" -type f -name '*.md')
   [ "$n" -ge 1 ] || bad="${bad}no use of the prompt marker check found"$'\n'
   report_offenders "prompt marker" "$bad"
+}
+
+@test "every skill command is pre-approvable headless" {
+  local f files=() bad
+  for f in "$REPO_ROOT"/skills/{init,ship,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md; do
+    [ -f "$f" ] && files+=("$f")
+  done
+  [ "${#files[@]}" -ge 11 ] || { printf 'only %s skill files found\n' "${#files[@]}" >&2; return 1; }
+  bad=$(preapprovable_offenders "$REPO_ROOT" "${files[@]}")
+  report_offenders "pre-approvable commands (Rewrite guide H1-H8, M1)" "$bad"
 }
