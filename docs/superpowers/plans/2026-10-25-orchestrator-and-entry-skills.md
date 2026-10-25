@@ -3678,3 +3678,7 @@ wins for the tasks still to run.
    the snippet exits 1 again (as before RW3) with the branch unchanged, and the stop no longer rests on the model
    reading the line. `git merge-base --is-ancestor` runs without a rule (RULES.2 I03; Claude Code's read-only git
    table), so no template or lane rule changes. `skills/init/SKILL.md` is now 500 lines.
+8. **D5 plugin-side rollback (CTO final gate, C1).** Supersedes D5's "git revert of this task's commit": init §10 now
+   spans 2673d85, b9d2cc3 and dff7d82, so the rollback is to remove §10 (or not merge the branch). In a target
+   project the rollback is unchanged: don't merge the init PR or delete the added entries, and delete the added
+   entries from the gitignored `.claude/settings.local.json`.

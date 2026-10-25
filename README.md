@@ -138,7 +138,9 @@ Where it asks:
 - **Permissions**, once. It shows the rules, then asks whether to write them. The portable rules go
   to `.claude/settings.json`, which is committed in the init pull request. The rules naming the
   plugin's scripts by absolute path go to `.claude/settings.local.json`, which is gitignored so your
-  machine's path never reaches other cloners.
+  machine's path never reaches other cloners. To undo them, don't merge the init pull request (or
+  delete the added entries from `.claude/settings.json`), and delete the added entries from
+  `.claude/settings.local.json`.
 
 In a headless run, or with no answer, it takes the safe defaults: the recommended config values, no
 installs and no settings file written.
