@@ -103,6 +103,7 @@ if git rev-parse --verify refs/heads/chore/aew-init > /dev/null 2>&1 ||
     echo "restarted chore/aew-init from <default_branch>"
   elif ! git merge-base --is-ancestor <default_branch> HEAD; then
     echo "chore/aew-init is older than <default_branch>: if its PR is merged or closed run \`git switch <default_branch>\` and \`git branch -D chore/aew-init\`, otherwise rebase it, then re-run /aew:init"
+    git merge-base --is-ancestor <default_branch> HEAD
   fi
 else
   git switch -c chore/aew-init <default_branch>
@@ -112,8 +113,8 @@ fi
 An existing branch (local or on `origin`) is switched to. When all its commits are in the default branch
 (merged, or never committed) it is restarted there, which loses nothing. When the default branch has moved on
 and the branch has its own commits (a squash-merged or closed PR), the snippet prints the `older than`
-message and init stops there: the user decides, and init never deletes or rebases it. Otherwise (ahead of the
-default branch, the usual re-run) it is reused.
+message and exits 1 (the repeated check fails), and init stops there: the user decides, and init never
+deletes or rebases it. Otherwise (ahead of the default branch, the usual re-run) it is reused.
 
 A new branch starts from the local default branch (no fetch or fast-forward). A switch failure stops init.
 

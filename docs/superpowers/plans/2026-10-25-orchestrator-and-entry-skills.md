@@ -3673,3 +3673,8 @@ wins for the tasks still to run.
    line included. Allow files: ship 85 lines, p0 90, init 44. I1 check 9 expects the printed proposal to list 25
    portable and 8 local rules; I1 check 11 still expects `permission_denials` `[]`, which now rests on the init lane
    covering every init form.
+7. **D1 diverged case (per-task review of RW1 to RW5).** Supersedes item 4's "exits 0": the `older than` branch of
+   init §2's branch snippet now repeats `git merge-base --is-ancestor <default_branch> HEAD` after the message, so
+   the snippet exits 1 again (as before RW3) with the branch unchanged, and the stop no longer rests on the model
+   reading the line. `git merge-base --is-ancestor` runs without a rule (RULES.2 I03; Claude Code's read-only git
+   table), so no template or lane rule changes. `skills/init/SKILL.md` is now 500 lines.
