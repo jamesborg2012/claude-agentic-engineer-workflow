@@ -336,3 +336,126 @@ EOF
   echo "CLAUDE.md section added"
 fi
 ```
+
+## 10. Permissions proposal
+
+Propose rules that cut down permission prompts for the commands aew runs. Nothing is written without a yes.
+Two files are involved, because plugin-script paths are machine-specific:
+
+- `.claude/settings.local.json` holds the plugin scripts by absolute path. It is gitignored, so this
+  machine's plugin path never reaches other cloners.
+- `.claude/settings.json` holds the portable rules. It is committed in the init PR as a reviewable hunk.
+
+Every rule is an exact command, or a subcommand followed by a single trailing ` *`. No rule has a wildcard
+before the subcommand. `${CLAUDE_PLUGIN_ROOT}` is substituted when this skill loads, so the proposal carries
+the real installed path.
+
+Template 1 is `.claude/settings.local.json`:
+
+```json
+{ "permissions": { "allow": [
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/state.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-labels.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-milestone.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-retro.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/git-branch.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh *)"
+] } }
+```
+
+Template 2 is `.claude/settings.json`. Replace `<default_branch>` with the default branch from the config:
+
+```json
+{ "permissions": { "allow": [
+  "Bash(gh auth status)",
+  "Bash(claude plugin list --json)",
+  "Bash(git add *)", "Bash(git commit *)", "Bash(git switch *)", "Bash(git branch *)",
+  "Bash(git worktree *)", "Bash(git cherry-pick *)",
+  "Bash(git fetch origin <default_branch>)",
+  "Bash(jq *)",
+  "Bash(date +%Y-%m-%d)"
+] } }
+```
+
+The plugin path changes with each plugin version. Re-running init after an update adds the new rules to
+`.claude/settings.local.json`. The old ones stay, harmless, because nothing is ever removed.
+
+**Rules from the config**, added to the portable list:
+
+- `commands.install` becomes the exact command with no wildcard (for example `Bash(npm install)`), so it can't
+  install an arbitrary package.
+- `build`, `lint`, `format`, `typecheck`, `test_unit` and `test_e2e` become `Bash(<command> *)`.
+- A UI project also gets `Bash(npx playwright test *)` and `Bash(npx playwright install chromium)`.
+- A command becomes a rule only if it is one simple command: no `&`, `|`, `;`, `>`, `<`, `*`, `$(`,
+  backtick or newline, and it doesn't start with `cd `, `sh `, `bash `, `env ` or a `NAME=` assignment.
+  Anything else is listed as not pre-approved.
+- `dev` and `app.start_command` get no rule, because QA starts the app through ui-qa §3.
+- `commands.seed` gets no rule, because it may reset data.
+
+**Deliberately not pre-approved.** These are listed as prose and never written as rules, and they prompt when
+used:
+
+- `git -C <dir> …`, the sub-developers' worktree form. A wildcard before the subcommand would also match
+  `-c core.fsmonitor=<cmd>`.
+- `git diff`, `git log`, `git show` and `git format-patch` with a wildcard, because `--output=<path>` writes
+  files. Their read-only forms already run without a prompt.
+- `git fetch` with a wildcard, because of `--upload-pack=<cmd>`. Only the exact preflight form is allowed.
+- `git push`, which goes through `git-branch.sh` only, and every other `gh` command, because only the
+  scripts call `gh`.
+- `sh -c`, `nohup`, `cd <dir> && …`, `cp`, `curl`, `kill`, `rm -rf`, and bare `npx`, `npm` or `node`.
+- `commands.seed`, because it may reset data.
+
+These rules only cut down prompts. They are not a security boundary: the plugin's Bash guard hook is what
+blocks dangerous commands. Global git options sit before the subcommand, so an anchored rule can never match
+them, which is why no deny rules are proposed.
+
+**Ask.** Print both concrete lists, each under its target file (`.claude/settings.json`: portable, committed
+in the init PR; `.claude/settings.local.json`: this machine's plugin paths, gitignored), then the not
+pre-approved list. Then ask one AskUserQuestion, once, before writing either file: "Write these rules to
+`.claude/settings.json` and `.claude/settings.local.json`?" with **Write (recommended)** and Don't write.
+No answer, or a headless run, means don't write either file (the ask rule). Report both lists in §13 so the
+user can add them by hand. Skip the rest of this section in that case.
+
+**On a yes.** Write the two concrete `{"permissions":{"allow":[…]}}` lists with the Write tool (read each file
+first if it already exists): the portable one (template 2 plus the config rules) to
+`.aew/runs/init-permissions.json`, and the plugin-script one (template 1) to
+`.aew/runs/init-permissions-local.json`. Then run the snippet.
+
+The snippet first makes sure `.claude/settings.local.json` is ignored. `git check-ignore` honours every ignore
+source (`.gitignore`, `.git/info/exclude`, the user's global excludes), so a line is added to `.gitignore`
+only when nothing ignores the file yet. That is a conditional third line beside §3's two, written only on a
+yes, so `.aew/runs/` and `.playwright-mcp/` stay exactly once each. If the user already tracks
+`.claude/settings.local.json`, it is left alone and the plugin-script rules are reported instead, so they
+never land in a commit. The ignore check runs before the local file is written, so that file is never
+untracked and unignored.
+
+```sh
+l=.claude/settings.local.json; t=0
+if git ls-files --error-unmatch "$l" > /dev/null 2>&1; then t=1; echo "tracked $l"
+elif git check-ignore -q "$l"; then echo "ignored $l"
+else
+  if [ -s .gitignore ] && [ -n "$(tail -c 1 .gitignore)" ]; then echo >> .gitignore; fi
+  echo "$l" >> .gitignore; echo "added $l"
+fi
+for pair in "init-permissions.json .claude/settings.json" "init-permissions-local.json $l"; do
+  src=.aew/runs/${pair% *}; dst=${pair#* }
+  if [ "$t" = 1 ] && [ "$dst" = "$l" ]; then echo "skipped $l (tracked)"; continue; fi
+  base=$dst; [ -f "$dst" ] || base=/dev/null
+  jq -n --slurpfile p "$src" --slurpfile e "$base" '($e[0] // {}) as $e
+    | ($e.permissions.allow // []) as $a
+    | $e | .permissions.allow = $a + (($p[0].permissions.allow | unique) - $a)' > .aew/runs/init-settings.json ||
+    { echo "not merged $dst (not valid JSON)"; continue; }
+  if [ -f "$dst" ] && jq -e --slurpfile m .aew/runs/init-settings.json '. == $m[0]' "$dst" > /dev/null; then
+    echo "unchanged $dst"
+  else
+    mkdir -p .claude && cp .aew/runs/init-settings.json "$dst" && echo "written $dst"
+  fi
+done
+```
+
+In each file, existing rules keep their order and new ones are appended once. `deny`, `ask` and every other
+key are kept as they are, and an unchanged file is never rewritten, so a second run changes nothing. A file
+that isn't valid JSON (comments, a trailing comma) is left untouched: report "not merged" with its rules so the
+user can add them by hand.
