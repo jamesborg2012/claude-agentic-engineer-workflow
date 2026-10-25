@@ -23,18 +23,22 @@ A personal Claude Code (CLI) plugin that delivers GitHub issues end to end throu
 
 ## 3. Platform facts this design relies on (verify against current docs while building)
 
-Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before relying on it. If the docs now differ, follow the docs and update this section.
+Checked against code.claude.com/docs on 24 Oct 2026; the skill, headless, subagent, AskUserQuestion, plugin-version and permission-rule facts again on 25 Oct 2026 (build prompt 05). Re-verify each one before relying on it. If the docs now differ, follow the docs and update this section.
 
 - **Plugin layout.** `.claude-plugin/` holds only `plugin.json` (and `marketplace.json` for a marketplace). Components live at the plugin root: `skills/`, `agents/`, `hooks/hooks.json`, `.mcp.json`, `scripts/`. Commands have merged into skills, so use `skills/`. A `CLAUDE.md` at the plugin root is **not** loaded.
 - **Plugin name.** The plugin is named `aew`. Names starting with `claude-`, `anthropic-`, `anthropics-` or `cc-plugin-` are reserved and fail `claude plugin validate`.
-- **Namespacing.** Skills are invoked as `/aew:<skill>`. Agents are named `aew:<agent>`. Plugin MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`, so `mcp__plugin_aew_<server>__<tool>`.
+- **Namespacing.** Skills are invoked as `/aew:<skill>`. Agents are named `aew:<agent>`. Plugin MCP tools are named `mcp__plugin_<plugin>_<server>__<tool>`, so `mcp__plugin_aew_<server>__<tool>`. The Agent tool's `subagent_type` for a plugin agent is `aew:<agent>`; the docs give the `plugin:agent` naming but not the exact string, so it is live-evidenced (smoke runs since prompt 03; the `system/init` agents list in P0). Up to 20 background subagents run at once; several Agent calls in one message are not documented as concurrent, so aew relies only on them being dispatched together (run 961, S1: two Agent blocks under one `message.id`). https://code.claude.com/docs/en/sub-agents.md
 - **Playwright MCP tool names.** aew's bundled server is `playwright`, so its tools are `mcp__plugin_aew_playwright__<tool>` (for example `mcp__plugin_aew_playwright__browser_navigate`), and the init `mcp_servers` entry is `plugin:aew:playwright`. Confirmed from the `system/init` event of a headless `--plugin-dir` session on 24 Oct 2026; the full list is in `tests/agent-smoke/README.md` §8.2. The server writes its page snapshots to `.playwright-mcp/` in the session's working directory, so target projects ignore that path. Agent `tools` accepts full MCP tool names. A server wildcard (`mcp__<server>__*`) is documented, but the plugin-prefixed wildcard is not shown, so qa-engineer lists exact names. An omitted `tools` inherits every tool, MCP included.
 - **Agent frontmatter.** Plugin agents honour `name`, `description`, `model`, `effort`, `maxTurns`, `autoCompactWindow`, `tools`, `disallowedTools`, `skills`, `memory`, `background`, `omitClaudeMd`, `isolation` (only `worktree`), `color` and `experimental.cacheTtl`.
   - They **ignore** `hooks`, `mcpServers`, `permissionMode` and `initialPrompt`.
   - So hooks go in `hooks/hooks.json` and MCP servers in the plugin's `.mcp.json`.
 - **Effort.** The valid `effort` values depend on the model; check the model's entry in the docs before setting one.
 - **Agent tool restrictions.** A `disallowedTools` entry with a specifier (for example `Bash(gh *)`) removes the whole tool, not just that command, and a plugin cannot ship `permissions.deny`. Per-command denial therefore uses a `PreToolUse` hook (section 11): a subagent's payload carries `agent_id` and `agent_type`, and `agent_type` is `aew:<agent>` for plugin agents (null on the main thread). Live-evidenced in the smoke runs.
-- **Path variables.** `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_SKILL_DIR}` are substituted in agent and skill Markdown, and are not exported to Bash-tool commands, so prompts spell literal `${CLAUDE_PLUGIN_ROOT}/…` paths. Confirmed for `${CLAUDE_PLUGIN_ROOT}` in both an agent prompt and a preloaded skill (seeds were read at the substituted path); `${CLAUDE_SKILL_DIR}` is untested. A `Bash(<abs path> *)` allow rule matches the quoted `"<abs path>" …` call form.
+- **Path variables.** `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_SKILL_DIR}` are substituted in agent and skill Markdown, and are not exported to Bash-tool commands, so prompts spell literal `${CLAUDE_PLUGIN_ROOT}/…` paths. Confirmed for `${CLAUDE_PLUGIN_ROOT}` in both an agent prompt and a preloaded skill (seeds were read at the substituted path). `${CLAUDE_SKILL_DIR}` and `${CLAUDE_SESSION_ID}` are documented as substituted too, and aew doesn't use them. Only the loaded skill or agent body is substituted; a file read on demand with Read (a skill's `references/`) is not, so `ship/SKILL.md` states the substituted root once and its references spell literal `${CLAUDE_PLUGIN_ROOT}/…` paths, absolute rather than relative links because `resume` and `prompt` read them from another skill. A `Bash(<abs path> *)` allow rule matches the quoted `"<abs path>" …` call form. https://code.claude.com/docs/en/skills.md
+- **Skill frontmatter and arguments** (V-1). The keys aew uses are `name`, `description`, `argument-hint` and `disable-model-invocation`; unknown keys are ignored. `allowed-tools` only pre-approves tools for the invoking turn and restricts nothing, so aew's entry skills don't set it. `$ARGUMENTS` is the whole string, `$ARGUMENTS[N]` and `$N` are 0-based, and with no placeholder the input is appended as `ARGUMENTS: <input>`. `ship` parses `$ARGUMENTS` whole and uses no `$N` and no `` !`cmd` ``, because `resume` reads it with Read. Keep `SKILL.md` under 500 lines. `claude plugin validate` does not catch invalid YAML frontmatter (an unquoted `: ` in a `description:` value), so parse frontmatter separately. https://code.claude.com/docs/en/skills.md
+- **Headless runs** (V-2). `claude -p "/aew:<skill> …"` expands user-invoked skills, `disable-model-invocation` ones included (P0b and P1, `tests/agent-smoke/README.md` §9). Since v2.1.302 `-p` defaults to Manual mode, which denies approvals, so an unattended run sets a permission mode and an explicit allowlist (aew's harness: `acceptEdits` plus `--allowedTools`, never `bypassPermissions`). https://code.claude.com/docs/en/headless.md#auto-approve-tools `--permission-prompts none` (v2.1.259+) denies anything that would prompt and removes AskUserQuestion. https://code.claude.com/docs/en/headless.md#turn-off-permission-prompts-in-unattended-runs `--max-turns` errors when reached, and `--output-format stream-json` needs `--verbose`. https://code.claude.com/docs/en/cli-reference.md
+- **AskUserQuestion** (V-4). It is removed from every subagent's tool pool, so only main-thread skills (`ship`, `init`, `resume`, `prompt`) ask, and agents return `needs_input` instead. No per-call limits and no recommended-option marker are documented, so aew lists the recommended answer first with a label ending ` (recommended)` and batches by the schema the model sees; `Other` is added automatically. With `--permission-prompts none` the tool is absent, so gates are left pending (§9). https://code.claude.com/docs/en/tools-reference.md#askuserquestion-tool-behavior
+- **Plugin versions** (V-6). `claude plugin list --json` prints `[{id: "<name>@<marketplace>", version, installPath, …}]` and `~/.claude/plugins/installed_plugins.json` records the same. For a git source `version` may be a 12-character commit SHA, which `ship`'s superpowers check reports as not comparable. https://code.claude.com/docs/en/plugins/loading.md#find-plugins-on-disk, https://code.claude.com/docs/en/plugins/cli-reference.md
 - **Plugin dependencies at run time.** Disabling a plugin's dependency in `enabledPlugins` stops the dependent plugin loading (headless harnesses must disable only unrelated plugins). `claude plugin validate` does not check agent frontmatter, so agent fields are verified by running the agents.
 - **context7 tool names.** Assumed `mcp__plugin_context7_context7__*` (context7 is a dependency plugin, not an `aew` server). Unverified: without `CONTEXT7_API_KEY` the server reports `needs-auth` in headless runs, no call was made, and the agents fall back to the seeds as designed.
 - **Models.** Valid `model` values are `sonnet`, `opus`, `haiku`, `fable`, a full model ID, or `inherit`.
@@ -42,11 +46,11 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
 - **Worktree isolation.** `isolation: worktree` (in frontmatter or on the Agent call) branches from the repo's default branch, not the caller's HEAD, unless the user sets `worktree.baseRef: "head"`. Its path and branch naming are undocumented, it is auto-cleaned only when unchanged, and nothing is merged back. So aew does not use it, and the developer creates its worktrees with `git worktree add`. Observed in run 961 (Claude Code 2.1.308): a sub-developer spawned by the developer fires `SubagentStop` with `agent_type` `aew:developer` and its own `agent_id` (so the developer gate runs for it as well, against the main run dir), and `last_assistant_message` carries its ARTEFACTS line. The Bash tool also refuses any `cd <dir> && git …` command (it cannot be allowlisted), so a sub-developer runs git as `git -C <worktree> <subcommand>` and other commands as `cd <worktree> && <command>`.
 - **Search tools.** On macOS, Linux and WSL `Glob` and `Grep` are not in the default tool set; Claude searches with `find` and `grep` through Bash instead (code.claude.com/docs/en/tools-reference). A subagent that lists `Glob` or `Grep` in `tools` and leaves out `Bash` gets them back for that subagent only (/en/sub-agents). So agents with Bash (standards-setter, senior-engineer) do not list them and search with `find`/`grep`; agents without Bash (spec-analyser, brief-compiler, doc-writer) list `Glob, Grep`. A built-in set of read-only Bash commands (`ls`, `cat`, `head`, `tail`, `grep`, `find`, `wc`, `diff`, `stat`, read-only `git`) runs without a permission prompt in every mode, but `find` with `-exec`, `-delete` or `-fprint` prompts (/en/permissions).
 - **SubagentStop payload.** `SubagentStop` carries `agent_type`, `agent_id`, `agent_transcript_path`, `last_assistant_message` and `stop_hook_active` (code.claude.com/docs/en/hooks). The nested-subagent behaviour observed in run 961 is under Worktree isolation above.
-- **Bash tool and permission rules.** A trailing `&` in a Bash command is refused in headless runs, so background processes start with the Bash tool's `run_in_background: true` and no `&`. `nohup` is stripped before permission rules are matched, so `Bash(sh -c *)` is what matches a `nohup sh -c …` start. A trailing ` *` also matches the bare command, but only when it is the rule's only wildcard. A `Skill` call (`aew:ui-qa`) works headless without an allow entry.
+- **Bash tool and permission rules.** A trailing `&` in a Bash command is refused in headless runs, so background processes start with the Bash tool's `run_in_background: true` and no `&`. `nohup` is stripped before permission rules are matched, so `Bash(sh -c *)` is what matches a `nohup sh -c …` start. A trailing ` *` also matches the bare command, but only when it is the rule's only wildcard. A `Skill` call (`aew:ui-qa`) works headless without an allow entry. Rule matching (V-7): `*` matches any text anywhere, and `Bash(git commit *)` matches the bare command too. In a compound command (`&&`, `||`, `;`, pipes, `$(…)`, subshells) every part must match an allow, while deny and ask apply when any part matches. Leading env assignments are skipped for allows only when the variable is known-safe (for deny and ask, any assignment). `timeout`, `time`, `nice`, `nohup`, `stdbuf`, `command`, `builtin`, `noglob` and bare `xargs` are stripped; `npx` and `docker exec` are not. `git -C <dir>` and `git -c k=v` are not normalised, so `Bash(git <sub> *)` never matches them. Precedence is deny, then ask, then allow, first match wins. Deny rules are not a security boundary around a program, so aew's enforcement stays its Bash guard hook (§11), and `init`'s proposal uses anchored per-subcommand allow rules only (no deny rules, no `commands.seed` rule, which may reset data), written to the committed `.claude/settings.json` (portable rules) and the gitignored `.claude/settings.local.json` (plugin scripts by absolute machine path, added to `.gitignore` only on a yes and only when `git check-ignore` says it isn't already ignored). Rules reduce prompts; they are not a security boundary. An existing settings file that isn't valid JSON is left untouched and reported as not merged. https://code.claude.com/docs/en/permissions.md
 - **Skills in agents.** `skills:` frontmatter preloads full skill content into an agent. Agents can still invoke other skills with the Skill tool. Up to 32 skills can be preloaded, and a skill with `disable-model-invocation: true` cannot be. **A missing skill is skipped silently** (debug-log warning only), so verify preloads with `--debug-file`. Qualified plugin skill names preload, including dependency skills (`aew:run-protocol`, `superpowers:systematic-debugging`); the debug log shows `Preloaded skill '<name>'` (confirmed in headless smoke runs).
 - **Agent memory.** `memory: project` gives an agent `.claude/agent-memory/<plugin>-<agent>/MEMORY.md` (for a plugin agent the directory is `aew-<agent>`, for example `aew-spec-analyser`, confirmed in a headless run). The first 200 lines or 25 KB are loaded. Memory scopes are `user`, `project` and `local`; any memory scope automatically enables Read, Write and Edit for the agent, and has no effect when auto memory is off.
 - **Dependencies.** Each `dependencies` entry in `plugin.json` is `"name"`, `"name@marketplace"` or `{ name, marketplace, version }`. A `version` range resolves only against git tags named `<plugin>--v<version>` on the dependency's repo; with no matching tag, installing a dependency that has its own repo fails. Cross-marketplace dependencies need `allowCrossMarketplaceDependenciesOn` (an array of marketplace names) in the root marketplace's `marketplace.json`.
-- **Skill visibility.** `user-invocable: false` hides a skill from the `/` menu while Claude and agents can still use it. `disable-model-invocation: true` is the reverse: the user can invoke it, but Claude won't load it on its own.
+- **Skill visibility.** `user-invocable: false` hides a skill from the `/` menu while Claude and agents can still use it. `disable-model-invocation: true` is the reverse: the user can invoke it, but Claude won't load it on its own. It also removes the skill from Claude's context and blocks a Skill-tool call to it, so `resume` and `prompt` reuse `ship` by reading its files with Read, never through the Skill tool (V-1).
 - **Validation.** `claude plugin validate <path>` checks a plugin or marketplace manifest and its components.
 - **Blocking hooks.**
   - `PreToolUse` denies with `hookSpecificOutput.permissionDecision: "deny"` and `permissionDecisionReason` on exit 0. Top-level `decision`/`reason` are deprecated for `PreToolUse`.
@@ -72,10 +76,10 @@ Checked against code.claude.com/docs on 24 Oct 2026. Re-verify each one before r
 | frontend-design | `claude-plugins-official` | The developer uses it on UI work packages |
 | Playwright MCP | plugin `.mcp.json`: `npx --yes @playwright/mcp@0.0.83 --headless --isolated` (exact version) | Exploratory UI checks by QA (§8.6). `claude-plugins-official` ships a `playwright` plugin (by Microsoft), but it is only an unpinned `npx @playwright/mcp@latest` `.mcp.json` with no skill, so it covers neither §8.6 (that is the `ui-qa` skill) nor the pinning rule. aew bundles its own pinned server instead (decided 24 Oct 2026). `--headless` because QA runs unattended; `--isolated` so no browser profile or login state persists between runs. If the official plugin is also enabled, both servers run under different tool prefixes. The server drives the MCP's default browser channel, the installed Google Chrome (verified 24 Oct 2026). |
 
-- **Why superpowers has no version range.** obra/superpowers tags releases as `v<version>`, not `superpowers--v<version>`, so a range such as `^7.0.0` can't resolve and the install would fail. The official marketplace pins superpowers to a commit (v7.0.0 on 24 Oct 2026), so the dependency only moves when that pin moves. The plugin is built and tested against superpowers 7.x. Add a range once upstream publishes `superpowers--v*` tags.
+- **Why superpowers has no version range.** obra/superpowers tags releases as `v<version>`, not `superpowers--v<version>`, so a range such as `^7.0.0` can't resolve and the install would fail. The official marketplace pins superpowers to a commit (v7.0.0 on 24 Oct 2026), so the dependency only moves when that pin moves. The plugin is built and tested against superpowers 7.x. `ship`'s preflight warns, never blocks, when the installed major isn't 7 or the version is a commit SHA (`skills/ship/references/preflight.md`). Add a range once upstream publishes `superpowers--v*` tags.
 - **Playwright packages.** Plugin MCP servers start with the plugin, so every session with aew enabled runs one `npx @playwright/mcp` process (the first run downloads it). The test packages are not in the plugin: `ui-qa` setup exact-pins `@playwright/test@1.64.1` and `@axe-core/playwright@4.14.0` in the target project and installs Chromium with `npx playwright install chromium`.
 - **CLI prerequisites:** git, gh (authenticated), jq, Node ≥ 20, plus stack tools as needed (php/composer, dotnet, Docker for wp-env or ddev).
-- **GitHub access:** the `gh` CLI only, wrapped by plugin scripts. No GitHub MCP.
+- **GitHub access:** the `gh` CLI only, wrapped by plugin scripts. No GitHub MCP. The one direct call is the read-only `gh auth status` in the `ship` and `init` preflights (no script wraps it; a recorded deviation, prompt 05). Newer `gh` may exit non-zero from it when any configured host is unhealthy, so preflight quotes gh's own output when it stops.
 
 ## 5. Components
 
@@ -176,6 +180,8 @@ The run id is the issue number, or `m-<milestone-number>` for milestone runs.
 | `prompt.md` (prompt mode only) | brief-compiler |
 
 `.aew/runs/current` holds the active run id. Hooks use it.
+
+Flat files directly under `.aew/runs/` are scratch, not runs: init's `init-*` files and ship's blocked comment `blocked-<id>.md` (written with Write, posted with `gh-issue.sh comment`). `status` lists only directories named like a run id.
 
 ### 7.2 `state.json`
 
@@ -323,6 +329,7 @@ The orchestrator reads return blocks and only reads full artefacts when a gate o
   - `tailwind` (overlay).
 - **C#/.NET:** generated on demand, with no seed. After the first real use, a retro item proposes adding a seed.
 - **Output:** `docs/standards/<profile>.md`, the index `docs/standards/README.md`, and `03-standards.md` for the run (which docs and sections apply to this brief).
+- **Init mode.** `/aew:init` dispatches it with `mode: init` and no run dir. There is no brief, so it skips the brief and `03-standards.md`, writes or reuses `docs/standards/` as above (nothing changes when every fingerprint matches), and puts its return block in its final message only. This settles §5.1's "init generates the first standards docs" against the run-dir inputs above (Conflict C3, prompt 05).
 
 ### 8.4 senior-engineer (Opus, high)
 
@@ -347,6 +354,8 @@ The orchestrator passes the mode.
 - the unit tests the developer is expected to write per work package;
 - risks;
 - an AC→WP traceability matrix.
+
+**Revision notes.** An optional `notes` dispatch field carries James's change requests from the plan gate, or the developer's `blocked` reason. The senior engineer reads the existing `05-plan.md`, rewrites it, and ends `## Approach` with `Revision notes:`, one line per note saying what changed or why not. A note that needs a material spec change becomes a challenge (`needs_input`).
 
 No code beyond short illustrative signatures.
 
@@ -451,7 +460,7 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
   - `Closes #n` for every issue in the run.
 - **`retro.md`:** improvements to the plugin seen during the run (agent mistakes, missing rules, slow stages, cycles used, false-positive hooks). The orchestrator files these to the retro repo. They never go in the project repo.
 
-The doc-writer has no Bash and doesn't commit. The orchestrator commits its docs after the stage, as it does `docs/standards/` (prompt 05).
+The doc-writer has no Bash and doesn't commit. The orchestrator commits its docs after the stage, as it does `docs/standards/` (prompt 05; this overrides the build prompt's "the doc-writer commits", Conflict C1).
 
 ## 9. Orchestrator (`ship` skill)
 
@@ -461,11 +470,12 @@ Runs on the main thread.
   - config exists (if not, suggest `init`);
   - the working tree is clean;
   - gh is authenticated;
-  - the default branch is up to date;
+  - the default branch is up to date with `origin`: checked after a fetch and never fast-forwarded; behind or diverged stops with a `git pull` hint (preflight writes nothing);
+  - the superpowers major version (warning only);
   - no other active run is in progress (unless resuming).
 - **Steps:**
-  - fetch the issue into the run dir;
-  - initialise state;
+  - initialise state (this creates the run dir);
+  - fetch the issue into it (Conflict C4: the fetch needs the run dir);
   - set labels;
   - create the branch;
   - dispatch agents with explicit input paths;
@@ -479,8 +489,9 @@ Runs on the main thread.
   - A material spec change always gets a gate, even with `--auto`. It uses AskUserQuestion with recommended answers.
   - Plan approval is on by default. `--auto`, or `gates.plan_approval: false`, skips it. James sees a plan summary of 25 lines or fewer plus the file path, with the options approve / request changes / stop.
   - Irreversible or destructive operations always get a gate.
-- **Resume:** reads `state.json`, verifies the branch and working tree, and continues from the recorded stage.
-- **Context hygiene:** reads return blocks only. It opens artefacts only for gates and routing.
+  - **Unanswered gate.** When AskUserQuestion is unavailable (headless runs with `--permission-prompts none`), refused or answered empty, the gate stays pending: state and label are already set, ship prints the questions (or the plan summary and path) and `Answer with /aew:resume <id>`, and stops; nothing after the gate runs. `init` instead uses its recommended defaults and writes no settings.
+- **Resume:** reads `state.json`, verifies the branch and working tree, and continues from the recorded stage. `resume` reads `ship`'s files with Read and enters at the recorded stage's section.
+- **Context hygiene:** reads return blocks only. It opens artefacts only for gates and routing. The exact reads (the plan in full at the plan gate, and bounded section reads for the gates and QA routing) are the reads table in `skills/ship/SKILL.md` `## What the orchestrator reads`.
 - **Final report:**
   - outcome;
   - PR link;
@@ -488,6 +499,9 @@ Runs on the main thread.
   - review and fix cycles used;
   - manual tests outstanding;
   - retro items filed.
+- **Procedure detail.** The preflight order and messages, run start, `--from`, dispatch rows and return checks, gate steps, routing table, PR steps and final-report format are in `skills/ship/SKILL.md` and `skills/ship/references/` (`preflight.md`, `dispatch.md`, `gates.md`, `routing.md`, `pr.md`, `final-report.md`); this section doesn't restate them.
+- **Recorded deviations (build prompt 05).** C1: the orchestrator commits the doc-writer's outputs (§8.7). C3: standards-setter init mode (§8.3). C4: state before fetch (Steps). C5: the simulated runs ship the static-shop fixture's issue #201, not issue 1 (`tests/agent-smoke/README.md` §9). The direct `gh auth status` (§4). A blocked prompt-mode run posts no report comment and sets no `aew:blocked` label, because prompt mode sets no labels (§7.3's blocked rule; Phase C PC-3). On a corrupt `state.json`, `status` names the corrupt file and still lists the other runs. The final report prints `ACs passed: n/a` when `10-summary.md` is absent or `stage` is not `pr`.
+- **Prompt mode and resume.** `/aew:prompt` marks its run with the `history` note `prompt` (written before the fetch), and a run is a prompt-mode run when that note exists and `branch` is null; the one check is in `skills/ship/references/gates.md` and is used unchanged by `resume` and `status`. `resume` continues `single` runs only until milestone mode (§10, prompt 06); `status` shows every mode.
 
 ## 10. Milestone mode
 
