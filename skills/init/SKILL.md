@@ -9,6 +9,9 @@ disable-model-invocation: true
 Prepares the current project for aew on a `chore/aew-init` branch and opens a PR. The plugin root is
 `${CLAUDE_PLUGIN_ROOT}`. Run plugin scripts by their full quoted path, as the snippets do. Run snippets from
 the project root, one Bash call per snippet, and replace every `<…>` placeholder before running one.
+Write every command with literal paths and values: no shell variables, `$(…)`, loops, `VAR=value` prefixes
+or jq `--slurpfile` (a headless run denies those before any allow rule applies). Where a step depends on
+printed output, read it, then write the next command literally.
 
 Init takes no arguments. If any were given, stop with `usage: /aew:init (no arguments)`.
 
@@ -29,47 +32,41 @@ repo changes no file and makes no commit, push or new PR.
 - only when the Playwright offer is accepted, the ui-qa §2 files (`package.json`, the lock file,
   `playwright.config.ts`, `<ui.e2e_dir>/aew.ts`, or the nested `tests/e2e/` package)
 
-Scratch files live flat in the gitignored `.aew/runs/` and are removed in §13: `init-config.json`,
-`init-config-merged.json`, `init-permissions.json`, `init-permissions-local.json`, `init-settings.json`,
-`init-pr-body.md`.
+Scratch files, flat in the gitignored `.aew/runs/` and removed in §13: `init-config.json`,
+`init-config-merged.json`, `init-permissions.json`, `init-permissions-local.json`, `init-settings.json`, `init-pr-body.md`.
 
 Never install a global tool. Touch GitHub only through `gh auth status` and the plugin scripts named here.
 
 ## 1. Prerequisites
 
 ```sh
-for c in git jq node gh; do
-  if command -v "$c" > /dev/null 2>&1; then echo "ok $c"; else echo "missing $c"; fi
-done
-if command -v node > /dev/null 2>&1; then
-  v=$(node -p 'process.versions.node')
-  if [ "${v%%.*}" -ge 20 ]; then echo "ok node $v"; else echo "old node $v"; fi
-fi
+command -v git jq node gh
+node --version
 ```
 
 ```sh
-git rev-parse --show-toplevel
-pwd -P
-git remote get-url origin
+git rev-parse --show-toplevel --show-prefix
+git remote -v
 ```
 
 ```sh
 gh auth status
 ```
 
-Any failure stops init with nothing written. Quote gh's own output when `gh auth status` fails.
+`command -v` prints a path for each tool it finds (no line means missing), `node --version` prints
+`v<major>.…`, and the second `rev-parse` line is empty at the repository root. Any failure stops init with
+nothing written. Quote gh's own output when `gh auth status` fails. `gh auth status` stays a separate, exact
+call so `Bash(gh auth status)` matches it.
 
 | Failure | Stop message and hint |
 |---|---|
-| `missing git` | git is required. On macOS run `xcode-select --install`, otherwise use the OS package manager. |
-| `missing gh` | The GitHub CLI is required. Install it from https://cli.github.com, then run `gh auth login`. |
+| no `git` line | git is required. On macOS run `xcode-select --install`, otherwise use the OS package manager. |
+| no `gh` line | The GitHub CLI is required. Install it from https://cli.github.com, then run `gh auth login`. |
 | `gh auth status` fails | gh is not logged in. Run `gh auth login`, then re-run `/aew:init`. |
-| `missing jq` | jq is required. `brew install jq`, or use the OS package manager. |
-| `missing node` or `old node` | Node 20 or later is required. Install it from https://nodejs.org or with a version manager such as `nvm install 20`. |
-| Not inside a git repo, or the top level differs from `pwd -P` | Run `/aew:init` from the repository root. |
-| No `origin` | Add the GitHub remote as `origin`, then re-run. |
-
-`gh auth status` stays a separate, exact call so `Bash(gh auth status)` matches it.
+| no `jq` line | jq is required. `brew install jq`, or use the OS package manager. |
+| no `node` line, or a major version below 20 | Node 20 or later is required. Install it from https://nodejs.org or with a version manager such as `nvm install 20`. |
+| `rev-parse` fails (not a git repo), or its second line is not empty | Run `/aew:init` from the repository root. |
+| No `origin` line from `git remote -v` | Add the GitHub remote as `origin`, then re-run. |
 
 ## 2. Clean tree and branch
 
@@ -98,28 +95,25 @@ interrupted earlier init, and this run finishes it.
 Create or reuse the branch.
 
 ```sh
-if git rev-parse --verify --quiet refs/heads/chore/aew-init > /dev/null ||
-   git rev-parse --verify --quiet refs/remotes/origin/chore/aew-init > /dev/null; then
+if git rev-parse --verify refs/heads/chore/aew-init > /dev/null 2>&1 ||
+   git rev-parse --verify refs/remotes/origin/chore/aew-init > /dev/null 2>&1; then
   git switch chore/aew-init
   if git merge-base --is-ancestor HEAD <default_branch>; then
     git switch -C chore/aew-init <default_branch>
     echo "restarted chore/aew-init from <default_branch>"
   elif ! git merge-base --is-ancestor <default_branch> HEAD; then
     echo "chore/aew-init is older than <default_branch>: if its PR is merged or closed run \`git switch <default_branch>\` and \`git branch -D chore/aew-init\`, otherwise rebase it, then re-run /aew:init"
-    exit 1
   fi
 else
   git switch -c chore/aew-init <default_branch>
 fi
 ```
 
-An existing branch (local or on `origin`) is switched to, and then:
-
-- all its commits are in the default branch (merged, or never committed): restart it at the default branch,
-  which loses nothing;
-- the default branch has moved on and the branch has its own commits (for example a squash-merged or closed
-  PR): stop with the message above. The user decides; init never deletes or rebases it;
-- otherwise (ahead of the default branch, the usual re-run): reuse it.
+An existing branch (local or on `origin`) is switched to. When all its commits are in the default branch
+(merged, or never committed) it is restarted there, which loses nothing. When the default branch has moved on
+and the branch has its own commits (a squash-merged or closed PR), the snippet prints the `older than`
+message and init stops there: the user decides, and init never deletes or rebases it. Otherwise (ahead of the
+default branch, the usual re-run) it is reused.
 
 A new branch starts from the local default branch (no fetch or fast-forward). A switch failure stops init.
 
@@ -128,16 +122,18 @@ A new branch starts from the local default branch (no fetch or fast-forward). A 
 Do this before any scratch file is written.
 
 ```sh
-touch .gitignore
-for l in '.aew/runs/' '.playwright-mcp/'; do
-  if grep -qxF "$l" .gitignore; then echo "present $l"; else
-    if [ -s .gitignore ] && [ -n "$(tail -c 1 .gitignore)" ]; then echo >> .gitignore; fi
-    echo "$l" >> .gitignore; echo "added $l"
-  fi
-done
+if grep -qxF '.aew/runs/' .gitignore 2> /dev/null; then echo "present .aew/runs/"; else
+  if tail -c 1 .gitignore 2> /dev/null | grep -q .; then printf '\n' >> .gitignore; fi
+  printf '%s\n' '.aew/runs/' >> .gitignore; echo "added .aew/runs/"
+fi
+if grep -qxF '.playwright-mcp/' .gitignore 2> /dev/null; then echo "present .playwright-mcp/"; else
+  if tail -c 1 .gitignore 2> /dev/null | grep -q .; then printf '\n' >> .gitignore; fi
+  printf '%s\n' '.playwright-mcp/' >> .gitignore; echo "added .playwright-mcp/"
+fi
 ```
 
-Each line is matched exactly, so it appears once; §10 adds `.claude/settings.local.json` only on a yes.
+Each line is matched exactly, so it appears once, and a missing final newline is repaired before an append
+(the pattern for any gitignore line); §10 adds `.claude/settings.local.json` only on a yes.
 
 ## 4. Detect and discover
 
@@ -172,14 +168,12 @@ Then build a discovery table (source, field and value, certain or inferred); §5
 | `default_branch` | from §2 | certain, or inferred when §2 marked it uncertain |
 | `retro.repo` | `jamesborg2012/claude-agentic-engineer-workflow` | inferred |
 
-Commands not found are left out (the schema has no required command keys). To read a stack path's package
-manager and scripts, replace `<stack_path>`:
+Commands not found are left out (the schema has no required command keys). To read a stack path's files
+(the lock file in the listing names the package manager) and scripts, replace `<stack_path>`:
 
 ```sh
-p=<stack_path>
-if [ -f "$p/pnpm-lock.yaml" ]; then echo pnpm; elif [ -f "$p/yarn.lock" ]; then echo yarn
-elif [ -f "$p/bun.lock" ] || [ -f "$p/bun.lockb" ]; then echo bun; else echo npm; fi
-jq -r '.scripts // {} | keys[]' "$p/package.json"
+ls -a <stack_path>
+jq -r '.scripts // {} | keys[]' <stack_path>/package.json
 ```
 
 **Stack tools.** Warn, never stop. The tools to look for: nextjs, react and tailwind need the package
@@ -188,12 +182,10 @@ plus `docker` when `.wp-env.json` or `.ddev/` exists; dotnet needs `dotnet`. Rep
 space-separated list.
 
 ```sh
-for c in <tools>; do
-  if command -v "$c" > /dev/null 2>&1; then echo "ok $c"; else echo "missing $c"; fi
-done
+command -v <tools>
 ```
 
-A missing tool is a §13 warning with an install hint. Nothing is installed.
+A tool with no line is missing: a §13 warning with an install hint. Nothing is installed.
 
 **UI project** (§5, §10): a detected nextjs, react, tailwind, wordpress or woocommerce profile, or a `pages/`,
 `app/`, `resources/views/` or `wp-content/themes/` directory.
@@ -205,7 +197,6 @@ Put the proposal together in schema key order (`project`, `default_branch`, `sta
 ## 5. Confirm in one question round
 
 First Write §4's proposal to `.aew/runs/init-config.json` with the Write tool (read it first if it exists).
-
 Print the whole proposal. Mark certain values "found in the repo" and inferred values "inferred".
 
 On a re-run (`.aew/config.json` exists), run this next and print what it shows. The existing value is kept and
@@ -213,14 +204,14 @@ never overwritten. Stacks are compared by `(profile, path)`, not by array index,
 reported as an addition.
 
 ```sh
-jq -r --slurpfile p .aew/runs/init-config.json '. as $e | $p[0] as $q
+jq -r -s '.[0] as $e | .[1] as $q
   | ($q | del(.stacks) | paths(scalars) as $x
      | select(($e | getpath($x)) != null and ($e | getpath($x)) != ($q | getpath($x)))
      | "\($x | map(tostring) | join(".")): keeping \($e | getpath($x) | tojson), detected \($q | getpath($x) | tojson)"),
     ($q.stacks[] as $s | ([$e.stacks[] | select(.profile == $s.profile and .path == $s.path)] | first) as $o
      | if $o == null then "stacks: adding \($s.profile) at \($s.path) (\($s.version))"
        elif $o.version != $s.version then "stacks: keeping \($s.profile) at \($s.path) version \($o.version), detected \($s.version)"
-       else empty end)' .aew/config.json
+       else empty end)' .aew/config.json .aew/runs/init-config.json
 ```
 
 Then ask **one** AskUserQuestion round: only the inferred values not already in the existing config, plus the
@@ -244,18 +235,18 @@ Merge the proposal with any existing config, and say whether the result differs.
 ```sh
 mkdir -p .aew
 if [ -f .aew/config.json ]; then
-  jq --slurpfile p .aew/runs/init-config.json '. as $e | ($p[0] * $e) | .stacks = $e.stacks + [$p[0].stacks[] | select([.profile, .path] as $k | all($e.stacks[]; [.profile, .path] != $k))]' .aew/config.json > .aew/runs/init-config-merged.json
+  jq -s '.[0] as $e | .[1] as $p | ($p * $e) | .stacks = $e.stacks + [$p.stacks[] | select([.profile, .path] as $k | all($e.stacks[]; [.profile, .path] != $k))]' .aew/config.json .aew/runs/init-config.json > .aew/runs/init-config-merged.json
 else
   jq . .aew/runs/init-config.json > .aew/runs/init-config-merged.json
 fi
-if [ -f .aew/config.json ] && jq -e --slurpfile m .aew/runs/init-config-merged.json '. == $m[0]' .aew/config.json > /dev/null; then
+if [ -f .aew/config.json ] && jq -s -e '.[0] == .[1]' .aew/config.json .aew/runs/init-config-merged.json > /dev/null; then
   echo "config unchanged"
 else
   echo "config changed"
 fi
 ```
 
-- `$p[0] * $e` is a recursive merge where the existing file wins: missing fields are added, nothing is removed
+- `$p * $e` is a recursive merge where the existing file wins: missing fields are added, nothing is removed
   or duplicated. `stacks` is a union keyed by `(profile, path)`; existing entries (versions included) are kept
   and a newly detected stack is appended. Merging its own output changes nothing.
 - `==` compares JSON values, not text, so a hand-formatted config that holds every value is never rewritten.
@@ -264,7 +255,7 @@ fi
 Run the next snippet only on "config changed". It validates the scratch copy, then replaces the live file.
 
 ```sh
-npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s "${CLAUDE_PLUGIN_ROOT}/templates/config.schema.json" -d .aew/runs/init-config-merged.json && cp .aew/runs/init-config-merged.json .aew/config.json && echo "config written"
+npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s "${CLAUDE_PLUGIN_ROOT}/templates/config.schema.json" -d .aew/runs/init-config-merged.json && jq . .aew/runs/init-config-merged.json > .aew/config.json && echo "config written"
 ```
 
 An invalid result stops init before §7 and quotes ajv's errors; the live config is untouched.
@@ -285,10 +276,8 @@ Only when §5's Playwright offer was answered yes. Read `${CLAUDE_PLUGIN_ROOT}/s
 Playwright` with the Read tool and follow it: install with the lock file's package manager, exact-pinned, run
 `npx playwright install chromium`, append the missing gitignore lines with the §3 pattern, then write
 `playwright.config.ts` from ui-qa §4 and `<ui.e2e_dir>/aew.ts` from ui-qa §6 and §7 (versions live only in
-ui-qa). The files go into init's commit.
-
-For a root package, then add `commands.test_e2e` as `npx playwright test` to `.aew/runs/init-config.json` (Read,
-then Write) and re-run §6.
+ui-qa). The files go into init's commit. For a root package, then add `commands.test_e2e` as
+`npx playwright test` to `.aew/runs/init-config.json` (Read, then Write) and re-run §6.
 
 Otherwise report "Playwright: skipped (QA sets it up on first use)", or "Playwright: present" when
 `@playwright/test` was already there. Nothing is installed without a yes.
@@ -299,9 +288,14 @@ Add the workflow section once; an existing section is left as it is, even if edi
 
 ```sh
 [ -f CLAUDE.md ] || printf '# CLAUDE.md\n' > CLAUDE.md
-if grep -qxF '## Agentic workflow' CLAUDE.md; then echo "CLAUDE.md section present"; else
-  if [ -n "$(tail -c 1 CLAUDE.md)" ]; then echo >> CLAUDE.md; fi
-  cat >> CLAUDE.md << 'EOF'
+if grep -qxF '## Agentic workflow' CLAUDE.md; then echo "CLAUDE.md section present"; else echo "CLAUDE.md section missing"; fi
+```
+
+Only on "missing", append it:
+
+```sh
+if tail -c 1 CLAUDE.md | grep -q .; then printf '\n' >> CLAUDE.md; fi
+cat >> CLAUDE.md << 'EOF'
 
 ## Agentic workflow
 
@@ -314,8 +308,7 @@ in `.aew/runs/` is gitignored.
 - `/aew:prompt <issue>`: spec analysis and a single build prompt, no pipeline.
 - `/aew:init`: re-run after the stack changes; it only adds what is missing.
 EOF
-  echo "CLAUDE.md section added"
-fi
+echo "CLAUDE.md section added"
 ```
 
 ## 10. Permissions proposal
@@ -351,7 +344,11 @@ Template 2 is `.claude/settings.json`. Replace `<default_branch>` with the defau
   "Bash(git add *)", "Bash(git commit *)", "Bash(git switch *)", "Bash(git branch *)",
   "Bash(git worktree *)", "Bash(git cherry-pick *)",
   "Bash(git fetch origin <default_branch>)",
-  "Bash(jq *)",
+  "Bash(git rev-parse *)", "Bash(git rev-list --left-right *)", "Bash(git check-ignore *)",
+  "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)",
+  "Bash(git ls-remote --symref origin HEAD)",
+  "Bash(git restore -- .claude/agent-memory/aew-standards-setter/)",
+  "Bash(command -v *)", "Bash(jq *)", "Bash(echo *)", "Bash(printf *)",
   "Bash(date +%Y-%m-%d)"
 ] } }
 ```
@@ -376,9 +373,11 @@ used:
   `-c core.fsmonitor=<cmd>`).
 - `git diff`, `git log`, `git show` and `git format-patch` with a wildcard (`--output=<path>` writes files);
   their read-only forms already run without a prompt.
-- `git fetch` with a wildcard (`--upload-pack=<cmd>`); only the exact preflight form is allowed.
+- `git fetch` and `git ls-remote` with a wildcard (`--upload-pack=<cmd>`), and `git symbolic-ref` with one
+  (it can repoint `HEAD`); only the exact preflight and §2 forms are allowed.
 - `git push` (it goes through `git-branch.sh` only) and every other `gh` command (only the scripts call `gh`).
-- `sh -c`, `nohup`, `cd <dir> && …`, `cp`, `curl`, `kill`, `rm -rf`, and bare `npx`, `npm` or `node`.
+- `sh -c`, `nohup`, `cd <dir> && …`, `cp`, `curl`, `kill`, `rm -rf`, `awk` (its programs can write any file),
+  `node -p` and bare `npx`, `npm` or `node`.
 - `commands.seed` (may reset data).
 
 These rules only cut down prompts. They are not a security boundary: the plugin's Bash guard hook is what
@@ -395,35 +394,36 @@ hand, and skip the rest of this section.
 **On a yes.** Write the two concrete `{"permissions":{"allow":[…]}}` lists with the Write tool (read each file
 first if it already exists): the portable one (template 2 plus the config rules) to
 `.aew/runs/init-permissions.json`, and the plugin-script one (template 1) to
-`.aew/runs/init-permissions-local.json`. Then run the snippet.
+`.aew/runs/init-permissions-local.json`. Then run the snippets below in order.
 
-The snippet first makes sure `.claude/settings.local.json` is ignored: `git check-ignore` honours every
-ignore source, so a third `.gitignore` line is added (only on a yes) only when nothing ignores the file yet.
-A file the user already tracks is left alone and its rules are reported instead. The check runs before the
-local file is written, so it is never untracked and unignored.
+The first makes sure `.claude/settings.local.json` is ignored before it is written: `git check-ignore` honours
+every ignore source, so a third `.gitignore` line is added (only on a yes) only when nothing ignores it yet.
 
 ```sh
-l=.claude/settings.local.json; t=0
-if git ls-files --error-unmatch "$l" > /dev/null 2>&1; then t=1; echo "tracked $l"
-elif git check-ignore -q "$l"; then echo "ignored $l"
+if git ls-files --error-unmatch .claude/settings.local.json > /dev/null 2>&1; then echo "tracked .claude/settings.local.json"
+elif git check-ignore -q .claude/settings.local.json; then echo "ignored .claude/settings.local.json"
 else
-  if [ -s .gitignore ] && [ -n "$(tail -c 1 .gitignore)" ]; then echo >> .gitignore; fi
-  echo "$l" >> .gitignore; echo "added $l"
+  if tail -c 1 .gitignore 2> /dev/null | grep -q .; then printf '\n' >> .gitignore; fi
+  printf '%s\n' '.claude/settings.local.json' >> .gitignore; echo "added .claude/settings.local.json"
 fi
-for pair in "init-permissions.json .claude/settings.json" "init-permissions-local.json $l"; do
-  src=.aew/runs/${pair% *}; dst=${pair#* }
-  if [ "$t" = 1 ] && [ "$dst" = "$l" ]; then echo "skipped $l (tracked)"; continue; fi
-  base=$dst; [ -f "$dst" ] || base=/dev/null
-  jq -n --slurpfile p "$src" --slurpfile e "$base" '($e[0] // {}) as $e
-    | ($e.permissions.allow // []) as $a
-    | $e | .permissions.allow = $a + (($p[0].permissions.allow | unique) - $a)' > .aew/runs/init-settings.json ||
-    { echo "not merged $dst (not valid JSON)"; continue; }
-  if [ -f "$dst" ] && jq -e --slurpfile m .aew/runs/init-settings.json '. == $m[0]' "$dst" > /dev/null; then
-    echo "unchanged $dst"
-  else
-    mkdir -p .claude && cp .aew/runs/init-settings.json "$dst" && echo "written $dst"
-  fi
-done
+```
+
+The second merges one file (a missing file starts as `{}`). Run it with `<settings_file>` =
+`.claude/settings.json` and `<rules_file>` = `.aew/runs/init-permissions.json`, then again with
+`.claude/settings.local.json` and `.aew/runs/init-permissions-local.json`, unless the first printed
+`tracked`: then the user already tracks the local file, so report "skipped .claude/settings.local.json
+(tracked)" with its rules.
+
+```sh
+mkdir -p .claude
+[ -f <settings_file> ] || printf '{}\n' > <settings_file>
+if ! jq -s '.[0] as $p | (.[1] // {}) as $e | ($e.permissions.allow // []) as $a | $e | .permissions.allow = $a + (($p.permissions.allow | unique) - $a)' <rules_file> <settings_file> > .aew/runs/init-settings.json; then
+  echo "not merged <settings_file> (not valid JSON)"
+elif jq -s -e '.[0] == .[1]' <settings_file> .aew/runs/init-settings.json > /dev/null; then
+  echo "unchanged <settings_file>"
+else
+  jq . .aew/runs/init-settings.json > <settings_file> && echo "written <settings_file>"
+fi
 ```
 
 Existing rules keep their order, new ones are appended once, every other key is kept, and an unchanged file
@@ -441,24 +441,24 @@ Init commits the agent's shared memory (`.claude/agent-memory/aew-standards-sett
 holds the only change in the tree, it is dropped, so a re-run changes nothing.
 
 ```sh
-m=.claude/agent-memory/aew-standards-setter/
-all=$(git status --porcelain --untracked-files=all)
-if [ -n "$all" ] && [ -z "$(printf '%s\n' "$all" | grep -vF " $m")" ]; then
-  if [ -n "$(git ls-files -m -- "$m")" ]; then git restore -- "$m"; fi
-  git ls-files --others --exclude-standard -- "$m" | while read -r f; do rm -f "$f"; done
-  echo "standards-setter memory update discarded (nothing else changed)"
-else echo "memory kept"; fi
+git status --porcelain --untracked-files=all
+```
+
+If it prints nothing, or any path outside `.claude/agent-memory/aew-standards-setter/`, the memory is kept.
+Otherwise run the next snippet, then `rm -f <path> …` with every path it printed, written out literally, and
+report "standards-setter memory update discarded (nothing else changed)".
+
+```sh
+if git ls-files -m -- .claude/agent-memory/aew-standards-setter/ | grep -q .; then git restore -- .claude/agent-memory/aew-standards-setter/; fi
+git ls-files --others --exclude-standard -- .claude/agent-memory/aew-standards-setter/
 ```
 
 ## 12. Commit, push and PR
 
 ```sh
 git status --porcelain --untracked-files=all
-for f in .claude/settings.json .claude/settings.local.json; do
-  if [ -f "$f" ] && ! git ls-files --error-unmatch "$f" > /dev/null 2>&1 && git check-ignore -q "$f"; then
-    echo "ignored $f (not committed)"
-  fi
-done
+if [ -f .claude/settings.json ] && ! git ls-files --error-unmatch .claude/settings.json > /dev/null 2>&1 && git check-ignore -q .claude/settings.json; then echo "ignored .claude/settings.json (not committed)"; fi
+if [ -f .claude/settings.local.json ] && ! git ls-files --error-unmatch .claude/settings.local.json > /dev/null 2>&1 && git check-ignore -q .claude/settings.local.json; then echo "ignored .claude/settings.local.json (not committed)"; fi
 ```
 
 Every changed path must be one of Init's files, or stop, list the strangers and commit nothing. An
@@ -467,12 +467,12 @@ each path (never `git add -A` or `git add .`), then `git commit -m "chore: set u
 trailer). Then decide the push and the PR.
 
 ```sh
-if git rev-parse --verify --quiet refs/remotes/origin/chore/aew-init > /dev/null; then
-  echo "unpushed $(git rev-list --count origin/chore/aew-init..HEAD)"
+if git rev-parse --verify refs/remotes/origin/chore/aew-init > /dev/null 2>&1; then
+  printf 'unpushed '; git rev-list --count origin/chore/aew-init..HEAD
 else
-  echo "unpushed $(git rev-list --count <default_branch>..HEAD)"
+  printf 'unpushed '; git rev-list --count <default_branch>..HEAD
 fi
-echo "ahead $(git rev-list --count <default_branch>..HEAD)"
+printf 'ahead '; git rev-list --count <default_branch>..HEAD
 ```
 
 - `unpushed` above 0: run `"${CLAUDE_PLUGIN_ROOT}/scripts/git-branch.sh" push`.
