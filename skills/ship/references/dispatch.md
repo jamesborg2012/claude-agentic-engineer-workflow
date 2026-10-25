@@ -62,7 +62,7 @@ Used by each stage's step 2, by `--from` and by resume. Check each file with `te
 | `develop` | `02-brief.md`, `03-standards.md`, `05-plan.md`, plus `07-review-<review_cycle>.md` in fix mode |
 | `review` | `02-brief.md`, `03-standards.md`, `05-plan.md`, at least one `06-dev-report*.md` |
 | `qa` | `02-brief.md`, `04-qa-test-plan.md` |
-| `docs` | `spec-final.md`, `issue.json`, and `08-qa-report-<fix_cycle+1>.md`, whose return block (`awk 'NF' <file> \| tail -n 4`) reads `STATUS: ok` |
+| `docs` | `spec-final.md`, `issue.json`, and `08-qa-report-<fix_cycle+1>.md`, whose return block (`grep -v '^$' <file> \| tail -n 4`) reads `STATUS: ok` |
 | `pr` | `pr-body.md`, `10-summary.md` |
 
 Develop mode is fix only when `review_cycle` is at least 1 and `test <rd>/07-review-<review_cycle>.md -nt <rd>/05-plan.md && echo newer || echo older` prints `newer`. Otherwise it is full mode, which needs no review file.
@@ -71,7 +71,7 @@ Develop mode is fix only when `review_cycle` is at least 1 and `test <rd>/07-rev
 
 1. The last four non-blank lines of the Agent result must be, in order, `STATUS: <ok|needs_input|blocked|failed>` (exactly one of the four words), `ARTEFACTS: <non-empty>`, `SUMMARY: <non-empty>` and `NEXT: <non-empty>`. This is the rule of `valid_return_block` in `${CLAUDE_PLUGIN_ROOT}/scripts/hooks/gate-subagent.sh`. The template form `STATUS: ok | needs_input | blocked | failed` is invalid.
 2. Every comma-separated ARTEFACTS path must print `yes` from `test -f <path> && echo yes || echo no`. Paths are relative to the project root, or absolute for a sub-developer's report.
-3. Developer only: for each `06-dev-report.md` or `06-dev-report-WP<n>.md` named in ARTEFACTS, `awk 'NF' <file> | tail -n 4` must also pass rule 1. In fan-out the gate hook can pass on a sibling's report, so the orchestrator checks every named report itself (CTO-3b).
+3. Developer only: for each `06-dev-report.md` or `06-dev-report-WP<n>.md` named in ARTEFACTS, `grep -v '^$' <file> | tail -n 4` must also pass rule 1. In fan-out the gate hook can pass on a sibling's report, so the orchestrator checks every named report itself (CTO-3b).
 4. If any rule fails, the return counts as `failed` (see `## Retries`). Do not open the artefact to fix it.
 5. Otherwise route on STATUS through `routing.md` `## Agent status routing`. SUMMARY and NEXT are the only parts of the result the orchestrator uses.
 

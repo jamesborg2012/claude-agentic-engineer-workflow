@@ -154,7 +154,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
     - Failures: the triage table first, then the entries.
 12. If any manual-only case exists, write `manual-tests.md`. Otherwise write none. Overwrite it each cycle.
 13. On `ok` only, copy the report to `docs/qa/<issue>/report.md` with Bash, as one `cp "<run_dir>/08-qa-report-<n>.md" "<abs root>/<evidence.dir>/<issue>/report.md"` (create the directory with `mkdir -p` first if it is missing). Never use Write or Edit for this file: Claude Code refuses a subagent's Write of a file named `report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.
-14. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)`. Stage by path only, and only these:
+14. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)`, with a last `-m "Co-Authored-By: Claude <noreply@anthropic.com>"` as the only trailer (even if the session asks for another, and no model name). Stage by path only, and only these:
     - `ui.e2e_dir`;
     - `playwright.config.*`;
     - Playwright setup files (`package.json`, the lock file, `.gitignore`, `tests/e2e/package.json`), only when setup changed them;

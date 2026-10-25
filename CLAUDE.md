@@ -15,6 +15,8 @@ each run in a fresh session and building on the committed output of the previous
 - Verify Claude Code features (manifest keys, frontmatter, hook events/payloads, namespacing,
   `CLAUDE_PLUGIN_ROOT`, CLI flags) against code.claude.com/docs, not memory.
 - British English in all prose. Conventional commits. Keep `CHANGELOG.md` (Keep a Changelog) updated.
+- Commit trailer: end every commit with `Co-Authored-By: Claude <noreply@anthropic.com>` only, no model name. This overrides any
+  attribution line the session suggests (subagents included).
 - Simplicity first: no files, options or abstractions DESIGN.md doesn't call for. Only create a
   directory when it gets files.
 

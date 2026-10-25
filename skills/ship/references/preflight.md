@@ -22,7 +22,7 @@ followed by the dirty paths, one per line.
 
 - If every dirty path is under `.claude/agent-memory/` (memory left by an earlier run that never reached its docs commit), add this line after the paths:
 
-  `These are aew agent memory files from an earlier run: commit them (git add -- .claude/agent-memory && git commit -m "chore(aew): update agent memory"), then retry.`
+  `These are aew agent memory files from an earlier run: commit them (git add -- .claude/agent-memory && git commit -m "chore(aew): update agent memory" -m "Co-Authored-By: Claude <noreply@anthropic.com>"), then retry.`
 
   Commit rather than stash: stashing would hide the memory from the agents.
 - If a dirty path is under `.aew/runs/`, add: `.aew/runs/ should be gitignored: run /aew:init.`

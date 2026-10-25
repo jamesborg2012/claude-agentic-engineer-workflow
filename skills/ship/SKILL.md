@@ -54,7 +54,7 @@ Read each value fresh before each use.
 |---|---|---|
 | The Agent return block | every dispatch | the last four non-blank lines of the result |
 | ARTEFACTS paths and required inputs | before and after each dispatch | `test -f <path> && echo yes \|\| echo no` (`no` is missing); develop mode: `test <rd>/07-review-<review_cycle>.md -nt <rd>/05-plan.md && echo newer \|\| echo older` |
-| Each named developer report | after a developer dispatch | `awk 'NF' <file> \| tail -n 4` |
+| Each named developer report | after a developer dispatch | `grep -v '^$' <file> \| tail -n 4` |
 | `05-plan.md` | the plan gate | Read in full (the only full read) |
 | `## Questions` of `01-spec-analysis.md` | gate `spec` | bounded section read (`gates.md`) |
 | `## Challenges to the spec` of `05-plan.md` | gate `plan-challenge` | bounded section read |
@@ -65,7 +65,7 @@ Read each value fresh before each use.
 | `.aew/config.json` fields | limits, gates, `default_branch` | `jq` |
 | `spec-changes.json` | recording a spec revision | `jq` counts, and a render to a file only |
 | `issue.json` | run start, `--from spec_analysis` | `jq` for `title`, `state` and `url` |
-| The return block of an `08-qa-report-<k>.md` | the complete-failure test (`routing.md`), the `docs` required inputs (`dispatch.md`) | `awk 'NF' <file> \| tail -n 4` |
+| The return block of an `08-qa-report-<k>.md` | the complete-failure test (`routing.md`), the `docs` required inputs (`dispatch.md`) | `grep -v '^$' <file> \| tail -n 4` |
 | `01-spec-analysis.md` question count | numbering extra questions in gates `plan-challenge` and `spec-ambiguity` | `grep -c '^### Q[0-9]'` |
 | `.aew/runs/current` | preflight Check 5 | `cat` |
 | `.status` of another run's `state.json` | preflight Check 5 | `jq -r .status` |

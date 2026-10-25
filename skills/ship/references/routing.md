@@ -49,7 +49,7 @@ The note is how the once-per-run limit survives a resume: it is read from `histo
 The `stage` stays `qa` throughout. Reached on a D12 `failed`. Here `k` is fix_cycle + 1 on entry, the number of the report just written. Use `<rd>/08-qa-report-<k>.md`.
 
 1. **Complete-failure test.** Both must hold:
-   - `awk 'NF' <rd>/08-qa-report-<k>.md | tail -n 4` is a valid return block with `STATUS: failed`;
+   - `grep -v '^$' <rd>/08-qa-report-<k>.md | tail -n 4` is a valid return block with `STATUS: failed`;
    - `awk '/^## /{f=($0=="## Failures")} f && /^\|[[:space:]]*TC-[0-9]+[[:space:]]*\|/{n++} END{print n+0}' <rd>/08-qa-report-<k>.md` prints 1 or more.
 
    If not both, it is an ordinary `failed`: retry once, then the blocked path.
