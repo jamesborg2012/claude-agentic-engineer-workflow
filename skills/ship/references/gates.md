@@ -1,6 +1,6 @@
 # Gates
 
-Read at `SKILL.md` `## Stage: spec_analysis`, `## Stage: plan` and `## Stage: qa`, and by `resume`. Every `${CLAUDE_PLUGIN_ROOT}` here is the plugin root stated in `SKILL.md` `## Plugin root`, and a bare `state.sh …` or `gh-labels.sh …` is that root's `scripts/` file by absolute path. `<rd>` is `.aew/runs/<id>`.
+Read at `SKILL.md` `## Stage: spec_analysis`, `SKILL.md` `## Stage: plan` and `SKILL.md` `## Stage: qa`, and by `resume`. Every `${CLAUDE_PLUGIN_ROOT}` here is the plugin root stated in `SKILL.md` `## Plugin root`, and a bare `state.sh …` or `gh-labels.sh …` is that root's `scripts/` file by absolute path. `<rd>` is `.aew/runs/<id>`.
 
 Each `## Gate: <id>` section has four steps: set pending, read, ask, apply the answer.
 

@@ -24,7 +24,7 @@ base: main
 | Row | Agent and mode | subagent_type | Prompt fields | Required files | State write before |
 |---|---|---|---|---|---|
 | D1 | spec-analyser, first run | `aew:spec-analyser` | `run_dir`, `spec_version: <spec_revision+1>` | `00-issue-original.md`, `issue.json` | Step 3 (fresh) or stage entry `spec_analysis` |
-| D2 | spec-analyser, re-run with answers | `aew:spec-analyser` | `run_dir`, `spec_version: <spec_revision+1>`, `answers:` then one `Q<k>: ...` line per answer | the above plus `01-spec-analysis.md` | `state.sh stage spec_analysis --note "answers: gate:<id>"` |
+| D2 | spec-analyser, re-run with answers | `aew:spec-analyser` | `run_dir`, `spec_version: <spec_revision+1>`, `answers:` then one `Q<k>: …` line per answer | the above plus `01-spec-analysis.md` | `state.sh stage spec_analysis --note "answers: gate:<id>"` |
 | D3 | brief-compiler, pipeline | `aew:brief-compiler` | `run_dir`, `mode: pipeline` | `spec-final.md`, `issue.json` | stage entry `brief` |
 | D4 | brief-compiler, prompt (used by `prompt`) | `aew:brief-compiler` | `run_dir`, `mode: prompt` | `spec-final.md`, `issue.json` | `state.sh stage brief` (prompt mode sets no label) |
 | D5 | standards-setter | `aew:standards-setter` | `run_dir` | `02-brief.md` | stage entry `standards` |
@@ -62,7 +62,7 @@ Used by each stage's step 2, by `--from` and by resume. Check each file with `te
 | `develop` | `02-brief.md`, `03-standards.md`, `05-plan.md`, plus `07-review-<review_cycle>.md` in fix mode |
 | `review` | `02-brief.md`, `03-standards.md`, `05-plan.md`, at least one `06-dev-report*.md` |
 | `qa` | `02-brief.md`, `04-qa-test-plan.md` |
-| `docs` | `spec-final.md`, `issue.json`, and an `08-qa-report-<n>.md` whose return block reads `STATUS: ok` |
+| `docs` | `spec-final.md`, `issue.json`, and `08-qa-report-<fix_cycle+1>.md`, whose return block (`awk 'NF' <file> \| tail -n 4`) reads `STATUS: ok` |
 | `pr` | `pr-body.md`, `10-summary.md` |
 
 Develop mode is fix only when `review_cycle` is at least 1 and `test <rd>/07-review-<review_cycle>.md -nt <rd>/05-plan.md` succeeds. Otherwise it is full mode, which needs no review file.

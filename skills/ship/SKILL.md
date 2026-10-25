@@ -64,6 +64,10 @@ Read each value fresh before each use.
 | `.aew/config.json` fields | limits, gates, `default_branch` | `jq` |
 | `spec-changes.json` | recording a spec revision | `jq` counts, and a render to a file only |
 | `issue.json` | run start, `--from spec_analysis` | `jq` for `title`, `state` and `url` |
+| The return block of an `08-qa-report-<k>.md` | the complete-failure test (`routing.md`), the `docs` required inputs (`dispatch.md`) | `awk 'NF' <file> \| tail -n 4` |
+| `01-spec-analysis.md` question count | numbering extra questions in gates `plan-challenge` and `spec-ambiguity` | `grep -c '^### Q[0-9]'` |
+| `.aew/runs/current` | preflight Check 5 | `cat` |
+| `.status` of another run's `state.json` | preflight Check 5 | `jq -r .status` |
 | `10-summary.md` and `manual-tests.md` | the pull request and the final report | `grep -c` |
 
 Nothing else. Never open other artefacts, and never read source code. A bounded section read is not a full read.
@@ -110,7 +114,7 @@ The result is `<n>`, `auto` (true or false) and `from` (a stage, or none).
 
 ## Step 2. Preflight
 
-Run `preflight.md` checks 1 to 6 in order (`## Check 1. Config exists` to `## Check 6. superpowers major version (warn only)`). The first failing check stops the run with its message, having written nothing. Check 6 only warns. Preflight checks the default branch and never fast-forwards it. With `--from`, Check 2 uses the restart form and Check 5 treats this issue's run as being resumed.
+Run the six checks in order, from `preflight.md` `## Check 1. Config exists` to `preflight.md` `## Check 6. superpowers major version (warn only)`. The first failing check stops the run with its message, having written nothing. Check 6 only warns. Preflight checks the default branch and never fast-forwards it. With `--from`, Check 2 uses the restart form and Check 5 treats this issue's run as being resumed.
 
 Then: `from` set, go to Step 4. Otherwise go to Step 3.
 
@@ -222,7 +226,7 @@ Earlier stages are not redone, counters are kept, and a `done` run's PR is updat
 ## Stage: pr
 
 1. Entry: `state.sh stage pr` only. The `ready-for-review` label is set once the PR exists.
-2. Run `pr.md` `## Push and pull request`, `## Manual tests`, `## Retro` and `## Finish`, in that order.
+2. Run `pr.md` `## Push and pull request`, `pr.md` `## Manual tests`, `pr.md` `## Retro` and `pr.md` `## Finish`, in that order.
 3. Go to `## Final report`.
 4. Failure: `routing.md` `## Script failures`. Check `state.pr` before creating a PR (`pr.md`).
 
@@ -247,4 +251,4 @@ A failed `gh` script call in step 2 or 3 never skips step 4. The final report na
 
 ## Final report
 
-Follow `final-report.md` (`## Format`, `## Counting`, `## Blocked and failed runs`) for every outcome: `done`, `blocked` and `failed`.
+Follow `final-report.md` `## Format`, `final-report.md` `## Counting` and `final-report.md` `## Blocked and failed runs` for every outcome: `done`, `blocked` and `failed`.

@@ -1,6 +1,6 @@
 # Commits, pull request and finish
 
-Read at the standards, docs and pr stages. `<id>`, `<n>`, `<rd>` and the script names are as in `SKILL.md` `## Run variables` and `## Plugin root`. Script failures follow `routing.md` `## Script failures`.
+Read at the standards, docs and pr stages. `<id>`, `<n>`, `<rd>` and the script names are as in `SKILL.md` `## Run variables` and `SKILL.md` `## Plugin root`. Script failures follow `routing.md` `## Script failures`.
 
 ## Commit rules
 
