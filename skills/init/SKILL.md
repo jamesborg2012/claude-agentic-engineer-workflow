@@ -344,7 +344,7 @@ Template 2 is `.claude/settings.json`. Replace `<default_branch>` with the defau
   "Bash(git add *)", "Bash(git commit *)", "Bash(git switch *)", "Bash(git branch *)",
   "Bash(git worktree *)", "Bash(git cherry-pick *)",
   "Bash(git fetch origin <default_branch>)",
-  "Bash(git rev-parse *)", "Bash(git rev-list --left-right *)", "Bash(git check-ignore *)",
+  "Bash(git rev-parse *)", "Bash(git check-ignore *)",
   "Bash(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)",
   "Bash(git ls-remote --symref origin HEAD)",
   "Bash(git restore -- .claude/agent-memory/aew-standards-setter/)",
@@ -377,7 +377,7 @@ used:
   (it can repoint `HEAD`); only the exact preflight and §2 forms are allowed.
 - `git push` (it goes through `git-branch.sh` only) and every other `gh` command (only the scripts call `gh`).
 - `sh -c`, `nohup`, `cd <dir> && …`, `cp`, `curl`, `kill`, `rm -rf`, `awk` (its programs can write any file),
-  `node -p` and bare `npx`, `npm` or `node`.
+  `node -p` and bare `npx`, `npm` or `node`, so §6's `npx … ajv validate` prompts (its `-c` loads a module).
 - `commands.seed` (may reset data).
 
 These rules only cut down prompts. They are not a security boundary: the plugin's Bash guard hook is what

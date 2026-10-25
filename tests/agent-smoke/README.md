@@ -1045,13 +1045,18 @@ polled in a foreground loop. macOS `/var` is `/private/var`.
 the fixture commit (the nextjs fixture has no config until init writes one), installs the static-shop dependencies
 before that commit as section 8.3 does, makes `$W/origin.git` a bare clone with `main` as HEAD and sets the upstream,
 and cans the replies the scripts parse. `smoke_ship_allow <kind>` prints one launcher argument per line (kinds `ship`,
-`p0`, `init`) and must be called with `$P` set to the project: (1) the orchestrator rules (Phase B I-8 and Phase C
-K-4, plus every leading command form that 9.9's pre-check rules show is not auto-allowed: `git rev-parse`,
-`git rev-list --left-right`, `git check-ignore`, `git symbolic-ref`, `git ls-remote`, `command -v`, `node -p`); (2) for `ship` and `p0`, the agent lines already recorded
-in this README (961's developer line, 8.3's QA phase B line with this project's paths, the eleven Playwright MCP
-names), but not 8.3's `--disallowedTools "Bash(gh *)"`, because a deny beats every allow and would deny the canary;
-(3) for `p0`, the probe's commands; (4) for `init`, Phase D's list plus every further command of
-`skills/init/SKILL.md` sections 1 to 13; (5) the denials.
+`p0`, `init`) and must be called with `$P` set to the project: (1) for every lane, the plugin scripts and the forms
+the skills share (`gh auth status`, `git status`, `git switch`, `git add`, `git commit`, `jq`, `printf`, `echo`),
+and for `ship` and `p0` also the forms of ship, resume, status and prompt (Phase B I-8 and Phase C K-4 as rewritten
+by RW1 and RW2: `claude plugin list --json`, `git fetch origin main`, `awk`, `test`, `tail -n`, `grep -c`); (2) for
+`ship` and `p0`, the agents' git reads and the agent lines already recorded in this README (961's developer line,
+8.3's QA phase B line with this project's paths, the eleven Playwright MCP names), but not 8.3's `--disallowedTools
+"Bash(gh *)"`, because a deny beats every allow and would deny the canary; (3) for `p0`, the probe's commands; (4)
+for `init`, every leading form of `skills/init/SKILL.md` sections 1 to 13 that RULES.2 did not see run without a
+rule (9.9), the `npx … ajv validate` line included; (5) the denials. A form RULES.2 saw run without a rule (`cat
+.aew/runs/current`, `ls`, `grep`, `tail -c`, `[ … ]`, `node --version`, `mkdir -p .aew`, `rm -f` of project files,
+`git branch --show-current`, `git rev-list --count`, `git merge-base --is-ancestor`, `true`) gets none. The
+`<cmd> *` wildcards are harness-only; init's user template stays anchored.
 
 ```sh
 SHIM="$REPO/tests/scripts/helpers/bin"; SHOP="$REPO/tests/fixtures/apps/static-shop"; SHOP_RUN="$SHOP/run"
@@ -1093,22 +1098,26 @@ smoke_ship_allow() {
   local k=$1 s PR T=mcp__plugin_aew_playwright__browser
   case $k in ship | p0 | init) ;; *) echo "smoke_ship_allow: ship, p0 or init" >&2; return 1 ;; esac
   PR=$(cd "$P" && pwd -P) || return 1
-  # 1. orchestrator rules (Phase B I-8, Phase C K-4); scripts by absolute path, bare (ship) and quoted (init)
+  # 1. every lane: the scripts by absolute path, bare (ship) and quoted (init), the skills' shared forms, and the
+  #    standards-setter's date (it runs in both lanes)
   echo --allowedTools
   for s in state gh-issue gh-labels git-branch gh-pr gh-retro detect-stack; do
     printf '%s\n' "Bash($REPO/scripts/$s.sh *)" "Bash(\"$REPO/scripts/$s.sh\" *)"
   done
-  printf '%s\n' "Bash(gh auth status)" "Bash(claude plugin list --json)" \
-    "Bash(git status *)" "Bash(git fetch origin main)" "Bash(git rev-parse *)" \
-    "Bash(git rev-list --left-right *)" "Bash(git check-ignore *)" "Bash(git symbolic-ref *)" "Bash(git ls-remote *)" \
-    "Bash(command -v *)" "Bash(node -p *)" "Bash(git branch *)" "Bash(git switch *)" \
-    "Bash(git add *)" "Bash(git commit *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git show *)" \
-    "Bash(jq *)" "Bash(awk *)" "Bash(test *)" "Bash(tail -n *)" "Bash(grep -c *)" "Bash(cat .aew/runs/current)" \
-    "Bash(date *)" "Bash(ls *)" \
+  printf '%s\n' "Bash(gh auth status)" "Bash(git status *)" "Bash(git switch *)" "Bash(git add *)" "Bash(git commit *)" \
+    "Bash(jq *)" "Bash(printf *)" "Bash(echo *)" "Bash(date *)" \
     "mcp__plugin_context7_context7__*"
-  # 2. agent lines already recorded in this README (961 developer, 8.3 QA phase B, 951 developer additions)
+  # 1a. ship, resume, status and prompt (preflight, the bounded reads); test, tail -n and grep -c are kept although
+  #     the bundle's read-only tables list them (not observed in a session, RULES.2)
   if [ "$k" != init ]; then
-    printf '%s\n' "Bash(git worktree *)" "Bash(git cherry-pick *)" \
+    printf '%s\n' "Bash(claude plugin list --json)" "Bash(git fetch origin main)" \
+      "Bash(awk *)" "Bash(test *)" "Bash(tail -n *)" "Bash(grep -c *)"
+  fi
+  # 2. agent lines already recorded in this README (961 developer, 8.3 QA phase B, 951 developer additions), and the
+  #    developer's, qa-engineer's and senior-engineer's git reads
+  if [ "$k" != init ]; then
+    printf '%s\n' "Bash(git rev-parse *)" "Bash(git branch *)" "Bash(git diff *)" "Bash(git log *)" "Bash(git show *)" \
+      "Bash(git worktree *)" "Bash(git cherry-pick *)" \
       "Bash(git -C * status *)" "Bash(git -C * diff *)" "Bash(git -C * log *)" "Bash(git -C * show *)" \
       "Bash(git -C * add *)" "Bash(git -C * commit *)" "Bash(git -C * rev-parse *)" \
       "Bash(cd *)" "Bash(node *)" "Bash(npm *)" "Bash(npx *)" \
@@ -1123,15 +1132,12 @@ smoke_ship_allow() {
   if [ "$k" = p0 ]; then
     printf '%s\n' "Bash(command -v gh)" "Bash(type -a gh)" "Bash(env)" "Bash(cut -d= -f1)" "Bash(git remote get-url origin)"
   fi
-  # 4. init (Phase D cross-phase item 6), then every further command of skills/init/SKILL.md sections 1-13
+  # 4. init: every leading form of skills/init/SKILL.md sections 1-13 not observed to run without a rule (RULES.2)
   if [ "$k" = init ]; then
-    printf '%s\n' "Bash(git --version)" "Bash(jq --version)" "Bash(node --version)" \
-      "Bash(npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate *)" "Bash(touch *)" "Bash(grep *)" "Bash(tail *)" \
-      "Bash(printf *)" "Bash(cat *)" "Bash(echo *)" "Bash(mkdir -p *)" "Bash(rm -f .aew/runs/init-*)" \
-      "Bash(pwd -P)" "Bash(git remote get-url origin)" \
-      "Bash(git merge-base --is-ancestor *)" "Bash(git ls-files *)" "Bash(git rev-list --count *)" \
-      "Bash(git restore -- *)" "Bash(rm -f \"\$f\")" "Bash(rm -f .claude/agent-memory/aew-standards-setter/*)" \
-      "Bash(read -r f)" "Bash(cp .aew/runs/init-*)" "Bash([ *)" "Bash(true)" "Bash(exit 1)" "Bash(continue)"
+    printf '%s\n' "Bash(command -v *)" "Bash(git rev-parse *)" "Bash(git remote -v)" \
+      "Bash(git symbolic-ref *)" "Bash(git ls-remote *)" "Bash(git check-ignore *)" "Bash(git ls-files *)" \
+      "Bash(git restore -- *)" "Bash(npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate *)" \
+      "Bash(cat *)" "Bash(mkdir -p *)" "Bash(rm -f .claude/agent-memory/aew-standards-setter/*)"
   fi
   # 5. denials (a deny beats every allow, so never "Bash(gh *)": it would deny the canary). CTO-3: "//" plus the
   #    absolute path anchors at the filesystem root (/en/permissions), so no file tool or redirect may write the plugin.
@@ -1954,3 +1960,20 @@ Cap raises, harness faults, fixes and deviations, newest last.
   status listing, anything RW3 keeps in init sections 1 to 13); V-7 anchoring of the new rules (they are
   `<cmd> *` wildcards, broader than a user-settings template should be); whether the init list's remaining entries
   (`rm -f "$f"`, `read -r f`, `[ *`, `true`, `exit 1`, `continue`) still apply after RW3 removes `$var` and loops.
+- 2026-10-25 Task RW5, RW4's TODO reconciled against the merged RW1 to RW3 skills (scanned, not guessed):
+  `smoke_ship_allow` now gives every lane only the scripts and the shared forms (`gh auth status`, `git status`,
+  `git switch`, `git add`, `git commit`, `jq`, `printf`, `echo`, `date`); `ship` and `p0` add ship's forms
+  (`claude plugin list --json`, `git fetch origin main`, `awk`, `test`, `tail -n`, `grep -c`) and the agents' git
+  reads (`git rev-parse`, `git branch`, `git diff`, `git log`, `git show`); `init` adds `command -v`, `git rev-parse`,
+  `git remote -v`, `git symbolic-ref`, `git ls-remote`, `git check-ignore`, `git ls-files`, `git restore --`, the
+  `npx … ajv validate` line, `cat` (the quoted-heredoc append), `mkdir -p` (`.claude`) and the agent-memory `rm -f`.
+  Dropped: `git rev-list --left-right *` (nothing runs it now), `node -p *`, `cat .aew/runs/current`, `ls *`, and the
+  init entries `git --version`, `jq --version`, `node --version`, `touch`, `grep`, `tail`, `rm -f .aew/runs/init-*`,
+  `pwd -P`, `git remote get-url origin`, `git merge-base --is-ancestor`, `git rev-list --count`, `cp`,
+  `rm -f "$f"`, `read -r f`, `[ *`, `true`, `exit 1`, `continue` (unused, or seen running without a rule in
+  RULES.2). `test`, `tail -n` and `grep -c` are in the Claude Code 2.1.308 bundle's read-only tables (`test` and
+  `grep` safe-flag tables, `tail` in the read-only command list), so init's template has no rule for them; the
+  harness keeps its wildcards because no session has run them without one. Allow files: ship 85 lines, p0 90,
+  init 44. The free I-9 dry-run passes with them (`diff-exit=0`, the only `gh` rule `Bash(gh auth status)`,
+  `bypassPermissions` 0, `Edit(//<repo>/**)`). `tests/scripts/skills.bats` test 17 now checks every entry-skill
+  command against the Rewrite guide (H1 to H8, M1) statically.
