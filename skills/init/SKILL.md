@@ -286,3 +286,53 @@ npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-for
 
 An invalid result stops init before §7 and quotes ajv's errors. The live `.aew/config.json` is untouched,
 because only the scratch copy was validated.
+
+## 7. Labels
+
+Create or update the aew labels. This is idempotent on GitHub's side and runs on every init.
+
+```sh
+"${CLAUDE_PLUGIN_ROOT}/scripts/gh-labels.sh" ensure
+```
+
+A failure stops init before the commit. Quote the error and add: "is `origin` a GitHub repo you can write to?".
+
+## 8. Playwright setup
+
+Only when §5's Playwright offer was answered yes. Read `${CLAUDE_PLUGIN_ROOT}/skills/ui-qa/SKILL.md` `## 2. Setting up
+Playwright` with the Read tool and follow it: install with the lock file's package manager, exact-pinned, run
+`npx playwright install chromium`, append the missing gitignore lines with the §3 snippet's pattern, then write
+`playwright.config.ts` from ui-qa §4 and `<ui.e2e_dir>/aew.ts` from ui-qa §6 and §7. The versions live only in
+ui-qa, so don't restate them here. The files go into init's commit, not a QA cycle commit.
+
+For a root package, then add `commands.test_e2e` as `npx playwright test` to `.aew/runs/init-config.json` (Read it
+first, then Write it) and re-run §6.
+
+Otherwise (no, headless, no answer, not a UI project) report "Playwright: skipped (QA sets it up on first use)".
+When `@playwright/test` was already present, report "Playwright: present". Nothing is installed without a yes.
+
+## 9. CLAUDE.md section
+
+Add the workflow section once. The exact-heading check means it is never duplicated, and an existing section is
+left as it is, even if it was edited.
+
+```sh
+[ -f CLAUDE.md ] || printf '# CLAUDE.md\n' > CLAUDE.md
+if grep -qxF '## Agentic workflow' CLAUDE.md; then echo "CLAUDE.md section present"; else
+  if [ -n "$(tail -c 1 CLAUDE.md)" ]; then echo >> CLAUDE.md; fi
+  cat >> CLAUDE.md << 'EOF'
+
+## Agentic workflow
+
+Issues are shipped with the aew plugin. Agents follow the stack standards in `docs/standards/` and
+record each shipped issue's final spec in `docs/specs/`. Settings are in `.aew/config.json`; run state
+in `.aew/runs/` is gitignored.
+
+- `/aew:ship <issue> [--auto]`: spec, plan, build, review, QA, docs and PR for one issue.
+- `/aew:resume [<run-id>]`, `/aew:status [<run-id>]`: continue or inspect a run.
+- `/aew:prompt <issue>`: spec analysis and a single build prompt, no pipeline.
+- `/aew:init`: re-run after the stack changes; it only adds what is missing.
+EOF
+  echo "CLAUDE.md section added"
+fi
+```
