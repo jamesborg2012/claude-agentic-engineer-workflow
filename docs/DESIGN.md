@@ -462,6 +462,12 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
   - link to `docs/` for detail;
   - never duplicate the standards docs.
 - **`10-summary.md` and `pr-body.md`:**
+  - `## In plain English` first, before `## Summary`, written last so it summarises what is actually there:
+    - 100-250 words for a single issue; for a bulk PR an opening paragraph plus at most about 80 words per issue;
+    - in order: what was asked and why (naming "issue #12" in words); what changed for a user of the product; how it was done, including any obvious alternative the plan rejected; what changed along the way (confirmed spec clarifications, decisions taken on James's behalf, deviations from the issue); what needs attention (manual tests, risks, limitations, omissions, or one line saying none); confidence in one line;
+    - plain words and short sentences; no file paths, function or variable names, code, backticks or AC/TC/WP ids; no tables or headings inside, at most one short list; unavoidable technical terms explained in passing; no restating of the technical sections; real facts only;
+    - variants: stacked (says it builds on the PR for issue #n and must be merged after it), bulk (opening paragraph, then one short paragraph per issue), `init` (what was set up and why, what to check, such as detected commands and permissions, and what happens next);
+    - checked by `scripts/check-pr-intro.sh` (§9);
   - a summary and an AC checklist;
   - test results;
   - screenshots linked via `blob/<branch>/…?raw=true`;
@@ -491,6 +497,7 @@ Runs on the main thread.
   - run QA phase A and planning in parallel (one message, two Agent calls);
   - handle gates and routing;
   - push the branch (never the default branch);
+  - check the PR introduction with `scripts/check-pr-intro.sh <pr-body.md> [--issues <n>]`: on failure, re-dispatch the doc-writer once with the check's output; if it still fails, carry on and note the failure in the final report and the retro (the introduction never blocks a PR);
   - create the PR;
   - file the manual tests and retro items;
   - give the final report.
@@ -499,6 +506,7 @@ Runs on the main thread.
   - Plan approval is on by default. `--auto`, or `gates.plan_approval: false`, skips it. James sees a plan summary of 25 lines or fewer plus the file path, with the options approve / request changes / stop.
   - Irreversible or destructive operations always get a gate.
   - **Unanswered gate.** When AskUserQuestion is unavailable (headless runs with `--permission-prompts none`), refused or answered empty, the gate stays pending: state and label are already set, ship prints the questions (or the plan summary and path) and `Answer with /aew:resume <id>`, and stops; nothing after the gate runs. `init` instead uses its recommended defaults and writes no settings.
+- **Every completed run ends in a PR:** single-issue runs, bulk milestone runs, each sequential-milestone child and `init`. Blocked runs open none and keep their behaviour: a report comment, the blocked label, and a stop. A resumed or re-run run updates the existing PR and rewrites its `## In plain English` section to match the final state, never appending a second one. Issue bodies and comments carry no such introduction.
 - **Resume:** reads `state.json`, verifies the branch and working tree, and continues from the recorded stage. `resume` reads `ship`'s files with Read and enters at the recorded stage's section.
 - **Context hygiene:** reads return blocks only. It opens artefacts only for gates and routing. The exact reads (the plan in full at the plan gate, and bounded section reads for the gates and QA routing) are the reads table in `skills/ship/SKILL.md` `## What the orchestrator reads`.
 - **Final report:**
@@ -531,13 +539,13 @@ Otherwise it recommends **sequential**.
 - Spec analysis runs per issue in parallel. Each issue gets its own revision record and gate.
 - One combined brief, with AC ids prefixed by issue (`#12-AC-1`).
 - One plan, one branch (`milestone_branch_pattern`), one QA pass with traceability per issue.
-- One PR that closes all the issues.
+- One PR that closes all the issues, opening with a bulk-variant introduction (§8.7).
 
 **Sequential:**
 
 - Issues are ordered by their dependencies: "Blocked by #n", "Depends on #n", and task lists. A dependency cycle stops the run and asks.
 - Each issue runs through the single-issue pipeline (reuse `ship`'s procedure; don't duplicate it) and gets its own branch and PR.
-- An issue that depends on an unmerged one branches from that issue's branch (a stacked PR), and this is noted in the PR.
+- An issue that depends on an unmerged one branches from that issue's branch (a stacked PR), and this is noted in the PR, including in its introduction (the stacked variant, §8.7).
 - The plan gate applies per issue unless `--auto`.
 - The sequence stops on `blocked` and posts a milestone report.
 
