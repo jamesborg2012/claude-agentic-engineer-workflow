@@ -38,6 +38,7 @@ Prove the plugin works on real GitHub with real runs, fix whatever breaks, and r
    | S8 | `prompt` on a fresh issue | Paste `prompt.md` into a new session **without** the plugin (`claude --bare` or a plugin-less profile). It should be self-sufficient enough to plan and complete at least the first work package. |
    | S9 (optional) | Only if Docker is available: a minimal WooCommerce extension in a second sandbox, using wp-env | Stack detection gives wordpress + woocommerce. Standards docs are generated. A small issue ships. |
 
+   For every PR in S1–S6 (and the init PR), also check that it opens with the `## In plain English` introduction, that I could understand the run from it alone, and that it matches what actually happened. A generic or inaccurate introduction counts as a failure, even if `check-pr-intro.sh` passes.
 5. **Record results.** After each scenario, add to `tests/e2e-validation.md`:
    - pass/fail for each expectation;
    - review and fix cycles used;

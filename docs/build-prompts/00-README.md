@@ -1,6 +1,6 @@
 # Build prompts — how to use
 
-These seven prompts build the plugin described in `docs/DESIGN.md`, in order. Each one builds on the committed output of the previous one.
+These prompts build the plugin described in `docs/DESIGN.md`, in order. Each one builds on the committed output of the previous one.
 
 | # | Prompt | Builds |
 |---|---|---|
@@ -9,6 +9,7 @@ These seven prompts build the plugin described in `docs/DESIGN.md`, in order. Ea
 | 03 | `03-planning-agents.md` | Stack detection, standards system and seeds, spec-analyser, brief-compiler, standards-setter, senior-engineer |
 | 04 | `04-build-agents.md` | developer, qa-engineer, doc-writer, ui-qa and claude-md-curation skills, Playwright MCP |
 | 05 | `05-orchestrator.md` | init, ship, resume, status, prompt skills |
+| 05b | `05b-plain-english-pr-intro.md` | Plain-English introduction at the top of every PR, plus a check that enforces it |
 | 06 | `06-milestone-mode.md` | ship-milestone (bulk and sequential) |
 | 07 | `07-e2e-validation.md` | Real GitHub sandbox runs, fixes, README, 0.1.0 release |
 
