@@ -213,3 +213,76 @@ A missing tool becomes a warning in the §13 report with an install hint. Nothin
 Put the proposal together in schema key order (`project`, `default_branch`, `stacks`, `commands`, `app`,
 `retro`; commands in schema order) with only these six keys. The optional sections (`ui`, `git`, `gates`,
 `limits`, `evidence`, `claude_md`) keep their schema defaults until someone edits the config.
+
+## 5. Confirm in one question round
+
+Write the detected proposal from §4 to `.aew/runs/init-config.json` with the Write tool first (read the file
+first if it already exists). `.aew/runs/` is ignored since §3, and the snippet below reads this file.
+
+Print the whole proposal. Mark certain values "found in the repo" and inferred values "inferred".
+
+On a re-run (`.aew/config.json` exists), run this next and print what it shows. The existing value is kept and
+never overwritten. Stacks are compared by `(profile, path)`, not by array index, so a newly detected stack is
+reported as an addition.
+
+```sh
+jq -r --slurpfile p .aew/runs/init-config.json '. as $e | $p[0] as $q
+  | ($q | del(.stacks) | paths(scalars) as $x
+     | select(($e | getpath($x)) != null and ($e | getpath($x)) != ($q | getpath($x)))
+     | "\($x | map(tostring) | join(".")): keeping \($e | getpath($x) | tojson), detected \($q | getpath($x) | tojson)"),
+    ($q.stacks[] as $s | ([$e.stacks[] | select(.profile == $s.profile and .path == $s.path)] | first) as $o
+     | if $o == null then "stacks: adding \($s.profile) at \($s.path) (\($s.version))"
+       elif $o.version != $s.version then "stacks: keeping \($s.profile) at \($s.path) version \($o.version), detected \($s.version)"
+       else empty end)' .aew/config.json
+```
+
+Then ask **one** AskUserQuestion round. It covers only the inferred values that are not already in the existing
+config, plus the Playwright offer when §4 found a UI project and no `@playwright/test`. Each question puts the
+recommended answer first, with its label ending "(recommended)", and offers one or two alternatives. The user
+can always type their own through "Other".
+
+The Playwright question is: "Set up Playwright and axe for UI QA now? This installs `@playwright/test` and
+`@axe-core/playwright` as dev dependencies and downloads Chromium." It recommends **skip**: QA sets Playwright
+up on first use (ui-qa §2), and nothing gets installed without a yes.
+
+If the tool's schema caps questions or options per call, split the round over as many calls as needed. That
+still counts as one round. Nothing to ask means no call. Headless or no answer: use the recommended values
+(Playwright skipped) and list them under "Defaults used" in the §13 report.
+
+Write the final proposal, with the answers or defaults, over `.aew/runs/init-config.json` with the Write tool.
+
+## 6. Write and validate the config
+
+Merge the proposal with any existing config, and say whether the result differs.
+
+```sh
+mkdir -p .aew
+if [ -f .aew/config.json ]; then
+  jq --slurpfile p .aew/runs/init-config.json '. as $e | ($p[0] * $e) | .stacks = $e.stacks + [$p[0].stacks[] | select([.profile, .path] as $k | all($e.stacks[]; [.profile, .path] != $k))]' .aew/config.json > .aew/runs/init-config-merged.json
+else
+  jq . .aew/runs/init-config.json > .aew/runs/init-config-merged.json
+fi
+if [ -f .aew/config.json ] && jq -e --slurpfile m .aew/runs/init-config-merged.json '. == $m[0]' .aew/config.json > /dev/null; then
+  echo "config unchanged"
+else
+  echo "config changed"
+fi
+```
+
+- `$p[0] * $e` is a recursive merge where the existing file wins. Missing fields from the proposal are added,
+  and nothing is removed or duplicated. `stacks` is a union keyed by `(profile, path)`: every existing entry is
+  kept as it is (its version included), and a newly detected stack is appended. Running the merge on its own
+  output gives the same result.
+- `==` compares JSON values, not text, so a hand-formatted config that already holds every value counts as
+  unchanged and is never rewritten.
+- `jq .` output (two-space indent, the proposal's key order) is the stable format.
+
+Run the next snippet only on "config changed". It validates the scratch copy and only then replaces the live
+file.
+
+```sh
+npx --yes -p ajv-cli@5 -p ajv-formats@3 ajv validate --spec=draft2020 -c ajv-formats -s "${CLAUDE_PLUGIN_ROOT}/templates/config.schema.json" -d .aew/runs/init-config-merged.json && cp .aew/runs/init-config-merged.json .aew/config.json && echo "config written"
+```
+
+An invalid result stops init before §7 and quotes ajv's errors. The live `.aew/config.json` is untouched,
+because only the scratch copy was validated.
