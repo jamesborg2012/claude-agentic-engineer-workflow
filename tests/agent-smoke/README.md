@@ -1010,18 +1010,53 @@ G1 3, S1 25, run F1 2, R2 10, which is 56 in total and leaves 4 for a re-probe o
   reservation). Every lane shares it, because the launcher finds it beside itself, outside any worktree. Task F8 fills
   the table below from it; nothing else writes the table.
 
+Rendered by Task F8 from `$SMOKE/ledger-05/*.tsv`, one row per session in start-time order, so the running total is
+what the launcher saw at each reservation. RULES.1 and RULES.2 are the permission probes of 9.9 (Task RW4), paid
+from the 4 left over.
+
 | run | attempt | cap (USD) | cost (USD) | running total | cap raised? |
 |---|---|---|---|---|---|
-| P0a | pending | 0.50 | pending | pending | pending |
-| P0b | pending | 0.50 | pending | pending | pending |
-| P1 | pending | 1 | pending | pending | pending |
-| G2 | pending | 8 | pending | pending | pending |
-| I1 | pending | 3 | pending | pending | pending |
-| I2 | pending | 3 | pending | pending | pending |
-| G1 | pending | 3 | pending | pending | pending |
-| S1 | pending | 25 | pending | pending | pending |
-| run F1 | pending | 2 | pending | pending | pending |
-| R2 | pending | 10 | pending | pending | pending |
+| P0a | P0a.1 | 0.50 | 0.0092 | 0.0092 | no |
+| P0b | P0b.1 | 0.50 | 0.2333 | 0.2425 | no |
+| RULES | RULES.1 | 0.30 | 0.0132 | 0.2557 | no |
+| RULES | RULES.2 | 0.30 | 0.0226 | 0.2783 | no |
+| P0a | P0a.2 | 0.50 | 0.0096 | 0.2879 | no (re-run after the rewrite) |
+| P0b | P0b.2 | 0.50 | 0.2160 | 0.5038 | no (re-run after the rewrite) |
+| P1 | P1.1 | 1 | 0.2086 | 0.7124 | no |
+| G2 | G2.1 | 8 | 1.2173 | 1.9298 | no |
+| I1 | I1.1 | 3 | 0.9736 | 2.9034 | no |
+| G2 | G2.2 | 6.75 | 0.3488 | 3.2522 | no (G2's 8 less G2.1) |
+| G2 | G2.3 | 6.43 | 2.6318 | 5.8840 | no (G2's 8 less G2.1 and G2.2) |
+| I1 | I1.2 | 3 | 0.9362 | 6.8202 | no (re-run after the fix) |
+| I2 | I2.1 | 3 | 0.6379 | 7.4580 | no |
+| G1 | G1.1 | 3 | 1.9678 | 9.4258 | no |
+| S1 | S1.1 | 25 | 4.4236 | 13.8494 | no |
+| run F1 | F1.1 | 2 | 2.0000, cap counted (killed) | 15.8494 | no |
+| R2 | R2.1 | 10 | 10.0000, cap counted (killed) | 25.8494 | no |
+| G1 | G1.2 | 4 | 0.9741 | **26.8236** | yes, 3 to 4 (below the 2x limit of 6) |
+
+Total **$26.82** of the $60 stop (18 sessions; no refusal, no cap hit). The two killed sessions are charged at their
+caps ($12); their real spend is unknown, because a killed `-p` session emits no `result` event.
+
+**Results roll-up (build prompt 05's acceptance criteria).** Every 9.3 to 9.8 row is `pass` except G2 check 7
+(`fail (as written)`, an ordering deviation; `gates.md` now puts the plan path on its own line after the summary,
+`0bc414f`, not re-run live).
+
+| build-prompt AC | evidence |
+|---|---|
+| Static checks: every agent, script, template and reference mentioned exists; every DESIGN §7.3 stage has an entry, an exit and a failure path in `ship` | `tests/scripts/skills.bats`, 18 tests (paths and script names, `aew:<name>`, ship's stage sections and routing rows, citations, frontmatter, test 17 pre-approvable commands, test 18 printed checks) |
+| Static checks: bad arguments give clear messages | `skills.bats` "ship: every bad-argument case has its message"; P1.1 (9.3): the unknown-stage message and usage line verbatim, no tool call |
+| Simulated `--auto` run through PR creation, expected `gh` calls, valid `state.json` with status `done` | S1.1 (9.4): checks 1 to 17 pass, `diff` against `expected_s1 0 0 5` empty, PR 7, `current` cleared |
+| Material-ambiguity fixture stops at the spec gate | G1.2 (9.8), on init's output (#103 with the mock-only AC 5); `--auto` kept the gate |
+| A run without `--auto` stops at the plan gate | G2.3 (9.5) |
+| Kill during `develop`, resume continues from `develop` without redoing earlier stages | F1.1 and R2.1 (9.6): 01 to 05 artefacts byte-identical, one issue fetch in total, the developer re-dispatched once |
+| init on the nextjs-tailwind fixture validates; a second run changes nothing | I1.2 and I2.1 (9.7) |
+
+**Open items (carried to prompt 07).** QA's fix-cycle route and the manual-tests route were not exercised live: in S1
+the developer fixed every planted defect on the first pass (`fix_cycle` 0, S1 check 13), and no `manual-tests.md`
+was written, because the mock-only body puts #201's AC-4 (the confirmation email) out of scope (S1 check 5). The interactive gate answers and refusals, the
+spec-ambiguity, triage, developer-blocked and request-changes routes and the blocked path were not simulated either
+(spec scope); prompt 07 covers them against real GitHub.
 
 ### 9.2 Harness
 
@@ -1632,7 +1667,7 @@ smoke_res "$O"                                                                  
 git -C "$P" log --format=%s main.."$BR"                                                   # 11 developer (#201) commits, QA evidence, docs: … (#201), chore(aew): update agent memory (#201) if memory changed; docs(standards) only if standards changed (record)
 git -C "$P" status --porcelain                                                            # 12 empty
 jq -r '.review_cycle, .fix_cycle' "$RUN/state.json"; ls "$RUN"/08-qa-report-*.md "$RUN"/07-review-*.md   # 13 record; fix_cycle <= 3, review_cycle <= 2
-smoke_main "$O" | grep -E 'tail -n 4 .*06-dev-report'                                     # 14 one per developer report named in ARTEFACTS
+smoke_main "$O" | grep -E "awk 'NF' .*06-dev-report.*tail -n 4"                           # 14 one per developer report named in ARTEFACTS
 smoke_main "$O" | awk -F'\t' '$1 == "Read" && $2 ~ /\.aew\/runs\//'                       # 15 none (auto: no plan gate); record the bounded awk/grep -c/jq reads
 smoke_main "$O" | grep -c 'claude plugin list --json'; smoke_res "$O"                     # 16 1; no superpowers version warning with 7.x (record the line)
 smoke_denials "$O"; git -C "$REPO" status --porcelain                                     # 17 []; this README plus intended fixes
@@ -1657,7 +1692,7 @@ launcher (`$W/out/port-4173.log`); record it.
 | S1 | 11 commits (AC-16) | pass | `main..feat/201-add-to-basket`: `775e2d0 feat(basket): show live count and name basket button (#201)` (developer: `site/app.js`, `site/index.html`, `tests/unit/basket.test.js`); `00e0370 test(e2e): cover add-to-basket status, button name, a11y and layout (#201)` (QA evidence: `docs/qa/201/report.md`, 17 screenshots, `playwright.config.ts`, `tests/e2e/201-add-to-basket.spec.ts`, `tests/e2e/aew.ts`); `e0b1aeb docs: add the issue spec, and update CLAUDE.md (#201)` and `7956602 chore(aew): update agent memory (#201)` (6 files under `.claude/agent-memory/`), both committed by the orchestrator on the main thread with explicit paths (`git add -- …`). No `docs(standards)` commit: `git status --porcelain -- docs/standards` was empty. |
 | S1 | 12 tree clean | pass | `git -C "$P" status --porcelain`: empty, on `feat/201-add-to-basket`. |
 | S1 | 13 loops within limits | pass (no loop exercised) | `review_cycle` 0, `fix_cycle` 0; `07-review-1.md` (approved, no findings) and `08-qa-report-1.md` (11/11 TCs, Playwright 16 passed and 4 planned single-viewport skips, axe clean). The expected QA fix cycle did not happen: the real developer fixed the fixture's planted defects (the live basket count, the basket button's accessible name) in its first pass, so review and QA passed first time, and with AC-4 out of scope there was no manual test. S1 therefore gives no live evidence for the fix-cycle route or the manual-tests route (`gh-issue.sh manual-tests`, the flag). |
-| S1 | 14 per-report return check (AC-6) | pass (check text stale) | The check's `grep -E 'tail -n 4 .*06-dev-report'` prints nothing, because RW1 moved the form to `awk 'NF' <file> \| tail -n 4` (`skills/ship/SKILL.md` line 57, `references/dispatch.md` line 74), so the file name comes before `tail`. The main thread ran exactly one such read per developer report named in ARTEFACTS: `awk 'NF' .aew/runs/201/06-dev-report.md \| tail -n 4` (one report), plus `awk 'NF' .aew/runs/201/08-qa-report-1.md \| tail -n 4` for QA. A matching check is `grep -E "awk 'NF' .*06-dev-report.*tail -n 4"`. |
+| S1 | 14 per-report return check (AC-6) | pass (check text fixed after the run) | The check's original `grep -E 'tail -n 4 .*06-dev-report'` prints nothing, because RW1 moved the form to `awk 'NF' <file> \| tail -n 4` (`skills/ship/SKILL.md` line 57, `references/dispatch.md` line 74), so the file name comes before `tail`. The main thread ran exactly one such read per developer report named in ARTEFACTS: `awk 'NF' .aew/runs/201/06-dev-report.md \| tail -n 4` (one report), plus `awk 'NF' .aew/runs/201/08-qa-report-1.md \| tail -n 4` for QA. Task F8 put the matching check, `grep -E "awk 'NF' .*06-dev-report.*tail -n 4"`, in the block above; on S1.1's stream it prints that one line. |
 | S1 | 15 reads hygiene (AC-19) | pass | No main-thread Read under `.aew/runs/` (the only Reads are the plugin's `preflight.md`, `dispatch.md`, `routing.md`, `gates.md`, `pr.md` and `final-report.md`). Bounded reads, all Bash: `jq -r .state`, `jq -r .title`, the slug `jq` and the `.url` repo and PR `jq`s on `issue.json`; `jq '.changes \| length' spec-changes.json`; the `spec-ambiguity` history `jq` and the final `jq -r '.title, .pr, .stage, .review_cycle, .fix_cycle'` on `state.json`; the two `awk 'NF' … \| tail -n 4`; `grep -c '^- \[ \]' manual-tests.md` (file absent, exit 2, treated as 0 as `pr.md` says); two `grep -c` AC counts on `10-summary.md`; every existence check printed `yes`/`no` or `exists`/`absent`. |
 | S1 | 16 superpowers check | pass | `claude plugin list --json` count 1 (`… \| jq -r '.[] \| select(.id == "superpowers@claude-plugins-official") \| .version'`: `7.0.0`); no superpowers warning in the result. |
 | S1 | 17 denials, repo status | pass | `smoke_denials` `[]`; no `Permission for this tool use was denied` text in the stream. Launcher exit 0, `audit clean (128 Bash commands)` (MCP audit included), no `audit.txt`, `git-guard.txt`, `repo-head.txt` or `ghcfg.txt`; port 4173 free after (QA stopped its own server; no `port-4173.log`). Plugin repo HEAD `0bc414f` before and after; `git -C "$REPO" status --porcelain` only ` M tests/agent-smoke/README.md`. Writes only under `$P` (`.aew/runs/201/`, `.claude/agent-memory/`, `CLAUDE.md`, `docs/specs/`, `site/`, `tests/`, `playwright.config.ts`). Debug log: eight context7 "takes no tool" warnings and four `[Stall] … outcome=error` lines for expected non-zero exits (`cat .aew/runs/current` with no run, QA's `curl` and `lsof` probes of port 4173 when nothing listened, the absent `manual-tests.md`). |
@@ -2091,3 +2126,18 @@ Cap raises, harness faults, fixes and deviations, newest last.
   `gh` to fail that check in this offline simulation". This paraphrases `skills/ship/references/preflight.md`
   line 34 (the canary sentence) for the user. Harmless, but that sentence is simulation detail in a user-facing
   reference.
+- 2026-10-25 Task F8, roll-up (no paid session): 9.1's table rendered from the 18 ledger files, total $26.82 of the
+  $60 stop. G1.2's cap was raised once, from 3 to 4, below the one-raise limit of 2x (6); G2.2 and G2.3 ran on what
+  was left of G2's 8, so G2 stayed within its cap; F1.1 and R2.1 are charged at their caps (killed). S1 check 14's
+  command now matches RW1's `awk 'NF' <file> | tail -n 4` form (one line on S1.1's stream). G2 check 7 stays
+  `fail (as written)`: `0bc414f` tightened `gates.md` `## Gate: plan-approval` step 3 (the path on its own line after
+  the summary), and no later run reached a plan gate to show it live.
+- 2026-10-25 Task F8, deviations from the spec's run list (CTO cuts 1 to 5): R1 is not simulated (resume's re-ask of
+  a pending gate is checked statically by `skills.bats`); R2 stops at `review` instead of running to the PR; the bad
+  arguments get one paid probe (P1), the rest are static; G1 runs on init's output (the nextjs fixture's #103) rather
+  than on the static shop; run F1's kill condition is stage `develop` plus the `aew:developer` Agent call in the
+  stream, so the kill lands after the dispatch. Fixes made during the runs: `e5a01fb`, `8378c33` and `b3684c1`
+  (printed checks, no pipes in conditions, gitignore counts), `0bc414f` (connector denials, the plan-gate path line),
+  and the RW1 to RW5 rewrite (`af322b5`, `0d4d711`, `b9d2cc3`, `ce2af3e`, `c0789aa`, `dff7d82`, then `8840a5d` and
+  `a1d8273` after review; 9.9 above). Open for prompt 07: 9.1's open items, the P0b.2 status wording, the G1.1
+  budget self-pause, and the canary sentence in `preflight.md`.
