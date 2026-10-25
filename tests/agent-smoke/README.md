@@ -1141,8 +1141,12 @@ smoke_ship_allow() {
   fi
   # 5. denials (a deny beats every allow, so never "Bash(gh *)": it would deny the canary). CTO-3: "//" plus the
   #    absolute path anchors at the filesystem root (/en/permissions), so no file tool or redirect may write the plugin.
+  #    The user-level MCP connectors this machine loads into every session (seen in G2.3's system/init) are denied by
+  #    server name: a session must never reach the user's Notion, Drive, Docs, Gmail, Calendar or Figma. The launcher's
+  #    audit also flags any MCP call outside plugin:aew:playwright and plugin:context7.
   printf '%s\n' --disallowedTools "Bash(git push *)" "Bash(git reset *)" "Bash(git checkout *)" "Bash(git add -A*)" "Bash(git add .)" \
-    "Edit(/$REPO/**)"
+    "Edit(/$REPO/**)" "mcp__notion" "mcp__claude_ai_Claude_Docs" "mcp__claude_ai_Google_Drive" "mcp__claude_ai_Gmail" \
+    "mcp__claude_ai_Google_Calendar" "mcp__claude_ai_Figma"
 }
 ```
 
@@ -1396,6 +1400,11 @@ jq -cR --slurpfile ok "$OKF" --arg real "$REALGH" '
      + (if ($c | gsub("claude plugin list --json(?=\\s*($|[|;&)]))"; "") | test("(^|[^A-Za-z0-9_.-])claude(\\s|$)"))
         then ["claude command"] else [] end)) as $hits
   | select($hits | length > 0) | {thread: $t, hits: $hits, command: $c}' "$O/stream.jsonl" > "$O/audit.txt"
+# any MCP call outside the plugin's own servers (the user's connectors are denied, this catches a new one)
+jq -cR 'fromjson? | select(.type == "assistant") | (.parent_tool_use_id // "main") as $t
+  | .message.content[]? | select(.type == "tool_use") | .name as $n
+  | select(($n | startswith("mcp__")) and ($n | test("^mcp__plugin_(aew_playwright|context7_context7)__") | not))
+  | {thread: $t, hits: ["mcp tool"], command: $n}' "$O/stream.jsonl" >> "$O/audit.txt"
 if [ -s "$O/audit.txt" ]; then
   echo "ship-run: AUDIT HIT: $(wc -l < "$O/audit.txt" | tr -d ' ') Bash command(s) in $O/audit.txt" >&2; echo "AUDIT HIT"; fail=1
 else

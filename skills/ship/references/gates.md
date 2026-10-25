@@ -84,7 +84,7 @@ Entered from `SKILL.md` `## Stage: plan` step 5 when `auto` is false and the pla
 
 1. Set pending: `state.sh status awaiting_plan_approval --note "gate:plan-approval 05-plan.md"`, then `gh-labels.sh stage <n> awaiting-approval`.
 2. Read `05-plan.md` in full (the only full read).
-3. Write a summary of 25 lines or fewer: the headline approach, the work packages (and which run in parallel), the challenges resolved, the risks, and whether every AC is mapped. Then print the path `.aew/runs/<id>/05-plan.md`. Ask one question, `Approve the plan for #<n>?`, with the options `Approve`, `Request changes` and `Stop`. Free text counts as Request changes, with the text as the notes. `Request changes` without text gets one follow-up question for the notes (answered through "Other"). If nothing comes back, the gate stays pending (`SKILL.md` `## Gate pending`).
+3. Write a summary of 25 lines or fewer: the headline approach, the work packages (and which run in parallel), the challenges resolved, the risks, and whether every AC is mapped. Then, on its own line after the summary (not in its heading), print the path `.aew/runs/<id>/05-plan.md`. Ask one question, `Approve the plan for #<n>?`, with the options `Approve`, `Request changes` and `Stop`. Free text counts as Request changes, with the text as the notes. `Request changes` without text gets one follow-up question for the notes (answered through "Other"). If nothing comes back, the gate stays pending (`SKILL.md` `## Gate pending`).
 4. Apply:
    - Approve: go to `SKILL.md` `## Stage: develop`.
    - Request changes: go to `SKILL.md` `## Stage: plan` with the note `plan revision: request changes` and `notes:` set to the answer (dispatch row D7 only; QA phase A is not re-run). Then return to this gate.
