@@ -3616,3 +3616,60 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Plan content hash (SHA-256, the document above this section): c798b7baa8f0f2e72770e25bd974a383204b28e4e6d0e35ba927e22913fb8b77
 - Human (developer): APPROVED on 2026-10-25T07:36:19Z (with decision: plugin-script rules in gitignored `.claude/settings.local.json`; micro-revision senior-approved)
 - Plan content hash at approval: c798b7baa8f0f2e72770e25bd974a383204b28e4e6d0e35ba927e22913fb8b77
+
+---
+
+## Amendments after approval (2026-10-25)
+
+Recorded after the human approval above. This section sits below the approval trailer, so it is outside both
+content hashes (`c798b7ba…8b77` covers only the document above the consolidated `## Approval`); neither hash is
+recomputed and no approved text above is edited. Where an amendment and the approved text disagree, the amendment
+wins for the tasks still to run.
+
+1. **P0.1 finding (Task F2, P0 BLOCKED).** Under `--permission-mode acceptEdits --permission-prompts none`, Claude
+   Code denies some Bash forms in a pre-check before any allow rule is consulted: a `$VAR` expansion, a `"$(…)"` or
+   backtick substitution, `jq --arg` before the filter (the filter is then path-checked) and jq's file-reading
+   flags. P0a steps 4 and 7 and P0b's status listing were denied that way; interactively each such command prompts
+   every time. The probes RULES.1 and RULES.2 mapped the forms. **James's decision:** rewrite the skills inline so
+   every Bash command is pre-approvable headless; no new scripts. Done in RW1 (ship), RW2 (resume, status,
+   prompt), RW3 (init), RW4 (harness) and RW5 (reconciliation and the static guard).
+2. **Rules H1 to H8, M1, M2** (the Rewrite guide; DESIGN §3 records them in Task F8, which is then the reference):
+   H1 no shell parameter expansion outside single quotes (`${CLAUDE_PLUGIN_ROOT}` and `$ARGUMENTS` are
+   substituted at load); H2 no `$(…)` or backticks; H3 jq `--arg`/`--argjson` after the filter; H4 `--arg` values
+   plain tokens; H5 no jq `--slurpfile`, `--rawfile`, `-f`, `-L`, `system(`, `include`, `import`; H6 heredoc
+   delimiters quoted; H7 no brace expansion; H8 no awk `system(`, `| "cmd"`, `| getline`, `@load`/`@include`; M1 no
+   `VAR=value cmd` prefix; M2 every leading form either runs without a rule or has one in init's templates. An
+   exact allow rule beats the variable check but not the jq checks. `tests/scripts/skills.bats` test 17 ("every
+   skill command is pre-approvable headless") enforces H1 to H8 and M1 over the five entry `SKILL.md` files and
+   `skills/ship/references/*.md`; M2 is checked per lane against the allow files (README §9.2).
+3. **init's templates (D-C4, D5, AC-31 row).** Template 1 (`.claude/settings.local.json`) keeps 8 rules. Template
+   2 (`.claude/settings.json`) has 19: RW3 added `git rev-parse *`, `git check-ignore *`, the exact `git
+   symbolic-ref --quiet --short refs/remotes/origin/HEAD`, `git ls-remote --symref origin HEAD` and `git restore --
+   .claude/agent-memory/aew-standards-setter/`, `command -v *`, `echo *` and `printf *`; RW5 removed `git rev-list
+   --left-right *` (Check 4 now uses two auto-allowed `git rev-list --count` calls, and init never ran it). The D2
+   fixture proposal is therefore **25 portable** rules (19 + the 6 config rules) and **8 local**, where D-C4, D5's
+   reference list and GREEN, and the AC-31 row say 17 and 8; D5's merged-into-fixture allow count is **26** (was
+   18). `test`, `tail -n` and `grep -c` get no rule: the Claude Code 2.1.308 bundle's read-only tables allow them
+   (`test` and `grep` safe-flag tables, `tail` in the read-only command list), alongside RULES.2's observed `[`,
+   `grep -n`, `tail -c`. `awk`, `node -p` and the `npx … ajv validate` line (its `-c` loads a module) stay
+   deliberately not pre-approved and prompt interactively.
+4. **D1, D4, D6 expected output (RW3's rewrite).** D1: `run 1 1` prints a `command -v` path per found tool (a
+   missing tool prints nothing) and the `node --version` line, instead of `ok …` / `missing …` / `old node …`, and
+   the skill judges them; `run 1 2` prints `git rev-parse --show-toplevel --show-prefix` (an empty prefix line at
+   the root) then `git remote -v`; the diverged-branch case prints the stop line and exits 0 with the branch
+   unchanged (no `exit 1`: the skill stops on the printed line). D4: §9 is two snippets, the first prints `CLAUDE.md
+   section missing` or `present`, the second appends and prints `CLAUDE.md section added`. D6: §11's memory discard
+   and §12's push decision are read by the model from printed output (`git status --porcelain
+   --untracked-files=all`, the untracked memory list removed with literal `rm -f` paths, `unpushed <n>` / `ahead
+   <n>` lines). D6's `$W/pass.sh` is stale: use the scratchpad `rw3-pass.sh`, which runs the split snippets.
+5. **P0a probe (README §9.3, RW4).** Step 4 is `env | grep -E
+   '^(GH_CONFIG_DIR|GH_MOCK_DIR|GH_HOST|GIT_CONFIG_COUNT|GIT_TERMINAL_PROMPT|GIT_SSH_COMMAND)='` (no `$`, no secret
+   printed, no audit hit). Step 7 (`"$(jq …)"`) becomes step 7, `jq -r .project .aew/config.json`, and step 8, a
+   literal double-quoted `state.sh set title "…"`, the form ship step 3.5 now uses; with no run, step 8 exits 1 and
+   writes nothing, and the evidence is the absence of a pre-check denial. P0 re-runs as P0a.2 and P0b.2.
+6. **Phase F allowlists and I1 counts.** F1's allowlist text (orchestrator rules list, item 4's init list) is
+   superseded by `smoke_ship_allow` as merged in README §9.2 after RW5: every lane gets the scripts and the shared
+   forms; `ship`/`p0` add ship's forms and the agents' git reads; `init` adds init's forms, the `npx … ajv validate`
+   line included. Allow files: ship 85 lines, p0 90, init 44. I1 check 9 expects the printed proposal to list 25
+   portable and 8 local rules; I1 check 11 still expects `permission_denials` `[]`, which now rests on the init lane
+   covering every init form.
