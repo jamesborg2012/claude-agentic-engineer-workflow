@@ -973,6 +973,10 @@ the explicit allowlist, `--permission-prompts none` and the $60 stop; no session
 records its results in its own subsection, so parallel lanes edit disjoint lines. Never commit transcripts, streams,
 debug logs or anything under `$SMOKE`.
 
+The prompt-05 `$SMOKE` directory (streams, snapshots, the ledger files and the launcher) was deleted on 2026-10-26 at
+James's request. The results and spend recorded below are the surviving record; rebuild the launcher from the
+reference copy in 9.2 before the next paid run.
+
 Real-GitHub rails (every paid session):
 
 1. The `gh` shim is first on `PATH`, with `GH_MOCK_DIR` set (the shim exits 99 without it).
