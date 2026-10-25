@@ -1644,23 +1644,36 @@ launcher (`$W/out/port-4173.log`); record it.
 
 | run | check | result | notes |
 |---|---|---|---|
-| S1 | 1 completed | pending | |
-| S1 | 2 state valid | pending | |
-| S1 | 3 current cleared | pending | |
-| S1 | 4 branch on the bare origin, main untouched | pending | |
-| S1 | 5 final labels | pending | |
-| S1 | 6 `gh` route sequence | pending | |
-| S1 | 7 only the mock was reached | pending | |
-| S1 | 8 QA phase A and plan in one message (AC-7) | pending | |
-| S1 | 9 PR and state | pending | |
-| S1 | 10 final report (AC-17) | pending | |
-| S1 | 11 commits (AC-16) | pending | |
-| S1 | 12 tree clean | pending | |
-| S1 | 13 loops within limits | pending | |
-| S1 | 14 per-report return check (AC-6) | pending | |
-| S1 | 15 reads hygiene (AC-19) | pending | |
-| S1 | 16 superpowers check | pending | |
-| S1 | 17 denials, repo status | pending | |
+| S1 | 1 completed | pass | Attempt S1.1 (cap 25, cost 4.4236, `claude-opus-5-5`, `acceptEdits`, 102 turns, 855 s), fresh project `$SMOKE/ship-s1` with 9.5's mock-only AC-4 body (`4. Out of scope: the order service sends the email.` in `$GHM/issues/201/body`; the fixture's `issue.json` untouched), allow file regenerated from the current helpers (91 lines: G2's 85 plus the six MCP connector denials). Result `success`; `state.json` `pr`, `done`. All ten stages ran once, in order (`log.md`: `spec_analysis`, `brief`, `standards`, `plan`, `develop`, `review`, `qa`, `docs`, `pr` running, then `pr done`; `qa_test_plan` ran as QA phase A beside `plan`). One attempt. |
+| S1 | 2 state valid | pass | `smoke_state_valid`: `… state.json valid`. `spec_revision` 1, `fix_cycle` 0, `review_cycle` 0, `pr` 7, `auto` true. |
+| S1 | 3 current cleared | pass | `cleared`; `.aew/runs/` holds only `201/` (`state.sh current clear` ran after `state.sh status done`). |
+| S1 | 4 branch on the bare origin, main untouched | pass | `feat/201-add-to-basket`: origin and local both `7956602` (pushed by `git-branch.sh push`, the only push). `main`: origin and local both `21dc4c4`, the fixture commit. Origin has only `main` and the feature branch. |
+| S1 | 5 final labels | pass | `$GHM/issues/201/labels` is exactly `aew:ready-for-review`. No `aew:spec-revised` (no revision was recorded: `spec-changes.json` has 0 changes) and no `aew:manual-test-required` (no `manual-tests.md`). |
+| S1 | 6 `gh` route sequence | pass | `s1_flags`: `0 0 5`. `diff <(expected_s1 0 0 5) <(smoke_norm "$GHM/calls.log")`: empty (exit 0). Routes: `auth-status`, `issue-fetch`, `issue-edit +aew:analysing`, `+aew:planning`, `+aew:building`, `+aew:testing`, `+aew:documenting`, `pr-create`, `retro-label-create`, `retro-list`, five `retro-create`, `+aew:ready-for-review`. The standards, plan and review `gh-labels.sh stage` calls were no-ops (a label read only). |
+| S1 | 7 only the mock was reached | pass | The only `gh` command on any thread is `gh auth status` (main thread, once). `--repo` calls outside `acme/aew-retro`: 0. `$W/ghcfg` empty. `system/init` tools: no `mcp__notion__*` and no `mcp__claude_ai_*` tool (the servers `notion`, `claude.ai Claude Docs`, `… Google Drive`, `… Gmail`, `… Google Calendar`, `… Figma` are still listed in `mcp_servers`, but their tools are removed by the denials); the MCP tools present are the plugin's Playwright set (context7 `needs-auth`, no tools). MCP calls on any thread: Playwright only (11: navigate 2, snapshot 2, press_key 3, resize 2, console_messages 1, close 1). |
+| S1 | 8 QA phase A and plan in one message (AC-7) | pass | `smoke_pair` 1. Message `msg_011CgPTGbp8RJNWUY8DV4dn7` holds `aew:qa-engineer` (`toolu_01KRvZmTZydgKeGzQAt1TbNP`, `run_dir: .aew/runs/201` / `phase: A`) and `aew:senior-engineer` (`toolu_01UmFThhB7uNTwEMWccpcJ4A`, `mode: plan`). They overlapped: both `tool_use` blocks at stream lines 350 and 353, both `tool_result`s after them (448, 488). Every other dispatch had a message of its own (spec-analyser `spec_version: 2`, brief-compiler `mode: pipeline`, standards-setter, developer `mode: full`, senior-engineer `mode: review` / `n: 1` / `base: main`, qa-engineer `phase: B` / `n: 1`, doc-writer). |
+| S1 | 9 PR and state | pass | `jq -r .pr`: `7`. `gh-pr.sh create 201 .aew/runs/201/pr-body.md` was call 16 (`pr create --head feat/201-add-to-basket --base main --title Add to basket --body-file …`); `grep -c 'Closes #201' "$GHM/files/016-aew-pr."*`: 1. |
+| S1 | 10 final report (AC-17) | pass | Verbatim block: `aew ship #201 Add to basket: done`, `PR: https://github.com/acme/static-shop/pull/7`, `ACs passed: 10/10`, `Review cycles: 0/2`, `Fix cycles: 0/3`, `Manual tests outstanding: 0`, `Retro items filed: 5 (created #1, created #1, created #1, created #1, created #1)`, `Next: review and merge the PR`, then a prose summary. Every `gh-retro.sh` line says `created #1` because the mock's canned `issue-create.out` is one URL (harness, not a defect; the model itself flagged the repeat). The model also warned that the doc-writer removed the fixture's unexpired `Until 2026-11-30 the sale banner copy is frozen …` line (see the S1 notes below). |
+| S1 | 11 commits (AC-16) | pass | `main..feat/201-add-to-basket`: `775e2d0 feat(basket): show live count and name basket button (#201)` (developer: `site/app.js`, `site/index.html`, `tests/unit/basket.test.js`); `00e0370 test(e2e): cover add-to-basket status, button name, a11y and layout (#201)` (QA evidence: `docs/qa/201/report.md`, 17 screenshots, `playwright.config.ts`, `tests/e2e/201-add-to-basket.spec.ts`, `tests/e2e/aew.ts`); `e0b1aeb docs: add the issue spec, and update CLAUDE.md (#201)` and `7956602 chore(aew): update agent memory (#201)` (6 files under `.claude/agent-memory/`), both committed by the orchestrator on the main thread with explicit paths (`git add -- …`). No `docs(standards)` commit: `git status --porcelain -- docs/standards` was empty. |
+| S1 | 12 tree clean | pass | `git -C "$P" status --porcelain`: empty, on `feat/201-add-to-basket`. |
+| S1 | 13 loops within limits | pass (no loop exercised) | `review_cycle` 0, `fix_cycle` 0; `07-review-1.md` (approved, no findings) and `08-qa-report-1.md` (11/11 TCs, Playwright 16 passed and 4 planned single-viewport skips, axe clean). The expected QA fix cycle did not happen: the real developer fixed the fixture's planted defects (the live basket count, the basket button's accessible name) in its first pass, so review and QA passed first time, and with AC-4 out of scope there was no manual test. S1 therefore gives no live evidence for the fix-cycle route or the manual-tests route (`gh-issue.sh manual-tests`, the flag). |
+| S1 | 14 per-report return check (AC-6) | pass (check text stale) | The check's `grep -E 'tail -n 4 .*06-dev-report'` prints nothing, because RW1 moved the form to `awk 'NF' <file> \| tail -n 4` (`skills/ship/SKILL.md` line 57, `references/dispatch.md` line 74), so the file name comes before `tail`. The main thread ran exactly one such read per developer report named in ARTEFACTS: `awk 'NF' .aew/runs/201/06-dev-report.md \| tail -n 4` (one report), plus `awk 'NF' .aew/runs/201/08-qa-report-1.md \| tail -n 4` for QA. A matching check is `grep -E "awk 'NF' .*06-dev-report.*tail -n 4"`. |
+| S1 | 15 reads hygiene (AC-19) | pass | No main-thread Read under `.aew/runs/` (the only Reads are the plugin's `preflight.md`, `dispatch.md`, `routing.md`, `gates.md`, `pr.md` and `final-report.md`). Bounded reads, all Bash: `jq -r .state`, `jq -r .title`, the slug `jq` and the `.url` repo and PR `jq`s on `issue.json`; `jq '.changes \| length' spec-changes.json`; the `spec-ambiguity` history `jq` and the final `jq -r '.title, .pr, .stage, .review_cycle, .fix_cycle'` on `state.json`; the two `awk 'NF' … \| tail -n 4`; `grep -c '^- \[ \]' manual-tests.md` (file absent, exit 2, treated as 0 as `pr.md` says); two `grep -c` AC counts on `10-summary.md`; every existence check printed `yes`/`no` or `exists`/`absent`. |
+| S1 | 16 superpowers check | pass | `claude plugin list --json` count 1 (`… \| jq -r '.[] \| select(.id == "superpowers@claude-plugins-official") \| .version'`: `7.0.0`); no superpowers warning in the result. |
+| S1 | 17 denials, repo status | pass | `smoke_denials` `[]`; no `Permission for this tool use was denied` text in the stream. Launcher exit 0, `audit clean (128 Bash commands)` (MCP audit included), no `audit.txt`, `git-guard.txt`, `repo-head.txt` or `ghcfg.txt`; port 4173 free after (QA stopped its own server; no `port-4173.log`). Plugin repo HEAD `0bc414f` before and after; `git -C "$REPO" status --porcelain` only ` M tests/agent-smoke/README.md`. Writes only under `$P` (`.aew/runs/201/`, `.claude/agent-memory/`, `CLAUDE.md`, `docs/specs/`, `site/`, `tests/`, `playwright.config.ts`). Debug log: eight context7 "takes no tool" warnings and four `[Stall] … outcome=error` lines for expected non-zero exits (`cat .aew/runs/current` with no run, QA's `curl` and `lsof` probes of port 4173 when nothing listened, the absent `manual-tests.md`). |
+
+S1 notes (Task F3):
+
+- The doc-writer's `CLAUDE.md` curation removed the fixture line `- Until 2026-11-30 the sale banner copy is frozen,
+  so do not edit it.` (`10-summary.md`: "Time-bound, and the banner does not exist in `site/index.html`"). That follows
+  `skills/claude-md-curation/SKILL.md` line 75 ("An entry with a date or an expiry in it is time-bound, so drop" it)
+  and the 951 docs check D2 (8.4), which plants the line to be dropped; but on 2026-10-25 the freeze has not expired,
+  so the rule drops a live constraint. ship's final report raised it as a warning. A design question for the
+  curation rule (drop only an expired date?), not a harness or permission fault; not changed here.
+- The retro (five items, filed to the fake `acme/aew-retro`) repeats G2.3's standards-setter finding ("no stack
+  detected" although `.aew/config.json` declares `web` and `docs/standards/web.md` exists) and reports that the
+  developer's precondition `git status --porcelain` sees the untracked `.claude/agent-memory/` of earlier agents.
+  Both are the agents' own reports, recorded here unverified.
 
 ### 9.5 G2: plan-gate stop
 
@@ -1766,21 +1779,21 @@ expected and harmless (record it).
 
 | run | check | result | notes |
 |---|---|---|---|
-| run F1 | 1 killed by the poller during develop | pending | |
-| run F1 | 2 `--from` recorded, nothing earlier re-entered | pending | |
-| run F1 | 3 auto recorded | pending | |
-| run F1 | 4 tree after the kill | pending | |
-| run F1 | 5 no leftover processes | pending | |
-| R2 | 1 killed at review | pending | |
-| R2 | 2 no earlier stage re-entered | pending | |
-| R2 | 3 01 to 05 artefacts byte-identical | pending | |
-| R2 | 4 one issue fetch in total | pending | |
-| R2 | 5 a valid developer report | pending | |
-| R2 | 6 developer commits on the branch | pending | |
-| R2 | 7 state valid | pending | |
-| R2 | 8 resume reused ship by Read (AC-21) | pending | |
-| R2 | 9 developer re-dispatched once, from develop | pending | |
-| R2 | 10 hygiene | pending | |
+| run F1 | 1 killed by the poller during develop | pass | Attempt F1.1 (cap 2, counted in full as a killed session; `claude-opus-5-5`), in G2.3's project at the plan gate, allow file regenerated from the current helpers (91 lines: G2.3's 85 plus the six user-connector denials). `killed-at` `2026-10-25T18:43:03Z`, 4 s after `state.sh stage develop --note "--from"` (18:42:59Z); session exit 143, no `result` event. One main-thread `Agent` call, `aew:developer` with `run_dir: .aew/runs/201` / `mode: full`; the developer made no tool call before the kill. State `develop`, `running`. Before the dispatch: preflight (Check 2 restart form, Check 3 `gh auth status`, Check 4 `git fetch origin main` and the two `rev-list --count`, Check 5, Check 6), the restart checks (`state.json`, branch, `02-brief.md`, `03-standards.md`, `05-plan.md` present), `state.sh current set 201`, `state.sh set auto true`, the branch already `feat/201-add-to-basket`, then the label and the stage write: the model ran `gh-labels.sh stage 201 building` just before `state.sh stage develop` (SKILL.md `## Stage: develop` step 1 says state first; harmless here, recorded). |
+| run F1 | 2 `--from` recorded, nothing earlier re-entered | pass | `log.md` after G2's 5 lines: exactly one line, `- 2026-10-25T18:42:59Z develop running — --from`. |
+| run F1 | 3 auto recorded | pass | `true` (was `false` at the plan gate; Step 4.3's `state.sh set auto true`). |
+| run F1 | 4 tree after the kill | pass | Only `.claude/agent-memory/` (the same four untracked files as after G2), no commit on the branch (`main..HEAD` empty), so R2 proceeds without the dirty-tree path; 01 to 05 artefacts still match the G2 snapshot. |
+| run F1 | 5 no leftover processes | pass | No `claude` or Playwright MCP process from F1.1 after the kill; the one `@playwright/mcp` process (pid 30925) belongs to S1's parallel session (its parent is S1's `claude -p /aew:ship 201 --auto`, cwd `ship-s1/p`) and was there before F1.1 started. Port 4173 free before and after. Launcher exit 0, `audit clean (20 Bash commands)`, no guard files, plugin repo HEAD `0bc414f` and clean before and after, `$W/ghcfg` empty. `system/init`: `acceptEdits`, AskUserQuestion absent, and the only MCP tools are the 25 `mcp__plugin_aew_playwright__*` ones: the user connectors (`notion`, `claude.ai Claude Docs`, `Figma`, `Google Drive`, `Gmail`, `Google Calendar`) are listed in `mcp_servers` but expose no tool, context7 is `needs-auth`. No denial text in the stream. |
+| R2 | 1 killed at review | pass | Attempt R2.1 (cap 10, counted in full as a killed session; `claude-opus-5-5`), straight after F1.1 with no harness action in between (F1-4 clean, so no dirty-tree stop and no R2.2). `killed-at` `2026-10-25T18:45:06Z`, 1 s after `state.sh stage review` (18:45:05Z), before any review dispatch; session exit 143, no `result` event (about 80 s of session). State `review`, `running`. QA never reached (no `qa`, `docs` or `pr` line in `log.md`). |
+| R2 | 2 no earlier stage re-entered | pass | `0`. `log.md` after G2's 5 lines: F1's `develop running — --from`, then `develop running — resume` (18:44:07Z) and `review running` (18:45:05Z). |
+| R2 | 3 01 to 05 artefacts byte-identical | pass | `shasum -c` against `g2-artefacts.sha`: all eight lines `OK` (`00-issue-original.md`, `issue.json`, `01-spec-analysis.md`, `spec-final.md`, `02-brief.md`, `03-standards.md`, `04-qa-test-plan.md`, `05-plan.md`). |
+| R2 | 4 one issue fetch in total | pass | `1` (G2.3's fetch). F1.1 and R2.1 added only `auth status`, label reads and `issue edit 201 --add-label aew:building --remove-label aew:awaiting-approval` (F1.1; R2.1's `building` was a no-op). |
+| R2 | 5 a valid developer report | pass | `06-dev-report.md`: `valid_return_block` `ok`, `## ` headings equal `templates/artefacts/dev-report.md`'s, `Mode: full`, NEXT `senior-engineer review`, `node --test` pass (2 tests). No `06-dev-report-WP*.md`: WP-1 ran sequentially, no fan-out. Deviations it records: the untracked `.claude/` at start, no red run (the new test covers existing behaviour), and no browser check of the plan's viewport mitigation (the developer has no browser tool; left to QA). SubagentStop gate: exit 0, `success`. Ship's return check was `awk 'NF' … \| tail -n 4` on the report. |
+| R2 | 6 developer commits on the branch | pass | `main..HEAD`: one commit, `c2207f1 feat(basket): show live count and name basket button (#201)` (`site/app.js`, `site/index.html`, `tests/unit/basket.test.js`; explicit-path `git add`). |
+| R2 | 7 state valid | pass | `smoke_state_valid`: valid. `auto` `true`, `review_cycle` 0, `fix_cycle` 0, `branch` `feat/201-add-to-basket`. |
+| R2 | 8 resume reused ship by Read (AC-21) | pass | One main-thread Read of `skills/ship/SKILL.md`, then `preflight.md`, `dispatch.md` and `routing.md`; no Skill-tool call on any thread. Resume's checks: Step 1/2 in one compound Bash (`test -f … ; jq … ; jq …`, not denied), Check 1, Check 3 (`gh auth status`), Check 5 (`cat .aew/runs/current`), Check 2 restart form, branch already current, `state.sh current set 201`, then `## Stage: develop` step 1 in order (`state.sh stage develop --note "resume"`, then `gh-labels.sh stage 201 building`), `state.sh get review_cycle` (0, so full mode, D8) and `ls .aew/runs/201` for the required inputs (instead of one `test -f` per file; recorded). |
+| R2 | 9 developer re-dispatched once, from develop | pass | `1`: the only main-thread Agent call is `aew:developer` (`mode: full`). Developer Bash: `git status --porcelain`, `node --test`, `git add …`, `git commit -m …`; no app start, no port-4173 or Playwright command, no MCP call on any thread. |
+| R2 | 10 hygiene | pass | No `result` event, so `smoke_denials` prints nothing; no `Permission for this tool use was denied` text in the stream (0). `$W/ghcfg` empty. Launcher exit 0, `audit clean (18 Bash commands)`, no guard files, plugin repo HEAD `0bc414f` before and after, `git -C "$REPO" status` only this README. `system/init` as in F1.1 (25 `mcp__plugin_aew_playwright__*` tools, no user-connector tool). Project tree after the kill: only the four `.claude/agent-memory/` files. Debug log: the SessionStart resume hint ran as expected and harmless (`Active aew run 201 at stage develop (running). Use /aew:resume.`), plus two context7 "takes no tool" warnings. |
 
 ### 9.7 I1 and I2: init twice
 
