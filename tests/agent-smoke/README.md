@@ -1560,23 +1560,23 @@ strings win (E1 checks them statically). P1 also proves that a `disable-model-in
 
 | run | check | result | notes |
 |---|---|---|---|
-| P0a | 1 `gh` resolves to the shim | pending | |
-| P0a | 2 token variables and `SSH_AUTH_SOCK` absent | pending | |
-| P0a | 3 config dir, mock dir, host, git env | pending | |
-| P0a | 4 origin is the local bare repo | pending | |
-| P0a | 5 the shim answered `gh auth status` | pending | |
-| P0a | 7 `$(jq …)` substitution | pending | |
-| P0a | 8 Write inside `.aew/runs/` | pending | |
-| P0a, P0b | 9 AskUserQuestion absent | pending | |
-| P0b | 10 agent names | pending | |
-| P0b | 11 skills, mode, model | pending | |
-| P0b | 12 `/aew:status` ran in `-p` | pending | |
-| P0a, P0b | 13 no denials | pending | |
-| P0a, P0b | 14 hygiene and launcher safety checks | pending | |
-| P1 | 1 unknown-stage message, stage list, usage line | pending | |
-| P1 | 2 no run dir, no `current` | pending | |
-| P1 | 3 no `gh` call, no script call | pending | |
-| P1 | 4 hygiene | pending | |
+| P0a | 1 `gh` resolves to the shim | pass | Attempt P0a.1 (haiku, `claude-haiku-5-5`), cost 0.0092. `command -v gh`: `$REPO/tests/scripts/helpers/bin/gh`. `type -a gh`: `gh is $REPO/tests/scripts/helpers/bin/gh`, then `gh is /opt/homebrew/bin/gh` (the real `gh`, second). |
+| P0a | 2 token variables and `SSH_AUTH_SOCK` absent | pass | Step 3: `(Bash completed with no output)`, `is_error` false. Claude Code does not report grep's no-match exit 1 as an error, so the exit status is not visible; the empty output is the evidence. |
+| P0a | 3 config dir, mock dir, host, git env | **fail** | Step 4 was denied, never run: `Permission for this tool use was denied. … What required approval: A variable in this command can't be checked before it runs`. `Bash(echo *)` does not cover a command with a `$VAR` expansion under `--permission-prompts none`. Inside the session only `GH_MOCK_DIR` is proven, indirectly (the shim, which exits 99 without it, appended to `$W/gh/calls.log`); the other five values are proven only by 9.2's `--env-check`, outside the session. Harness fault in the probe text (9.9). Paid runs stop. |
+| P0a | 4 origin is the local bare repo | pass | Step 5: `$SMOKE/ship-p0/origin.git` (the `/var` form). |
+| P0a | 5 the shim answered `gh auth status` | pass | Step 6: `(Bash completed with no output)`. `$GHM/calls.log` is exactly one line, `auth status`. |
+| P0a | 7 `$(jq …)` substitution | **fail** | Step 7 was denied, never run: `… What required approval: Quoted text in this command can't be checked before it runs`. So a `"$(…)"` command substitution is denied headless (and prompts interactively), whatever the allow rules; it bears on `skills/ship/SKILL.md` line 129 and `skills/init/SKILL.md` (9.9). |
+| P0a | 8 Write inside `.aew/runs/` | pass | `cat "$P/.aew/runs/p0-write.md"`: `probe`. The Write call went to the `/private/var` path, with no denial and no hook block. |
+| P0a, P0b | 9 AskUserQuestion absent | pass | `.tools \| index("AskUserQuestion")`: `null`, `null`. |
+| P0b | 10 agent names | pass | Attempt P0b.1, cost 0.2333. `system/init` `.agents`: `aew:brief-compiler`, `aew:developer`, `aew:doc-writer`, `aew:qa-engineer`, `aew:senior-engineer`, `aew:spec-analyser`, `aew:standards-setter`, plus the built-ins `claude`, `Explore`, `general-purpose`, `Plan`, `statusline-setup`. The same list in P0a. |
+| P0b | 11 skills, mode, model | pass | `aew:init`, `aew:prompt`, `aew:resume`, `aew:ship`, `aew:status`; `acceptEdits`; model `claude-opus-5-5` (P0a: `acceptEdits`, `claude-haiku-5-5`). |
+| P0b | 12 `/aew:status` ran in `-p` | **fail** (partial) | The skill expanded in `-p` and the result is `No aew runs in this project.`; no write; `calls.log` still one line. But the listing read (`skills/status/SKILL.md` line 32, `jq … .aew/runs/*/state.json`) was denied: `… What required approval: Shell expansion syntax in paths requires manual approval`. The model then ran `ls .aew/runs`, which the skill does not name. With a run present, status could not list it headless (9.9). |
+| P0a, P0b | 13 no denials | **fail** | P0a: 2 (steps 4 and 7). P0b: 1 (the status listing `jq`). |
+| P0a, P0b | 14 hygiene and launcher safety checks | pass | Both sessions: launcher exit 0, `audit clean` (7 and 3 Bash commands), no `git-guard.txt`, `repo-head.txt` or `ghcfg.txt`. After each: `ls -A "$W/ghcfg"` empty; `git -C "$REPO" status --porcelain` empty; HEAD `73c43cc` unchanged. The `Edit(//<repo>/**)` deny loaded with no startup warning: `stderr.txt` empty, and the debug log's only `[WARN]` lines are seven `Bash(git -C * …)` wildcard-position warnings and one `[Stall]` line for `cat .aew/runs/current` (exit 1). |
+| P1 | 1 unknown-stage message, stage list, usage line | open | Not run: P0 check 3 failed, so paid runs stop until P0 passes on a re-run. |
+| P1 | 2 no run dir, no `current` | open | Not run (as above). |
+| P1 | 3 no `gh` call, no script call | open | Not run (as above). |
+| P1 | 4 hygiene | open | Not run (as above). |
 
 ### 9.4 S1: `/aew:ship 201 --auto` to a mocked PR
 
@@ -1907,3 +1907,20 @@ Cap raises, harness faults, fixes and deviations, newest last.
   P0b confirm it loads without a startup warning. The git guard hashes the shared `config` of the plugin checkout, so
   nothing in `$REPO` (or any of its worktrees) may change git config while a session runs (for example
   `git branch -u` or `git config`); a mismatch is still a P0 failure until classified.
+- 2026-10-25 Task F2, P0 BLOCKED (P0a.1 0.0092, P0b.1 0.2333; P1 not run). Platform fact: with
+  `--permission-prompts none`, Claude Code denies a Bash command before matching the allow rules when it holds a
+  `$VAR` expansion (`A variable in this command can't be checked before it runs`), a `"$(…)"` substitution (`Quoted
+  text in this command can't be checked before it runs`) or a glob in a path argument (`Shell expansion syntax in
+  paths requires manual approval`); interactively each one prompts. Harness fault: P0a steps 4 and 7 are denied, so
+  check 3 is unproven inside the session; a re-probe needs step 4 without `$` (for example `env | grep -E
+  '^(GH_CONFIG_DIR|GH_MOCK_DIR|GH_HOST|GIT_CONFIG_COUNT|GIT_TERMINAL_PROMPT|GIT_SSH_COMMAND)='`, none of them a secret,
+  checked against the audit patterns first) and a decision on step 7, then a full P0 re-run as P0a.2 and P0b.2.
+- 2026-10-25 Task F2, skill defects exposed (not fixed here, reported to the fix loop): `skills/status/SKILL.md`
+  line 32 (the listing `jq … .aew/runs/*/state.json`, denied in P0b.1) and line 40 (the fallback `for f in
+  .aew/runs/*/state.json; do … "$f" …`); `skills/ship/SKILL.md` line 129 (step 3.5, `state.sh set title "$(jq -r
+  .title …)"`, the form P0a step 7 shows is denied); `skills/init/SKILL.md` lines 134, 303, 410, 446 and 447 (`"$(…)"`
+  and `$var` in `if` tests). Each would be denied in every headless session and prompt in every interactive one.
+- 2026-10-25 Task F2, warnings: every session's debug log carries seven `[WARN] [permissions]` lines, one per
+  `Bash(git -C * <sub> *)` allow rule (a wildcard before the subcommand also approves options such as `-c`). These
+  are the harness-only developer rules of 961; they are not a startup error and the `Edit(//<repo>/**)` deny loads
+  without one.
