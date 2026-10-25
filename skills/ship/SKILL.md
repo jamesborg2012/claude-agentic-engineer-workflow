@@ -21,7 +21,7 @@ The plugin root is `${CLAUDE_PLUGIN_ROOT}`.
 ## Rules
 
 - Run every command from the project root and never `cd`.
-- Write each command so it can be pre-approved before it runs: one plain command per call, no `$VAR`, `$?` or `$(…)`, no backticks, no `VAR=x cmd` prefix, no brace expansion and no heredoc. A value one command prints and the next one needs is read first, then written into the next command as a literal. Free text in a double-quoted argument (a title, a `--note`, a commit message) has `"`, `$`, backtick and `\` escaped with a backslash. `jq` puts every `--arg name value` after the filter, with a plain-token value (a number or a run id), and reads several files with `-s`, never `--slurpfile`.
+- Write each command so it can be pre-approved before it runs: one command (or the pipeline given) per call, no `$VAR`, `$?` or `$(…)`, no backticks, no `VAR=x cmd` prefix, no brace expansion and no heredoc. A value one command prints and the next one needs is read first, then written into the next command as a literal. Free text in a double-quoted argument (a title, a `--note`, a commit message) has `"`, `$`, backtick and `\` escaped with a backslash. `jq` puts every `--arg name value` after the filter, with a plain-token value (a number or a run id), and reads several files with `-s`, never `--slurpfile`.
 - Never run `gh` except `gh auth status` in preflight.
 - Never run git's push, merge, rebase, reset or force forms. Push only with `git-branch.sh push`.
 - Stage explicit paths only (`git add -- <paths>`), never `-A` or `.`.
