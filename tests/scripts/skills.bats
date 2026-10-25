@@ -82,7 +82,8 @@ headings_equal() {
   fi
 }
 
-# preapprovable_offenders <root> <file>…: one line per Rewrite-guide finding (H1-H8, M1) in the Bash commands
+# preapprovable_offenders <root> <file>…: one line per Rewrite-guide finding (H1-H8, M1), pipe in a condition
+# (C1) or silent check (S1) in the Bash commands
 # the files tell Claude to run: fenced sh/bash blocks (quoted-heredoc bodies skipped) and inline code spans whose
 # first word is a command word or a plugin script. Single-quoted text is ignored, ${CLAUDE_PLUGIN_ROOT} and
 # $ARGUMENTS are substituted before Claude sees the text, and prose spans such as `$ARGUMENTS` are not commands.
@@ -147,6 +148,23 @@ preapprovable_offenders() {
       n = segs(s, a)
       for (i = 1; i <= n; i++)
         if (a[i] ~ /^[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+[^[:space:]]/) flag("M1 VAR=value prefix")
+      # C1: the checker splits a compound at a pipe in its condition and asks for the broken parts (I1.1).
+      t = s; gsub(/"[^"]*"/, "\"\"", t); gsub(/\\\|/, "|", t); gsub(/\|\|/, " OR ", t)
+      while (match(t, /(^|[^A-Za-z0-9_])(if|elif|while|until)[[:space:]]/)) {
+        t = substr(t, RSTART + RLENGTH); p = t
+        if (match(p, /(^|[^A-Za-z0-9_])(then|do)([^A-Za-z0-9_]|$)/)) p = substr(p, 1, RSTART)
+        if (p ~ /\|/) flag("C1 pipe inside an if or while condition")
+      }
+      # S1: a false test, grep -q or git --quiet check returns no output and no error to Claude (G2.2), so
+      # each check line prints its outcome, unless it follows a printed message (a deliberate stop).
+      nt = split(cmd, toks, "\n"); p = ""
+      for (j = 1; j <= nt; j++) {
+        t = trim(stripsq(toks[j])); sub(/^!?[[:space:]]*/, "", t)
+        if (t == "" || t ~ /^#/) continue
+        if ((t ~ /^(test|\[)[[:space:]]/ || (t !~ /&&|\|\|/ && t ~ /^(grep[[:space:]]+-[A-Za-z]*q|git[[:space:]]+(merge-base[[:space:]]+--is-ancestor|diff[[:space:]]+(.*[[:space:]])?--quiet))/)) &&
+            t !~ /(&&|\|\|)[[:space:]]*(echo|printf)([[:space:]]|$)/ && p !~ /^(echo|printf)[[:space:]]/) flag("S1 silent check: print its outcome")
+        p = t
+      }
     }
     FNR == 1 { fence = 0; sh = 0; hd = ""; rel = FILENAME; sub("^" root, "", rel) }
     /^[ \t]*```/ {
@@ -504,6 +522,16 @@ git-branch.sh')"
     [ -f "$f" ] && files+=("$f")
   done
   [ "${#files[@]}" -ge 11 ] || { printf 'only %s skill files found\n' "${#files[@]}" >&2; return 1; }
-  bad=$(preapprovable_offenders "$REPO_ROOT" "${files[@]}")
-  report_offenders "pre-approvable commands (Rewrite guide H1-H8, M1)" "$bad"
+  bad=$(preapprovable_offenders "$REPO_ROOT" "${files[@]}" | grep -v ': S1 ' || true)
+  report_offenders "pre-approvable commands (Rewrite guide H1-H8, M1; C1 pipe in a condition)" "$bad"
+}
+
+@test "every existence or condition check prints its outcome" {
+  local f files=() bad n=0
+  for f in "$REPO_ROOT"/skills/{init,ship,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md; do
+    [ -f "$f" ] && files+=("$f") && n=$((n + $(grep -cE '(test|\[) [^`]*&& echo [a-z]+ \\?\|\\?\| echo [a-z]+' "$f" || true)))
+  done
+  [ "$n" -ge 10 ] || { printf 'only %s printed checks found\n' "$n" >&2; return 1; }
+  bad=$(preapprovable_offenders "$REPO_ROOT" "${files[@]}" | grep ': S1 ' || true)
+  report_offenders "silent checks (S1)" "$bad"
 }
