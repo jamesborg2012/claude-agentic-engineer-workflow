@@ -2820,6 +2820,41 @@ would very likely block again the same way.
 Spend: Q3.1 5.074982 of cap 12. Ledger running total 22.992896 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647, Q3.1
 5.074982, on top of 10.4's 11.878700). No Q result yet shows a stacked PR introduction.
 
+#### Q3.2 (after the qa-engineer fix, 49debc8)
+
+49debc8 (`agents/qa-engineer.md`: ARTEFACTS lists files only, never a directory) fixed Q3.1's defect; suite green at 371,
+CTO-1 guard clean. James approved one attempt at cap 12. `project q` exactly as Q3.1 left it (`m-3` `blocked`; index 311
+done, 312 blocked, 313 pending; `feat/313-stock-filter-toggle` still in place; nothing reset). Restart: the `Next:` the
+milestone report printed, `/aew:resume m-3`, cap 12, no kill. Launcher exit 0, `audit clean (140 Bash commands)`, cost
+2.918497, result `success` (133 turns). **Q3.2 ran to the planned stop**: #312 shipped as a stacked PR and #313 hit the
+forced block.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q3.2 | 1 resume of a blocked milestone, #312 continued (AC-28) | pass | Reads: `ship/SKILL.md`, `preflight.md`, `ship-milestone/SKILL.md`, `sequential.md`, `dispatch.md`, `routing.md`, `pr.md`, `final-report.md`; no Skill call. #312 resumed at `qa` (labels `testing, documenting, ready-for-review`), no earlier stage re-entered. |
+| Q3.2 | 2 #312 QA, docs, pr | pass | QA returned valid (13 of 13, axe clean); commits `test(e2e): refresh notebook out-of-stock QA report (#312)`, `docs: add the issue spec, and update CLAUDE.md (#312)`, `chore(aew): update agent memory (#312)`; `312/state.json` `done`, pr `8`, base `feat/311-stock-labels`. |
+| Q3.2 | 3 stacked PR base | pass | `pr create --head feat/312-notebook-out-of-stock --base feat/311-stock-labels`: 1 (and #311's `--base main`: 1 in all); `merge-base --is-ancestor` true. |
+| Q3.2 | 4 introduction (AC-34) | pass | Names "the PR for issue #311" and "must be merged after it" (grep `#311\|after`: 2); `check-pr-intro.sh <body> --issues 1`: no output, `exit 0`. Quote below. |
+| Q3.2 | 5 #313 forced block | pass | `313`: `blocked`, note "git-branch.sh create failed: branch already exists: feat/313-stock-filter-toggle"; labels `aew:analysing aew:blocked`; 0 agent dispatches for `runs/313`. |
+| Q3.2 | 6 index, parent, current | pass | `311:done 312:done 313:blocked`; `m-3` `blocked`, "child #313 blocked: …"; `current` `m-3`. |
+| Q3.2 | 7 milestone report comments and final report | pass | `issue comment … milestone-report.md` on 311, 312, 313: 6 (3 from Q3.1's block, 3 now). The report: #311 shipped PR 7, #312 shipped PR 8, #313 blocked with the reason; `Mode: sequential`, `Not started: none`, `Next: Resume with /aew:resume m-3`. |
+| Q3.2 | 8 state valid | pass | `m-3`, 311, 312, 313 all valid. |
+| Q3.2 | 9 hygiene | partial | `smoke_denials` lists 2 denials (expected `[]`): a `curl localhost:4173` probe and a `for f in … do test -f` loop over 312's artefacts (QA's file check, the model then ran individual commands; both harmless). `ghcfg` empty; plugin repo clean; project tree clean; port 4173 free. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Finding (plugin gap, not fixed here): #313's branch was never recorded in its state, because `git-branch.sh create` failed
+before the branch field was set. The `Next: /aew:resume m-3` the report prints then stops on "Run 313 has no branch" and
+points at `/aew:ship 313 --from spec_analysis`, which would create the branch from `main`, not on #312's, losing the
+stack. Worth a look at `sequential.md` `## Resume` for a blocked child that never got a branch.
+
+PR #8's introduction (the second paragraph on, verbatim):
+
+    Issue #312 asked for the Notebook to be shown as out of stock, because it cannot currently be bought. Shoppers now see "Out of stock" under the Notebook's price instead of "In stock". Its "Add to basket" button is greyed out, shows a "not allowed" mouse pointer, and cannot be clicked or reached with the Tab key. The Tea towel and Mug still read "In stock" and still add to the basket.
+
+    This builds on the PR for issue #311 and must be merged after it. No manual tests are outstanding.
+
+Spend: Q3.2 2.918497 of cap 12. Ledger running total 25.911393 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647, Q3.1
+5.074982, Q3.2 2.918497, on top of 10.4's 11.878700).
+
 ### 10.6 Acceptance criteria (build prompt 06)
 
 ### 10.7 Notes (prompt 06)
@@ -2835,6 +2870,8 @@ Spend: Q3.1 5.074982 of cap 12. Ledger running total 22.992896 of the $45 stop (
   stating the disabled look of the Notebook button, because Q2.1's spec-analyser flagged its absence as a material change
   that gates even under `--auto`. The fix is in `smoke_ms_bodies` so the run is reproducible. #313 was left as it was
   (never analysed in these runs).
+- Q3.1's QA failure (qa-engineer listed a directory in ARTEFACTS, so ship's return check blocked #312 twice) was fixed
+  in 49debc8 (`agents/qa-engineer.md`: ARTEFACTS lists files only); Q3.2 shows QA returning a valid block.
 - Launcher copy: the plan's `KRUN` line uses `${KSTAGE:-}`, because `--env-check` runs under `set -u` without a
   `KSTAGE` and the bare form would abort it. The copy's header comment also names `ledger-06` and "$45", beside the
   usage word, so the `diff` has those two comment hunks as well.
