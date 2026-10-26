@@ -278,6 +278,10 @@ a killed or crashed session, charged at its cap.
 | probe | probe.1 | 0.50 | 0.0034 | 0.0034 | no | no | result |
 | init | init.1 | 5 | 1.31 | 1.31 | no | yes | usage |
 | S1 | S1.1 | 15 | 6.09 | 7.40 | no | yes | usage |
+| S2 | S2.1 | 20 | 0.25 | 7.65 | no | no | result |
+| S2 | S2.2 | 19.75 | 5.64 | 13.29 | no | no | result |
+| S2 | S2.3 | 8 | 2.07 | 15.37 | no | no | result |
+| S2 | S2.4 | 4 | 1.10 | 16.47 | no | no | result |
 
 ## Sandbox fixtures
 
@@ -304,6 +308,11 @@ repo with no ancestor `CLAUDE.md`, pushed to private `jamesborg2012/aew-sandbox`
   "figma@claude-plugins-official": false, "warp@claude-code-warp": false}}`; the probe proves it works.
 
 The issue and milestone fixtures are below.
+
+**Fixture tuning (S2).** Next.js 16's dev server writes an untracked `AGENTS.md` into the project unless
+`next.config.ts` sets `agentRules: false`, and that file fails aew's clean-tree checks. The executor set it on the
+sandbox's `main` (`5868040`, "chore: stop the dev server writing AGENTS.md") before S2.1. A Next.js dev server also
+kept serving stale CSS after a branch switch (S2.2); restarting it fixed that. Both go to README troubleshooting.
 
 ### Issue and milestone fixtures (AC-13)
 
@@ -609,9 +618,46 @@ James ran `e2e-session.sh <sandbox> S1.1 15` and `/aew:ship 1` (no `--auto`). Ru
 | Launcher post-checks | pass | exit 0; `audit clean (287 tool uses)` over 11 transcripts; git guard, plugin HEAD, working tree, `ghcfg` unchanged |
 | Introduction (AC-14) | **accurate** | `check-pr-intro.sh --issues 1` exit 0. It says what changed and what visitors see (nothing), why plain checks in the route (no new file or dependency), that the spec grew from 4 to 11 minor rules, the 422 choice over the standards' 400, the changed old test, that nothing needs a manual check, the follow-ups, and 22/22 with a clean review: all match the artefacts |
 
+Merge (CP-3): James merged PR #14 with a normal merge commit (`0af0e38`, two parents) and kept the branch; issue #1
+closed; `main` fast-forwarded.
+
 Cycles: review 0, fix 0. Duration: 18 minutes. Problems: the plan gate's missing summary (fixed, `c3476b8`).
 Fixture note: S1's auto revision (AC 6) already trims every field, which S7 asked for; S7 is left as filed and
 judged on its remaining change (lowercasing the email) and its tests.
+
+## S2
+
+Issue #2, `/aew:ship 2 --auto`, headless, cap line $20. Four attempts on one run (`2`), $9.06 in all.
+
+| Attempt | Cap | Cost | What happened |
+|---|---|---|---|
+| S2.1 | 20 | 0.25 | Stopped at preflight: the Read of `<plugin>/skills/ship/references/preflight.md` was denied ("requires approval", outside the working directories; the session has no approval surface). Nothing was written. **Plugin defect** for every headless user (S1 was interactive, where the same reads ran without a prompt): fixed in `444a579`, init's machine-local template now carries `Read(//<plugin root>/**)`; the rule was added to the sandbox's gitignored `settings.local.json` as a re-run of init would. Before S2.1 the dev server, started by the executor (the harness decision), wrote an untracked `AGENTS.md` (Next.js 16 does so unless `agentRules: false`), which fails the developer's clean-tree check; fixture fix on the sandbox's `main` (`5868040`, recorded under Sandbox fixtures) |
+| S2.2 | 19.75 | 5.64 | spec (v2, 7 non-material changes) → brief (29 ACs) → standards → plan (no gate: `auto`) → develop (`45a6f68`) → review (approved, 2 minor and 2 nit findings) → QA **blocked**: TC-29 dark contrast read 3.06:1 because the executor's dev server served stale CSS after the run switched branches under it (confirmed: the served stylesheet lacked the branch's dark `--error: #f87171`). QA would not restart a server it did not start, as designed. **Harness/platform**, not a plugin defect |
+| S2.3 | 8 | 2.07 | Executor restarted the dev server (now serving both colours), `/aew:resume 2`: QA passed, docs, PR #15 |
+| S2.4 | 4 | 1.10 | `/aew:ship 2 --auto --from docs` after the doc-writer fix `7f188e8`, to verify it live: PR #15's body rewritten in place |
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| [P] `ship --auto`, no plan gate | pass | no AskUserQuestion in any S2 stream; `log.md` goes `plan running` → `develop running` with no `awaiting_plan_approval` |
+| [P] Playwright specs committed | pass | `tests/e2e/2-show-inline-errors-on-the-contact-form-a.spec.ts`, `tests/e2e/aew.ts`, `playwright.config.ts` on the PR branch (`7424a3a`); QA set Playwright up on first use (ui-qa §2: `@playwright/test` 1.64.1, `@axe-core/playwright` 4.14.0, exact-pinned), since James skipped it at init |
+| [P] Screenshots for both viewports in `docs/qa/` | pass | `docs/qa/2/screenshots/`: 54 JPEGs, a `-desktop` and a `-mobile` for each of 27 TCs; `sips`: 1440×900 and 390×844 |
+| [P] axe results in the report | pass | `08-qa-report-1.md` `## Accessibility`: `/` loaded and with all errors shown, 0 critical/serious/moderate at wcag2a to wcag22aa (`axe-TC-17/18-{desktop,mobile}.json`); TC-28/29 also ran axe `color-contrast` in light and dark |
+| For information: QA fix cycle; frontend-design | none; not checked per thread | `fix_cycle` 0; the stale-CSS block was not a fix cycle |
+| Manual tests | 2, appropriate | TC-9 and TC-22 (VoiceOver announces the summary and the focused field) are not automatable; posted on the issue, `aew:manual-test-required` set, listed under `## Manual tests` in the PR |
+| CR-1 state | pass | `state.json` valid; `done` at `pr`; `current` empty |
+| CR-2 labels | pass | `aew:manual-test-required aew:ready-for-review aew:spec-revised` |
+| CR-3 PR | pass | PR #15, base `main`, `Closes #2` |
+| CR-4 lint, tests, typecheck, build | pass | lint 0; Vitest 54 passed; `tsc` 0; build 0 (run after stopping the dev server) |
+| CR-5 trailers | pass | 6 commits, each exactly `Co-Authored-By: Claude <noreply@anthropic.com>` |
+| CR-6 guard hits | none | no `aew guard:` text in the four streams |
+| CR-7 denials | recorded | S2.1: the plugin Read (fixed, above). S2.2: `curl -fsS … "http://localhost:3000"` (**harness**: the exact rule lacked the quotes; quoted forms added to the allow file), then QA's `nohup sh -c 'npm run dev' …` (refused by design, C-1); five improvised `git -C <sandbox> diff/log/ls-files/rev-parse` reads by an agent (`git -C` is prescribed only for fan-out; recorded, watch for recurrence). S2.3: the same quoted `curl`; an improvised `lsof -nP -iTCP:3000 …; jq …` by the resumed orchestrator; QA's `env AEW_EVIDENCE_DIR=… npx playwright test` (improvised; it then ran the prescribed `AEW_EVIDENCE_DIR="…" npx playwright test`, which passed). S2.4: none |
+| CR-8 report, cycles, duration | pass | review 0, fix 0; run time 20:20 to 20:48 (28 minutes) plus the docs re-run (7 minutes) |
+| Launcher post-checks | pass | every attempt exit 0 and `audit clean` (1, 290, 127, 79 tool uses) |
+| Introduction (AC-14), S2.3 | **gap, fixed** | `check-pr-intro.sh --issues 2` exit 0, and specific and true (inline errors, the announced summary, focus, kept input, contrast in both schemes, the decision taken on James's behalf, the two VoiceOver checks, the results). But no part of the PR body said that QA added two dev dependencies the plan had left for the (skipped) plan gate. Doc-writer fix `7f188e8` |
+| Introduction (AC-14), S2.4 | **accurate** | now also: "Two browser-testing tools were added for development only, and the plan's usual approval step was skipped because the run was automatic." Check exit 0 |
+
+Cycles: review 0, fix 0. Duration: about 50 minutes over four attempts. Problems: the plugin-file Read under headless
+(`444a579`), the introduction gap (`7f188e8`), and two harness issues (stale dev-server CSS; unquoted `curl` rules).
 
 ## Guard false positives
 
@@ -623,6 +669,8 @@ judged on its remaining change (lowercasing the email) and its tests.
 | `658615f` | init skipped the inferred `retro.repo` question and wrote the plugin repo | init.1 | not re-run: a re-run keeps existing config values; sandbox config corrected by hand (`7caf360`). Re-checked by the next fresh init (S9, if it runs) | `skills.bats` test red, then green |
 | `7ab432b` | init's §13 clean-up prompted in an attended session (two lines, no rule) | init.1 | as above | `skills.bats` test red, then green |
 | `c3476b8` | the plan gate asked "Approve the plan for #1?" with no summary or plan path | S1.1 | verified live in S5 (attended, no `--auto`), James's choice | `skills.bats` test red, then green |
+| `444a579` | a headless run cannot read the plugin's references and templates (Read outside the working directories needs approval) | S2.1 | S2.2 (and every later headless run) | `skills.bats` test red, then green; S2.2 read them |
+| `7f188e8` | the PR introduction did not mention new dev dependencies added under `--auto` without the plan gate's approval | S2.3 | S2.4 (`--from docs`) | `skills.bats` test red, then green; S2.4's introduction names them |
 
 ## Retro triage
 
