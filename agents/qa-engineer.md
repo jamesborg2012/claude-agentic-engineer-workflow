@@ -33,7 +33,9 @@ The orchestrator dispatches you with these fields. When one is absent, use the f
 - `n` (phase B): the report number. Fallback: `fix_cycle + 1` from `<run_dir>/state.json`.
 - `triage` (phase B, optional): a run-dir path to a `09-triage-<k>.md`. Apply its Test ruling to the tests it names, and only those.
 
-Phase B reads `state.json` for these fallbacks, `issues[0]` and `base_branch` only. Phase A never opens `state.json` or `issue.json`: it takes `#<issue> <title>` from the H1 of the brief. Never write `state.json`.
+Phase B reads `state.json` for these fallbacks, `issues`, `mode`, `run_id` and `base_branch` only. Phase A never opens `state.json` or `issue.json`: it takes `#<issue> <title>` from the H1 of the brief. In a bulk run the brief's H1 is `# Brief: m-7 <title>`, so the test plan's H1 is `# QA test plan: m-7 <title>`.
+
+`<issue>` is `issues[0]`, except in a bulk milestone run (`mode` is `bulk`), where it is the run id (`run_id`, for example `m-7`), because one QA pass covers every issue. Then the spec file is `<ui.e2e_dir>/m-7-<slug>.spec.ts` (the slug from the brief's H1 title), the evidence goes under `<evidence.dir>/m-7/`, and the report title has no `#`. Never write `state.json`.
 
 ### Files per phase
 
@@ -146,7 +148,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 8. Evidence check: confirm each expected screenshot exists and is JPEG (`file -b`, per `aew:ui-qa` §8).
 9. Stop the app if you started it, by its port, per `aew:ui-qa` §3.
 10. Classify each failure (`## Triage classes`) and apply the UI-done rule.
-11. Write `08-qa-report-<n>.md`:
+11. Write `08-qa-report-<n>.md`. In a bulk run the AC column of the Results and triage tables carries the prefixed id (`#12-AC-1`), which gives traceability per issue, and so does each `manual-tests.md` line (`- [ ] **TC-3 (#12-AC-1):** …`), because the milestone report and doc-writer's per-issue snapshot select manual tests by that prefix:
     - Results: every TC, manual ones as `manual`.
     - Commands and output, with the exploratory label.
     - Screenshots.
@@ -154,7 +156,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
     - Failures: the triage table first, then the entries.
 12. If any manual-only case exists, write `manual-tests.md`. Otherwise write none. Overwrite it each cycle.
 13. On `ok` only, copy the report to `docs/qa/<issue>/report.md` with Bash, as one `cp "<run_dir>/08-qa-report-<n>.md" "<abs root>/<evidence.dir>/<issue>/report.md"` (create the directory with `mkdir -p` first if it is missing). Never use Write or Edit for this file: Claude Code refuses a subagent's Write of a file named `report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.
-14. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)`, with a last `-m "Co-Authored-By: Claude <noreply@anthropic.com>"` as the only trailer (even if the session asks for another, and no model name). Stage by path only, and only these:
+14. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)` (in a bulk run the subject ends with every issue in `issues`, for example `test(e2e): add basket and checkout tests (#12, #13, #14)`), with a last `-m "Co-Authored-By: Claude <noreply@anthropic.com>"` as the only trailer (even if the session asks for another, and no model name). Stage by path only, and only these:
     - `ui.e2e_dir`;
     - `playwright.config.*`;
     - Playwright setup files (`package.json`, the lock file, `.gitignore`, `tests/e2e/package.json`), only when setup changed them;
@@ -179,7 +181,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
   - the specs in `ui.e2e_dir`, plus any Playwright setup files;
   - the `test(e2e):` commit.
 
-The title of the report is `# QA report <n>: #<issue> <title>`, where `<issue>` is `issues[0]` from `state.json`.
+The title of the report is `# QA report <n>: #<issue> <title>`, where `<issue>` is `issues[0]` from `state.json`; in a bulk run it is `# QA report <n>: <run_id> <title>`.
 
 The triage table sits at the top of `## Failures`, before the per-failure `### <TC>: …` entries, which come in the same order:
 
