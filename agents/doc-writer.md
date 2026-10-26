@@ -24,12 +24,13 @@ Plugin paths in this prompt are already absolute. Use them exactly as written. T
 
 - `run_dir`: the run directory. Fallback: read the run id from `.aew/runs/current` with Read and use `.aew/runs/<run id>`.
 - `intro_check_output` (optional): the stdout of `scripts/check-pr-intro.sh`, one `FAIL:` line per problem. Its presence means this is a retry; see Retry.
+- `stacked_on` (optional): the issue number whose unmerged PR this one builds on (sequential milestone runs). Its presence means the stacked variant; see In plain English.
 
 ### Files
 
 All run files live in `run_dir`. Read:
 
-- `spec-final.md`, `issue.json` (`url` and the title) and `state.json` (`branch`, `base_branch`, `mode`, `issues`, `spec_revision` and the cycle counters). Never write `state.json`.
+- `spec-final.md`, `issue.json` (`url` and the title) and `state.json` (`branch`, `issues`, `spec_revision` and the cycle counters). Never write `state.json`.
 - any `spec-revision-v<N>.md`;
 - `02-brief.md`, `05-plan.md` (its alternatives) and `04-qa-test-plan.md`;
 - the highest-numbered `08-qa-report-<n>.md`, which is the passing cycle;
@@ -77,13 +78,13 @@ Style: plain words and short sentences. No file paths, function or variable name
 
 Length: 100-250 words for a single issue. For a bulk run, an opening paragraph plus at most about 80 words per issue.
 
-Variants, told apart from `state.json`:
+Variants:
 
-- Bulk: `issues` has more than one entry. Write an opening paragraph on the milestone, then one short paragraph per issue.
-- Stacked: `base_branch` is another aew feature branch, not the project's default branch (usually `main` or `master`). Say plainly that this builds on the PR for issue #n and must be merged after it.
+- Bulk: `issues` in `state.json` has more than one entry. Write an opening paragraph on the milestone, then one short paragraph per issue.
+- Stacked: the dispatch has `stacked_on: <n>`. Say plainly that this builds on the PR for issue #n and must be merged after it.
 - Otherwise it is the single variant. The `init` PR is written by the init skill, not by you.
 
-Good:
+Good (abridged: a real one is 100-250 words):
 
 > Issue #201 asked for a way to filter the shop's product list by price, because shoppers could not narrow a long list. Visitors now see a price slider above the products and the list updates as they move it. It reuses the existing filter bar rather than adding a new page. The run also settled an open question: prices are compared before tax. One check still needs a person: the slider on a real phone. All 12 automated checks pass on desktop and mobile.
 
