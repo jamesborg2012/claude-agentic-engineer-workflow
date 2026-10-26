@@ -23,7 +23,7 @@ A personal Claude Code (CLI) plugin that delivers GitHub issues end to end throu
 
 ## 3. Platform facts this design relies on (verify against current docs while building)
 
-Checked against code.claude.com/docs on 24 Oct 2026; the skill, headless, subagent, AskUserQuestion, plugin-version and permission-rule facts again on 25 Oct 2026 (build prompt 05). The install, dependency, tag, `--bare`, budget and uninstall facts again on 26 Oct 2026 (build prompt 07, `tests/e2e-validation.md` § Platform facts). Re-verify each one before relying on it. If the docs now differ, follow the docs and update this section.
+Checked against code.claude.com/docs on 24 Oct 2026; the skill, headless, subagent, AskUserQuestion, plugin-version and permission-rule facts again on 25 Oct 2026 (build prompt 05); the install, dependency, tag, `--bare`, budget and uninstall facts again on 26 Oct 2026 (build prompt 07, `tests/e2e-validation.md` § Platform facts). Re-verify each one before relying on it. If the docs now differ, follow the docs and update this section.
 
 - **Plugin layout.** `.claude-plugin/` holds only `plugin.json` (and `marketplace.json` for a marketplace). Components live at the plugin root: `skills/`, `agents/`, `hooks/hooks.json`, `.mcp.json`, `scripts/`. Commands have merged into skills, so use `skills/`. A `CLAUDE.md` at the plugin root is **not** loaded.
 - **Plugin name.** The plugin is named `aew`. Names starting with `claude-`, `anthropic-`, `anthropics-` or `cc-plugin-` are reserved and fail `claude plugin validate`.

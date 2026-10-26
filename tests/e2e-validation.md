@@ -113,7 +113,10 @@ It is the `tests/agent-smoke/README.md` §9.2 reference launcher with the §10.2
   (`~/.claude/settings*.json`, empty `[]` today), the project's `.claude/settings.json` and `settings.local.json`, and
   the allow file, and refuses any `gh` rule other than exactly `Bash(gh auth status)`, any `git push` rule, and any
   interpreter or wildcard rule (`node`, `sh`, `bash`, `zsh`, `env`, `python*`, `npx *`, `curl *`, bare `Bash`,
-  `Bash(*)`). An allow file may not set `--disallowedTools`, a permission mode or a launcher flag.
+  `Bash(*)` and other all-wildcard forms), with or without a leading path (`/bin/sh`, `/opt/homebrew/bin/gh`). Because
+  claude splits a rule list on commas and spaces, any line that mentions `Bash` must be exactly one rule, so
+  `Bash(npm *),Bash(gh *)` and `--allowedTools=Bash(gh *)` are refused too. An allow file may not set
+  `--disallowedTools`, a permission mode or a launcher flag.
 - **Kill.** SIGINT first (V-9: it ends the turn), TERM after 30 s, KILL after a further 30 s; `killed-at` records the
   time and the signal that ended it. The session starts as a job-controlled background job (`set -m`) so it keeps
   SIGINT, which a plain non-interactive `&` job ignores.
@@ -122,22 +125,36 @@ It is the `tests/agent-smoke/README.md` §9.2 reference launcher with the §10.2
   subagents). Bash commands are checked for the credential set
   `GH_TOKEN|GITHUB_TOKEN|GH_HOST|GH_CONFIG_DIR|GH_ENTERPRISE|auth token|git-credential|osxkeychain|security find-|GIT_CONFIG|GIT_ASKPASS|credential fill|credential\.helper|find-(generic|internet)-password|\.config/gh|env -i`,
   the spawn pattern ``(exec|spawn|popen|passthru|proc_open|system)[A-Za-z_]*\s*\(\s*\[?\s*['"`](gh|git|security|env)\b``,
-  the command set `github\.com|--hostname|GH_CONFIG_DIR=|security |credential|remote (add|set-url)|unset |PATH=`, the
+  the command set `github\.com|--hostname|GH_CONFIG_DIR=|security |credential|remote (add|set-url)|\bunset\b|PATH=`, the
   real gh path and any `claude` command other than `claude plugin list --json`. Write, Edit, MultiEdit and NotebookEdit
   input is checked for the credential set, the spawn pattern and the real gh path (`credential` and `github.com` are
   left out for file contents, which use them legitimately). Any MCP tool outside `plugin_aew_playwright` and
   `plugin_context7_context7` is a hit. A hit exits 4 (`AUDIT HIT`). A genuine false positive is allowed only by its
-  exact string in `audit-allow.json`, recorded here.
+  exact string in `audit-allow.json`, recorded here. The audit fails closed, also exit 4: a line jq cannot read
+  (`AUDIT ERROR`), an attended session with no transcript newer than its start (`AUDIT GAP`), and the PAT's value
+  found in any output or transcript, for example a session that printed its environment (`TOKEN LEAK`, checked with
+  `grep -F -f .pat`, so the value is never printed).
 - **Attended mode.** The same preconditions, environment, lock, C-1 check, fixed denies and post-session checks.
   `--max-budget-usd` works only with `--print` (V-8), so the launcher prints "read /usage at each gate and stop at
   $<cap>" and keeps the cap reserved in the ledger until James's `/usage` figure is written in. The audit runs over
   the transcripts, so the attended gap the plan expected is closed.
 - **Kept unchanged:** the CTO-5 ledger lock, the port-4173 stop, the CTO-3 git guard (plugin repo config and hooks),
   the plugin-repo HEAD check, the empty `ghcfg` check and the "use the next attempt name" refusal. The stop is $200.
+- **Plugin working tree (added after the Phase A review).** aew loads in place from the plugin checkout, so a change to
+  its working tree during a session would change the code that session and later ones run. The launcher hashes
+  `git status --porcelain --untracked-files=all` plus `git diff HEAD` of the checkout before and after every session,
+  with `tests/e2e-validation.md` exempt (the executor records while sessions run), and exits 4 on a change
+  (`REPO WORKING TREE`). Together with the HEAD check this sets an executor rule: no plugin-repo commit and no edit
+  other than the record while a session runs.
+- **Signals and children (review MINOR).** If the launcher itself receives INT, TERM or HUP it sends TERM to the session
+  and still waits for it and audits it; the KILL step also kills the session's child processes (Playwright MCP).
 
 **Self-test** (`selftest.sh`, a stub `claude` first on `PATH`, a dummy `.pat`, no API call): 61 passed, 0 failed
 after two launcher fixes (the inherited `GIT_EDITOR`, and a jq error that silently skipped the file-content audit)
-and one test fix (the kill fired before the stub set its trap). It covers:
+and one test fix (the kill fired before the stub set its trap). The per-task review then closed eight C-1 bypasses
+(multi-rule lines, `--allowedTools=`, path-prefixed and all-wildcard rules) and four fail-open paths in the audit
+(a non-string tool input, `unset` in quotes, an attended session whose transcript is not found, the PAT value in the
+output); with the working-tree guard added after the review, the result is 79 passed, 0 failed. It covers:
 
 | Case | Result |
 |---|---|
@@ -145,19 +162,23 @@ and one test fix (the kill fired before the stub set its trap). It covers:
 | Same run name again; 199 spent plus cap 2; ledger lock held for 2 s | exit 2; exit 3; waits, then starts |
 | argv | every fixed deny and `--permission-prompts none`; no `--plugin-dir`, `--add-dir` or `--settings` |
 | Session env names | exactly `GH_CONFIG_DIR GH_TOKEN GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_0 GIT_CONFIG_VALUE_1 GIT_SSH_COMMAND GIT_TERMINAL_PROMPT`; `GH_TOKEN` length 17 (the dummy) |
-| Command audit hits (exit 4) | `unset GH_HOST`, `echo $GH_HOST`, `PATH=/tmp:$PATH claude -p x`, `env -u GH_TOKEN gh auth token`, `/opt/homebrew/bin/gh api user`, `git remote set-url origin x`, `curl https://github.com/x`, `env -i PATH=/usr/bin gh api user` |
+| Command audit hits (exit 4) | `unset GH_HOST`, `echo $GH_HOST`, `PATH=/tmp:$PATH claude -p x`, `env -u GH_TOKEN gh auth token`, `/opt/homebrew/bin/gh api user`, `git remote set-url origin x`, `curl https://github.com/x`, `env -i PATH=/usr/bin gh api user`, `"unset" FOO`, a non-string Bash command |
 | File-content audit hits (exit 4) | a Write of `process.env.GH_TOKEN`; a Write of `execSync('gh api user', {env:{}})` |
-| Non-hits (exit 0) | `claude plugin list --json \| jq .`, `"<installPath>/scripts/state.sh" get stage`, `npm test`, a Write of `fetch('/api/contact', { method: 'POST', credentials: 'same-origin' })` |
+| PAT value in the stream (exit 4) | `TOKEN LEAK`, reported without the value |
+| Non-hits (exit 0) | `claude plugin list --json \| jq .`, `"<installPath>/scripts/state.sh" get stage`, `"<plugin checkout>/scripts/state.sh" get stage`, `npm test`, a Write of `fetch('/api/contact', { method: 'POST', credentials: 'same-origin' })` |
 | A file written into `ghcfg` | exit 4 |
-| Refusals (exit 2) | allow rules `Bash(gh *)`, `Bash`, `Bash(*)`, `Bash(node *)`, `Bash(sh -c *)`, `Bash(npx *)`, `Bash(curl *)`, `Bash(env)`; `--permission-mode=default`; `--disallowedTools` in an allow file; `Bash(npx *)` in the project's `settings.local.json` (C-1); an SSH origin; a non-sandbox origin; a project inside the plugin repo; `.pat` at 644. An `aew-sandbox-woo` origin is accepted. |
+| A file created in the plugin checkout during a session | exit 4, `REPO WORKING TREE` |
+| Refusals (exit 2) | allow rules `Bash(gh *)`, `Bash`, `Bash(*)`, `Bash(**)`, `Bash(node *)`, `Bash(sh -c *)`, `Bash(/bin/sh -c *)`, `Bash(npx *)`, `Bash(curl *)`, `Bash(env)`, `Bash(/opt/homebrew/bin/gh *)`, `Bash( gh *)`, `Bash(npm *),Bash(gh *)`, `Bash(npm *) Bash(gh *)`, `Read,Bash(*)`, `--allowedTools=Bash(gh *)`; `--permission-mode=default`; `--disallowedTools` in an allow file; `Bash(npx *)` in the project's `settings.local.json` (C-1); an SSH origin; a non-sandbox origin; a project inside the plugin repo; `.pat` at 644. An `aew-sandbox-woo` origin is accepted. |
 | Kill at `develop`, and `<run-id>:develop` | `killed-at` names `INT`, the stub's INT trap ran, the ledger charges the cap |
-| `--attended` | a reservation row with an empty cost, the fixed denies in argv, no `-p`/`--plugin-dir`/`--max-budget-usd`, post-checks and the transcript audit ran |
+| `--attended` (scratch `HOME`) | a reservation row with an empty cost, the fixed denies in argv, no `-p`/`--plugin-dir`/`--max-budget-usd`; a subagent transcript is found and audited (clean, 1 tool use); `unset GH_HOST` in the transcript exits 4; no transcript exits 4 (`AUDIT GAP`) |
 | Leak check | the dummy token appears in no output file |
 
 **Canary** (AC-9; `canary.sh`, every row through `e2e-run.sh --env-check <sandbox>`). The first run (2026-10-26T17:11Z)
 failed rows 3, 4, 6 and 7 with `HTTP 401: Bad credentials`: the PAT file did not hold a fine-grained token (wrong
-clipboard). James saved it again (93 characters, `github_pat_` prefix, checked without printing it) and the second run
-passed:
+clipboard). James saved it again (93 characters with the fine-grained token prefix, checked without printing it) and the second run
+passed. The review fixes above changed the launcher after this run (the session environment is unchanged), so the
+canary was re-run before B1 (AC-9). The third run (2026-10-26, `canary.sh` now compares every row with its expected
+value) passed all eleven rows; the results are the same as the second run's:
 
 | # | Command (session environment) | Result |
 |---|---|---|
@@ -174,12 +195,20 @@ passed:
 | 9b | `env -u GH_TOKEN git ls-remote <plugin repo>` (CTO C-3) | `exit=0`: **accepted deviation** |
 | 10 | files in `ghcfg/` | `0` |
 
+**Fix loop, step 6 as executed.** The plan's fix-loop step 6 ("refresh the install", then `cmp` each changed file
+against `installPath`) assumed a cached copy. aew loads in place (install probe), so the recorded `installPath` copy
+never changes and the `cmp` would fail falsely after any fix. Step 6 is therefore: the checkout is on
+`feature/e2e-validation`, clean, with HEAD at the fix commit, and the next session's `system/init` shows aew's
+`plugins[].path` equal to the plugin checkout. The paths init writes into the sandbox's settings are checked against
+the checkout path, not `installPath`.
+
 **C3 amended: detect-only for the keychain channel.** With `GH_TOKEN` removed, a session can still read James's keychain
 gh token (`gh auth token`, row 9) and git reaches the plugin repo through the gh credential helper (row 9b). C3 asked
 for the keychain token to be unreachable. James chose option (a) at A5 (2026-10-26, "Ledger approved, PAT saved,
 (a)"), which the CTO risk gate accepted as an amendment to C3 with conditions C-1 to C-3 (the effective-allow-rule
-refusal, the widened audit, rows 9 and 9b asserting this result). Rows 9 and 9b are expected to exit 0 on every canary
-re-run; a change shows up there.
+refusal, the widened audit, rows 9 and 9b asserting this result). Every canary re-run is expected to show row 9 as
+`api-exit=4 token-exit=0` (gh's own API calls see no login in the empty config dir, but `gh auth token` reads the
+keychain) and row 9b as `exit=0`; a change shows up there.
 
 **Credential incident playbook (CTO C-4).** An audit hit on a credential pattern (exit 4) is a P0 stop for James:
 (1) no further sessions; (2) James revokes the PAT; (3) if the hit could have reached the keychain token, James

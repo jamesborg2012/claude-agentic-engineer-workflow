@@ -41,7 +41,9 @@ source is a relative path, aew is read from the checkout itself: `claude plugin 
 the next session start (or `/reload-plugins`), and every session runs whatever branch the
 checkout has. The `installPath` that `claude plugin list --json` reports
 (`~/.claude/plugins/cache/jamesborg-plugins/aew/0.1.0`) is a copy made at install time and is not
-what loads.
+what loads. This holds only for a marketplace added from a local folder: one added from GitHub copies the plugin
+into the cache, and then `claude plugin marketplace update jamesborg-plugins` followed by
+`claude plugin update aew@jamesborg-plugins` picks up a new version.
 
 To try it for one session without installing it, run `claude --plugin-dir .` from the repo. The
 dependencies below must already be installed, because a `--plugin-dir` session doesn't install them.
