@@ -331,7 +331,8 @@ Template 1 is `.claude/settings.local.json`:
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-retro.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/git-branch.sh *)",
-  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh *)"
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-pr-intro.sh *)"
 ] } }
 ```
 
@@ -476,7 +477,15 @@ printf 'ahead '; git rev-list --count <default_branch>..HEAD
 
 - `unpushed` above 0: run `"${CLAUDE_PLUGIN_ROOT}/scripts/git-branch.sh" push`.
 - `ahead` above 0, even when nothing was pushed: Write `.aew/runs/init-pr-body.md` (read it first if it
-  exists) saying what init did and which defaults need review, then run
+  exists) saying what init did and which defaults need review. It opens with `## In plain English`, the first
+  `##` section, then the technical list. The introduction is 100 to 250 words for James, who was not watching:
+  what was set up for the project and why; what to check (the detected commands and the permissions); what
+  happens next. Plain words and short sentences, and no file paths, names, code, backticks, AC/TC/WP ids,
+  tables or headings, and at most one short list. Then run
+  `"${CLAUDE_PLUGIN_ROOT}/scripts/check-pr-intro.sh" .aew/runs/init-pr-body.md` once. On exit 1, rewrite the
+  introduction once so that each `FAIL:` line is cleared and run the check again. If it still fails, carry on
+  and add a warning to §13 (`PR introduction failed the check: <first FAIL line>`). The check never blocks the PR.
+  Then run
   `"${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr.sh" open chore/aew-init "chore: set up aew" .aew/runs/init-pr-body.md --base <default_branch>`
   and keep the number. `open` reuses an open PR, so every run is safe and a failed call is retried; on
   failure report the error.
@@ -489,7 +498,7 @@ rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/ini
   .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md
 ```
 
-Print, in order: prerequisite and stack-tool warnings; stacks; config written or unchanged and the detected
+Print, in order: prerequisite and stack-tool warnings (and the PR introduction check warning, if any); stacks; config written or unchanged and the detected
 differences kept; "Defaults used"; labels; gitignore lines added or present; Playwright set up, skipped or
 present; CLAUDE.md section added or present; permissions for `.claude/settings.json` and
 `.claude/settings.local.json` each written, unchanged or proposed only (with the lists), the local file's

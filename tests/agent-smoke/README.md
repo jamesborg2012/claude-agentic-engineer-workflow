@@ -1140,7 +1140,7 @@ smoke_ship_allow() {
   # 1. every lane: the scripts by absolute path, bare (ship) and quoted (init), the skills' shared forms, and the
   #    standards-setter's date (it runs in both lanes)
   echo --allowedTools
-  for s in state gh-issue gh-labels git-branch gh-pr gh-retro detect-stack; do
+  for s in state gh-issue gh-labels git-branch gh-pr gh-retro detect-stack check-pr-intro; do
     printf '%s\n' "Bash($REPO/scripts/$s.sh *)" "Bash(\"$REPO/scripts/$s.sh\" *)"
   done
   printf '%s\n' "Bash(gh auth status)" "Bash(git status *)" "Bash(git switch *)" "Bash(git add *)" "Bash(git commit *)" \
