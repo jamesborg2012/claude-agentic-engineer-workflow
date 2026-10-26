@@ -51,12 +51,12 @@ Used by `## Start a child` and by ship's docs and Gate pending hooks.
 3. The three uses:
    - the `--base` and `base_branch` of `## Start a child`;
    - `stacked_on: <dep>` on dispatch row D13 (ship's docs hook), from which the doc-writer writes the stacked introduction (this PR builds on the PR for issue #`<dep>` and must be merged after it), with `check-pr-intro.sh` run as ship runs it;
-   - the parent id in ship's `## Gate pending` line.
+   - the parent id in `ship/SKILL.md` `## Gate pending` line.
 4. Stacking is decided without a `gh` call. A dependency that was closed at selection is not in `stack_on`.
 
 ## After a child
 
-Reached from ship's `## Final report` (`done`, the blocked path, the plan-gate stop) and from ship's Step 3.3 and 3.4 stops. `<k>` is the child that just ended.
+Reached from `ship/SKILL.md` `## Final report` (`done`, the blocked path, the plan-gate stop) and from ship's Step 3.3 and 3.4 stops. `<k>` is the child that just ended.
 
 1. The parent `<mid>`, from `## Parent and dependency of a child` step 1.
 2. `jq -r .status .aew/runs/<k>/state.json`. It is expected to be `done`, `blocked` or `failed`. Any other status means the child is still in progress: print `Child #<k> is <status>: continue it with /aew:resume <k>.` and stop, having written nothing.
