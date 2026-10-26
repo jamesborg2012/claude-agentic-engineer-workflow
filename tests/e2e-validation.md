@@ -282,6 +282,9 @@ a killed or crashed session, charged at its cap.
 | S2 | S2.2 | 19.75 | 5.64 | 13.29 | no | no | result |
 | S2 | S2.3 | 8 | 2.07 | 15.37 | no | no | result |
 | S2 | S2.4 | 4 | 1.10 | 16.47 | no | no | result |
+| S3 | S3.1 | 10 | 10.38 | 26.85 | no (ran $0.38 over, James's call to let it finish) | yes | usage |
+| S3 | S3.2 | 2 | 0.94 | 27.79 | reserve, approved by James | no | result |
+| S3 | S3.3 | 2 | 0.93 | 28.72 | reserve, approved by James | no | result |
 
 ## Sandbox fixtures
 
@@ -662,6 +665,46 @@ closed; `main` fast-forwarded.
 Cycles: review 0, fix 0. Duration: about 50 minutes over four attempts. Problems: the plugin-file Read under headless
 (`444a579`), the introduction gap (`7f188e8`), and two harness issues (stale dev-server CSS; unquoted `curl` rules).
 
+## S3
+
+Issue #3, deliberately silent on the limit, the client key and the response. Run `3`.
+
+| Attempt | Drive | Cap | Cost | What happened |
+|---|---|---|---|---|
+| S3.1 | attended, `/aew:ship 3 --auto` | 10 | 10.38 (`/usage`) | spec gate under `--auto` → James's five answers → spec v2 → brief → standards (Tailwind doc updated) → plan (no gate) → develop, **fanned out** into WP-1 (limiter and route) and WP-2 (form message) in `git -C` worktrees, cherry-picked back → review (approved) → QA (started and stopped the app itself: `nohup sh -c 'npm run dev'`, `lsof`, `kill`; James saw no prompt) → docs → PR #16. 30 minutes. James let it run $0.38 past the cap to finish the PR body |
+| S3.2 | headless, `--from docs` | 2 | 0.94 | after doc-writer fix `22b901f`; the doc-writer kept its earlier `pr-body.md` as "already accurate", so the fix was not applied (→ fix `468ed5f`). Also surfaced: no stage runs the build (→ `97291e4`), the `retro` label warning (→ `88f26c7`) and an improvised `for` loop (→ `d141b4d` after it recurred) |
+| S3.3 | headless, `--from docs` | 2 | 0.93 | introduction rewritten with the clarification; no label warning; the `for` loop recurred (denied, recovered) |
+
+James's answers at the spec gate (verbatim):
+
+```text
+Q1. What limit should apply to contact submissions? → 5 per client per 10 min, every POST (recommended)
+Q2. How should the endpoint identify a client for the limit? → IP from x-forwarded-for (recommended)
+Q3. What should a request over the limit receive? → 429 { ok: false } + Retry-After (recommended)
+Q4. Should the contact form tell the user when they are rate-limited? → Yes, in the alert region (recommended)
+Q5. Where should the request counts be kept? → Server memory, no new dep (recommended)
+```
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| [P] Spec gate fires even with `--auto` | pass | `log.md`: `spec_analysis awaiting_input — gate:spec 01-spec-analysis.md`, then `answers: gate:spec`; `state.json` `auto` `true` |
+| [P] After the answers, revision v2 appears on the issue | pass | issue #3's body starts `<!-- aew:spec v2 -->`; `spec_revision` 2; `spec-changes.json`: 5 `confirmed`, 6 `auto` changes; one `## Spec revision v2` comment; flag `aew:spec-revised` |
+| [P] The original is collapsed | pass | `<summary>Spec v1 (original)</summary>` inside `<!-- aew:spec-prev v1 -->`; v1 extracted with `prev_of` (k=1) is byte-identical (`cmp` 0) to the body saved before the run (itself identical to B2's read-back) and to the `## Body` section of `00-issue-original.md` |
+| PR (CR-3) | pass | PR #16, base `main`, `Closes #3` |
+| CR-1, CR-2 | pass | `state.json` valid, `done`; labels `aew:ready-for-review aew:spec-revised` |
+| CR-4 | pass | lint 0, Vitest 118 passed, `tsc` 0, build 0 |
+| CR-5 | pass | 6 commits, plain trailer |
+| CR-6 | none | no `aew:` guard text in 14 transcripts or the two streams |
+| CR-7 | recorded | S3.1: James saw no prompt; settings unchanged. S3.2 and S3.3: the orchestrator's improvised `for f in …; do test -f "$f" …` loop, denied both times (H1), then one call per file (fixed `d141b4d`) |
+| CR-8 | pass | review 0, fix 0; 30 minutes plus two short re-runs |
+| Fan-out (first live use) | pass | `06-dev-report-WP1.md`, `-WP2.md`; worktrees under `.aew/runs/3/worktrees/` removed; `git worktree list` shows only the main checkout; sub-developers used `git -C <worktree>` |
+| Retro "Seen again" | pass | the re-runs commented on retro #7 to #9 instead of filing duplicates |
+| Introduction (AC-14), S3.1 | **gap, fixed** | check exit 0 and true, but it stated the limit and response as plain facts: it did not say the issue left them open and James decided them (the plan requires the clarification to be mentioned). Fixes `22b901f` and `468ed5f` |
+| Introduction (AC-14), S3.3 | **accurate** | "The issue gave no numbers, so James answered the open questions: the limit is 5 per 10 minutes, every attempt counts even if it fails, visitors are told apart by network address, and the form shows the message above." Its "production build check was not run" was true of this run (before `97291e4`); the executor's build passed |
+
+Cycles: review 0, fix 0. Duration: 30 minutes plus two re-runs of about 3 minutes. Problems: five plugin fixes
+(`22b901f`, `468ed5f`, `97291e4`, `88f26c7`, `d141b4d`).
+
 ## Guard false positives
 
 ## Fix log
@@ -674,6 +717,11 @@ Cycles: review 0, fix 0. Duration: about 50 minutes over four attempts. Problems
 | `c3476b8` | the plan gate asked "Approve the plan for #1?" with no summary or plan path | S1.1 | verified live in S5 (attended, no `--auto`), James's choice | `skills.bats` test red, then green |
 | `444a579` | a headless run cannot read the plugin's references and templates (Read outside the working directories needs approval) | S2.1 | S2.2 (and every later headless run) | `skills.bats` test red, then green; S2.2 read them |
 | `7f188e8` | the PR introduction did not mention new dev dependencies added under `--auto` without the plan gate's approval | S2.3 | S2.4 (`--from docs`) | `skills.bats` test red, then green; S2.4's introduction names them |
+| `22b901f` | the introduction stated gate answers as plain facts, not as what the issue left open and James decided | S3.1 | S3.3 | test red, then green; S3.3's introduction names the open questions and the answers |
+| `468ed5f` | on a `--from docs` re-run the doc-writer kept its earlier PR body as "already accurate", so new rules were never applied | S3.2 | S3.3 | test red, then green; S3.3 rewrote the introduction |
+| `97291e4` | no stage ran `commands.build` (developer: lint, format, typecheck, unit; QA and review never build) | S3.2 report | next full run (S4) | test red, then green; DESIGN records it |
+| `88f26c7` | `gh-retro.sh` warned on every run after the first that the `retro` label already exists | S3.2 | S3.3 | bats red, then green; no warning in S3.3 |
+| `d141b4d` | the orchestrator checked ARTEFACTS with a `for` loop, denied headless (recurred) | S3.2, S3.3 | next headless run | test red, then green |
 
 ## Retro triage
 
