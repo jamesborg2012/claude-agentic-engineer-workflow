@@ -2663,6 +2663,67 @@ Spend: B1.1 4.963957 of cap 15. Ledger running total 6.275661 of the $45 stop (M
 
 PR introduction: none, because no PR was created. The bulk-variant introduction check is therefore still open.
 
+Reviewer note: the B1.1 blocking finding (developer clean-tree precondition vs. agent memory) was fixed in a34996f and
+12021ad (`agents/developer.md` now reads `git status --porcelain --untracked-files=all` and ignores
+`.claude/agent-memory/`; DESIGN §10 deviation recorded). James approved the fix and exactly one B1 re-run at cap 15 on
+2026-10-26; `B1.2` below is that run. The `$k` jq denial finding was not part of that fix and recurred.
+
+#### B1.2 (re-run after the fix)
+
+Fresh project (`smoke_ship_project b1 shop` rebuilt `$SMOKE/ship-b1` from scratch: new project, run dir, branch and mock
+state), CTO-2 re-checks after the fix (suite green at 371, CTO-1 guard clean, port 4173 free, ledger readable). Same
+issues, listing and prompt as B1.1. Launcher exit 0, `audit clean (155 Bash commands)`, cost 5.603024 (131 turns,
+922 s). **The run completed:** `bulk`, `pr`, `done`, one PR (`…/pull/7`).
+
+| run | check | result | notes |
+|---|---|---|---|
+| B1.2 | 1 completed | pass | Result `success`; `bulk`, `pr`, `done`, issues `301,302,303`. |
+| B1.2 | 2 state valid, current | pass | `smoke_state_valid`: valid; `current` cleared. |
+| B1.2 | 3 branch | pass | `feat/m2-shop-footer`; origin and local both `38f6b89`. |
+| B1.2 | 4 per-issue artefacts | pass | Each of 301, 302, 303: `00-issue-original.md`, `01-spec-analysis.md`, `issue.json`, `spec-changes.json`, `spec-final.md` (no `spec-revision-v2.md` anywhere). |
+| B1.2 | 5 spec-analyser fan-out (AC-15) | pass | `smoke_fanout`: `3`. |
+| B1.2 | 6 revisions (AC-33, R-E2) | open | All three issues `changes=0 comment=0 marker=0 flag=0`; no `spec revision:` history note. This time spec-analyser left 302 unrevised: "The project's axe check (`wcag22aa`) already covers this page, so no extra AC is needed" (its SUMMARY: "No changes needed … Accessibility … is already met"). The WCAG clause was judged covered by the project's own axe check, so the seeded gap did not trigger a revision. Per R-E2 no revised issue means open, not pass. B1.1 did revise 302 (`spec revision: #302 v2`, flag, comment, marker), so the revision path was exercised once across the two attempts, not in the run that reached `pr`. |
+| B1.2 | 7 brief | pass | `# Brief: m-2 Shop footer`; 17 lines carry `#30[123]-AC-n` ids (>= 6); one brief-compiler prompt with `issues: 301,302,303`. |
+| B1.2 | 8 one PR | pass | `pr create` calls: 1. |
+| B1.2 | 9 closing keywords and intro | pass | `Closes #301`, `#302`, `#303`: 1, 1, 1. `scripts/check-pr-intro.sh <pr-body.md> --issues 3`: no output, `exit 0`. The introduction reads as the bulk variant (verbatim below). |
+| B1.2 | 10 stage labels | pass | Each issue: `aew:analysing`, `aew:planning`, `aew:building`, `aew:testing`, `aew:documenting`, `aew:ready-for-review`; final label `aew:ready-for-review` only (no `spec-revised`, matching check 6). |
+| B1.2 | 11 milestone report | pass | 3 `issue comment` calls with `milestone-report.md`; `$RUN/milestone-report.md` exists. |
+| B1.2 | 12 retro and select calls | pass | Retro `issue list --repo acme/aew-retro`: 1; `--milestone` listing calls: 1 (Risk 4 record: one `select` call). The final report lists 3 retro items, each answered `created #1` by the single canned `issue-create.out` (mock artefact). |
+| B1.2 | 13 files on the branch | pass | `docs/specs/301-footer-contact-email.md`, `302-footer-copyright-line.md`, `303-footer-opening-hours.md`; `docs/qa/m-2/report.md` and 32 screenshots (TC-1 to TC-16, desktop and mobile); `tests/e2e/m-2-shop-footer.spec.ts` and `tests/e2e/aew.ts`. |
+| B1.2 | 14 commit subjects | pass | `main..feat/m2-shop-footer`: `chore(aew): update agent memory (#301, #302, #303)`, `docs: add the issue specs, and update CLAUDE.md (#301, #302, #303)`, `test(e2e): add shop footer tests (#301, #302, #303)`, and the developer's single `feat(footer): add hours, contact link and copyright (#301)`. |
+| B1.2 | 15 final report | pass | `Mode: bulk (given)` printed early; then `aew ship-milestone m-2 Shop footer: done`, `Mode: bulk`, `Shipped:` #301/#302/#303 → `…/pull/7`, `Blocked: none`, `Not started: none`, `Manual tests outstanding: none`, `Retro items filed: 3 (created #1, created #1, created #1)`, `Next: review and merge the PR`. QA: 32 of 32 runs, 0 axe violations, 1 unit test. |
+| B1.2 | 16 denials, ghcfg, trees, MCP | fail | `smoke_denials` lists 2 denials (expected `[]`): the same per-issue `jq -r --arg k 301 '… "spec revision: #" + $k + " v" …'` lookup as B1.1, and `grep -c $'\xc2\xa0' …/site/index.html`. The model fell back to `$`-free reads and reported the `$k` denial itself. `$W/ghcfg` empty; project tree and plugin repo clean; launcher exit 0, audit clean. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Findings:
+
+- The B1.1 blocker is fixed: develop, review, QA, docs and pr all ran, with no blocked reason.
+- **jq `$k` denial persists** (second run): bulk's per-issue spec-version lookup is still denied headless. Open item for
+  James: a `$`-free form in `bulk.md`/`ship`, or a recorded allowlist decision (CTO-3 allows widening only after a
+  recorded denial; this is the second record). The run completed regardless.
+- Check 6 stays open: under `--auto` the analyser may legitimately judge 302's accessibility gap covered by the project's
+  axe check; the seeded gap is therefore not a reliable revision trigger. B1.1 showed the revision path works.
+- The PR introduction check is now exercised (bulk variant, below).
+
+Spend: B1.2 5.603024 of cap 15. Ledger running total 11.878700 of the $45 stop (M1.1 0.415012, M3.1 0.487072, M3.2
+0.409620, B1.1 4.963957, B1.2 5.603024); Q1 (8) and Q2 (12) still fit ($31.88 against $45).
+
+PR introduction (verbatim, the start of the captured PR body):
+
+    ## In plain English
+    
+    This milestone, "Shop footer", covers issues #301, #302 and #303. Together they turn the page footer from a placeholder note into real shop information. The three changes touch the same footer, so they ship as one pull request.
+    
+    Issue #301 asked for a way to contact the shop. Shoppers now see the email address hello@static-shop.test at the bottom of the page, and clicking it opens their mail program.
+    
+    Issue #302 asked for a copyright line. The footer now says "© 2026 Static Shop". The year is typed in, not worked out from today's date, as the issue required.
+    
+    Issue #303 asked for opening hours in place of the old test note. The footer now says "Open Monday to Friday, 9am to 5pm."
+    
+    Each line sits in its own paragraph, so changing one cannot break another. The run also gave the basket button in the header a spoken label, "View basket", because screen readers could not name it and the accessibility checks would have failed. Nothing looks different.
+    
+    Nothing needs a person to check by hand. Known gap: the browser asks for a site icon that does not exist, which is harmless. All 32 browser checks pass on desktop and mobile, the unit test passes, and the accessibility scan found no problems.
+    
+
 ### 10.5 Q1 and Q2: sequential, killed in child 2, resumed, child 3 blocked
 
 ### 10.6 Acceptance criteria (build prompt 06)
