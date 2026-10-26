@@ -551,6 +551,11 @@ git-branch.sh')"
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
 }
 
+@test "ship: the ARTEFACTS check is one test -f call per path, never a loop" {
+  grep -E '^2\. Every comma-separated ARTEFACTS path' "$REPO_ROOT/skills/ship/references/dispatch.md" | grep -q 'one call per path' ||
+    { echo "dispatch.md return check does not say one call per path" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')
