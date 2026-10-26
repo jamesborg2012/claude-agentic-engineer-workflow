@@ -13,24 +13,46 @@ Apply each row wherever ship's files reach the place in the first column.
 | 1. Run variables `<n>` (`ship/SKILL.md` `## Run variables`) | the issue | each issue `<k>` of `issues`, ascending. Every `gh-labels.sh stage <n> …`, `gh-labels.sh flag <n> …`, `gh-issue.sh comment <n> …` and `gh-issue.sh manual-tests <n> …` call runs once per issue, except where rows 8 and 9 name one issue |
 | 2. Printed `#<n>` (gate questions, the `plan-approval` question, `ship/SKILL.md` `## Gate pending`'s first line, the final report's first line) | `#<n>` | the run id `<id>`, with no `#`. A per-issue spec-gate question is prefixed `#<k>: ` |
 | 3. D1 and D2 (`dispatch.md` `## Dispatch table`) | `run_dir: .aew/runs/<id>` and `spec_version` from `state.sh get spec_revision` | `run_dir: .aew/runs/<id>/issues/<k>` and `spec_version: <v_k + 1>` (row 7). Required files: `issues/<k>/00-issue-original.md` and `issues/<k>/issue.json` (D2 adds `issues/<k>/01-spec-analysis.md`). `description` is `spec_analysis <id> #<k>` |
-| 4. D3 | no `issues` field | the fields are `run_dir: .aew/runs/<id>`, `mode: pipeline`, then `issues: <a,b,c>`, taken from `jq -r '.issues | map(tostring) | join(",")' .aew/runs/<id>/state.json`. Required files: `issues/<k>/spec-final.md` and `issues/<k>/issue.json` for every k |
+| 4. D3 | no `issues` field | the fields are `run_dir: .aew/runs/<id>`, `mode: pipeline`, then `issues: <a,b,c>`, taken from the issue list filter below (`### Filters`, filter F1). Required files: `issues/<k>/spec-final.md` and `issues/<k>/issue.json` for every k |
 | 5. D13 | run-root `spec-final.md` and `issue.json` | required files `issues/<k>/spec-final.md` and `issues/<k>/issue.json` for every k, and `state.json`. Fields unchanged |
 | 6. `## Required inputs per stage` (`dispatch.md`) | files at the run root | `spec_analysis`: per issue as row 3. `brief`: per issue as row 4. `docs`: per issue as row 5, plus the unchanged `08-qa-report-<fix_cycle+1>.md` rule. Other stages are unchanged |
-| 7. `spec_revision` | `state.sh get spec_revision` | `<v_k>`, from `jq -r '[.history[] | (.note // "") | select(startswith("spec revision: #" + $k + " v")) | ltrimstr("spec revision: #" + $k + " v") | tonumber] | max // 1' --arg k <k> .aew/runs/<id>/state.json`. With no note it is 1. `state.sh set spec_revision` is never called in a bulk run |
+| 7. `spec_revision` | `state.sh get spec_revision` | `<v_k>`, from the revision filter below (`### Filters`, filter F2). With no note it is 1. `state.sh set spec_revision` is never called in a bulk run |
 | 8. `gates.md` `## Gate: spec` | `<rd>` is `.aew/runs/<id>`, `<n>` is the issue, note `gate:spec 01-spec-analysis.md` | `<rd>` is `.aew/runs/<id>/issues/<k>` and `<n>` is `k`. Step 1's note is `gate:spec issues/<k>/01-spec-analysis.md`, and its label goes on issue k only. Step 4's `gh-labels.sh stage <k> analysing` goes on k only, and D2 goes to k only. After the D2 return check (`dispatch.md` `## Return check`, retried once as `dispatch.md` `## Retries`), go to `## Spec analysis` step 1, not `ship/SKILL.md` `## Stage: spec_analysis` step 4 |
 | 9. `gates.md` `## Recording a spec revision` | paths under `.aew/runs/<id>/`, version compared with `spec_revision`, step 5 sets `spec_revision` | for issue k, every `.aew/runs/<id>/` path is `.aew/runs/<id>/issues/<k>/`, `<n>` is `k`, the version check compares `jq '.version' …` with `<v_k>` (row 7), and step 5 is `state.sh status running --note "spec revision: #<k> v<N>"`. The idempotency rule is unchanged: no post when the version is not greater than `<v_k>` |
 | 10. The other four gates (`plan-challenge`, `triage`, `spec-ambiguity`, `plan-approval`) | label on the issue, step 4 re-runs D2 on the run | the pending status writes are unchanged and the label goes on every issue. Step 4 of `plan-challenge`, `triage` and `spec-ambiguity` is `## Re-analysis`. `plan-approval` is unchanged apart from row 2 |
 | 11. `gates.md` `## Re-asking a pending gate` | `<rd>` is `.aew/runs/<id>` | a note `gate:spec issues/<k>/01-spec-analysis.md` gives `<rd>` `.aew/runs/<id>/issues/<k>` and `<n>` `k` (`resume` uses this) |
-| 12. `pr.md` `## Commit rules` | suffix `(#<n>)` | every issue, from `jq -r '.issues | map("#" + tostring) | join(", ")' .aew/runs/<id>/state.json`, for example `(#12, #13, #14)`. This also applies to the standards commit and the memory commit |
+| 12. `pr.md` `## Commit rules` | suffix `(#<n>)` | every issue, from the suffix filter below (`### Filters`, filter F3), for example `(#12, #13, #14)`. This also applies to the standards commit and the memory commit |
 | 13. `pr.md` `## Docs and memory commits` step 1 | `docs: add the issue spec<, and update CLAUDE.md> (#<n>)` | `docs: add the issue specs<, and update CLAUDE.md> (#12, #13, #14)`. The paths rule is unchanged (every ARTEFACTS path outside `.aew/`: one `docs/specs/<k>-<slug>.md` per issue, and `CLAUDE.md`) |
 | 14. `issue.json` in `pr.md` `## Push and pull request` step 4 (the PR URL) and `pr.md` `## Retro` step 1 (the repo) | `.aew/runs/<id>/issue.json` | `.aew/runs/<id>/issues/<first issue>/issue.json`. `gh-pr.sh create <id>` and `check-pr-intro.sh … --issues <count>` are unchanged |
 | 15. `pr.md` `## Manual tests` | the issue | the whole `manual-tests.md` goes to every issue (`gh-issue.sh manual-tests <k> …`), and every issue gets `gh-labels.sh flag <k> add manual-test-required` |
 | 16. `pr.md` `## Finish` step 1 | `ready-for-review` on the issue | `ready-for-review` on every issue. The retro is filed once, as now |
-| 17. `final-report.md` | first line `aew ship #<n> <title>: …`, AC counts without a prefix | the first line is `aew ship <id> <title>: <done | blocked | failed>`. The AC counts are `grep -c '^- \[x\] #[0-9][0-9]*-AC-' .aew/runs/<id>/10-summary.md` and `grep -cE '^- \[[ x]\] #[0-9]+-AC-' .aew/runs/<id>/10-summary.md`. `failed` reads `Next: remove .aew/runs/m-<mn>, then rerun /aew:ship-milestone <mn> --bulk`. After the report, go to `## Report` |
+| 17. `final-report.md` | first line `aew ship #<n> <title>: …`, AC counts without a prefix | the first line is `aew ship <id> <title>: ` followed by `done`, `blocked` or `failed`. The AC counts are `grep -c '^- \[x\] #[0-9][0-9]*-AC-' .aew/runs/<id>/10-summary.md` and `grep -cE '^- \[[ x]\] #[0-9]+-AC-' .aew/runs/<id>/10-summary.md`. `failed` reads `Next: remove .aew/runs/m-<mn>, then rerun /aew:ship-milestone <mn> --bulk`. After the report, go to `## Report` |
 | 18. `ship/SKILL.md` `## Blocked path` | steps 2 and 3 on the issue | steps 2 (`gh-issue.sh comment <k> .aew/runs/blocked-<id>.md`) and 3 (`gh-labels.sh stage <k> blocked`) run once per issue, and step 4 runs once. A failed call for one issue never skips the others or step 4 |
 | 19. Agents, for reference (no orchestrator action) | `<issue>` is the issue number | the developer and senior-engineer are already bulk-aware. qa-engineer's `<issue>` is `<id>` (evidence under `docs/qa/<id>/`). doc-writer writes one snapshot per issue. The `SubagentStop` gates read `.aew/runs/current`, which is `<id>` |
 
 Everything else in ship's files applies unchanged: one standards pass, one plan (D6 ∥ D7), one plan gate unless `auto`, one develop, review and QA loop, one docs pass and one PR.
+
+### Filters
+
+Run each with the Bash tool exactly as written, with `<id>` and `<k>` filled in. They sit outside the table so that no pipe in them is read as a table column.
+
+F1, the issue list (row 4):
+
+```
+jq -r '.issues | map(tostring) | join(",")' .aew/runs/<id>/state.json
+```
+
+F2, the revision `<v_k>` of issue k (row 7):
+
+```
+jq -r --arg k <k> '[.history[] | (.note // "") | select(startswith("spec revision: #" + $k + " v")) | ltrimstr("spec revision: #" + $k + " v") | tonumber] | max // 1' .aew/runs/<id>/state.json
+```
+
+F3, the commit suffix (row 12):
+
+```
+jq -r '.issues | map("#" + tostring) | join(", ")' .aew/runs/<id>/state.json
+```
 
 ## Start
 
