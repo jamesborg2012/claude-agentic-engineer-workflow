@@ -32,13 +32,20 @@ number (`42`), or `m-<milestone-number>` for a milestone run (`m-3`).
 | `manual-tests.md` | qa-engineer |
 | `10-summary.md`, `pr-body.md`, `retro.md` | doc-writer |
 | `prompt.md` | brief-compiler (prompt mode only) |
+| `issues/<k>/` | bulk milestone runs only: per issue `issue.json`, `00-issue-original.md`, `01-spec-analysis.md`, `spec-final.md`, `spec-changes.json`, `spec-revision-v<N>.md`; writers as for the root files |
+| `index.json` | sequential milestone runs only: order, each child's `stack_on` and status; `state.sh index` only |
+| `milestone-report.md` | milestone runs: the orchestrator |
+
+A sequential run's children are ordinary runs `.aew/runs/<k>/` beside `m-<n>`, linked by the
+index and the child's history note `milestone m-<n>`. A bulk issue's spec version is the history
+note `spec revision: #<k> v<N>`.
 
 Who reads each artefact, and its template: [references/artefacts.md](references/artefacts.md).
 Templates live in the plugin at `templates/artefacts/`. Start every artefact from its template,
 and keep its sections and their order.
 
 Committed outputs outside the run dir: `docs/standards/`, `docs/specs/<issue>-<slug>.md`,
-`docs/qa/<issue>/` (PR branch, final passing cycle only), the e2e dir and `CLAUDE.md`.
+`docs/qa/<issue>/` (PR branch, final passing cycle only; `docs/qa/m-<n>/` for a bulk run), the e2e dir and `CLAUDE.md`.
 
 ## Stages
 

@@ -19,14 +19,16 @@ lives in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Stage/status to label mapping: `run-p
 | `gh-labels.sh` | create the 11 labels, set the one stage label, toggle flags | `gh-labels.sh stage 42 building` |
 | `git-branch.sh` | create the run branch from the pattern; push it | `git-branch.sh create 42 add-export` |
 | `gh-pr.sh` | open (for a run or run-less), update, ready and comment on the PR | `gh-pr.sh create 42 .aew/runs/42/pr-body.md --draft` |
-| `gh-milestone.sh` | list a milestone's issues with parsed dependencies | `gh-milestone.sh issues "v1.2"` |
+| `gh-milestone.sh` | list a milestone's issues with parsed dependencies, or `select`: order, cycle, AC count, stacking and the mode recommendation | `gh-milestone.sh issues "v1.2"` |
 | `gh-retro.sh` | file `retro.md` items to the retro repo, deduplicated | `gh-retro.sh file .aew/runs/42/retro.md me/app 42` |
 
 Other calls: `state.sh init 42 --issues 42 --mode single`, `state.sh bump fix_cycle`,
 `state.sh set pr 17`, `gh-issue.sh comment 42 spec-revision-v2.md`,
 `gh-issue.sh revise 42 spec-final.md 2`, `gh-issue.sh manual-tests 42 manual-tests.md`,
 `gh-labels.sh flag 42 add spec-revised`, `git-branch.sh push`, `gh-pr.sh update 17 pr-body.md --run 42`,
-`gh-pr.sh ready 17`, `gh-pr.sh open chore/aew-init "chore: set up aew" pr-body.md --base main`.
+`gh-pr.sh ready 17`, `gh-pr.sh open chore/aew-init "chore: set up aew" pr-body.md --base main`,
+`gh-milestone.sh select 3`, `state.sh index init m-3 --stack-on 312:311,313:312`,
+`state.sh index set m-3 312 done`.
 
 ## Spec-revision recording order
 
@@ -51,7 +53,7 @@ Other calls: `state.sh init 42 --issues 42 --mode single`, `state.sh bump fix_cy
 | Topic | Fact |
 |---|---|
 | Argument order | `<subcommand> <id> <file-or-value>`, with exceptions below |
-| Exceptions | `gh-issue.sh fetch <n> <run-dir>`; `gh-pr.sh create <run-id> <body-file>`; `gh-pr.sh open <branch> <title> <body-file>`; `gh-retro.sh file <retro.md> <src-repo> <run-id>`; `gh-milestone.sh issues <milestone>` (number or title); `git-branch.sh create <run-id> <slug>` |
+| Exceptions | `gh-issue.sh fetch <n> <run-dir>`; `gh-pr.sh create <run-id> <body-file>`; `gh-pr.sh open <branch> <title> <body-file>`; `gh-retro.sh file <retro.md> <src-repo> <run-id>`; `gh-milestone.sh issues <milestone>` and `gh-milestone.sh select <milestone>` (number or title); `state.sh index` takes an explicit `m-<n>` id, not `current`; `git-branch.sh create <run-id> <slug>` |
 | Issue-number check | Duplicated in gh-issue, gh-pr and gh-labels, with equivalent behaviour |
 | Empty retro | `gh-retro.sh` accepts an empty `retro.md` (exit 0, no items) |
 | Repo targeting | Only `gh-retro.sh` passes `--repo` (from `retro.repo`). The rest act on the cwd repo. `GH_REPO` is honoured by `gh` itself and by `gh-milestone.sh` cross-repo filtering |
@@ -60,12 +62,12 @@ Stdout contract:
 
 | Script | Prints |
 |---|---|
-| `state.sh` | `get`: JSON or the field; `bump`: the new value; `current`: the run id |
+| `state.sh` | `get`: JSON or the field; `bump`: the new value; `current`: the run id; `index`: writes `.aew/runs/<run-id>/index.json` as `{"run_id","order":[n,...],"children":[{"issue","stack_on","status"}]}` |
 | `gh-issue.sh` | `comment`: the comment URL; `revise` and `manual-tests`: the issue URL when they edit (gh's own output); `fetch`: quiet |
 | `gh-labels.sh` | quiet |
 | `git-branch.sh` | `create` and `push`: the branch name (git chatter on stderr) |
 | `gh-pr.sh` | `create` and `open`: the PR number; `update` and `comment`: gh's own output (the PR or comment URL); `ready`: nothing on stdout |
-| `gh-milestone.sh` | a JSON array of `{number, title, labels, state, depends_on}` |
+| `gh-milestone.sh` | `issues`: a JSON array of `{number, title, labels, state, depends_on}`; `select`: one JSON object `{milestone, issues, closed, order, cycle, stack_conflicts, recommend, reasons}` |
 | `gh-retro.sh` | one line per item: `created #n` or `commented #n` |
 
 ## Known limitations
