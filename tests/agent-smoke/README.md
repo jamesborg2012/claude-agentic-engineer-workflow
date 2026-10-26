@@ -2741,7 +2741,7 @@ PR introduction (verbatim, the start of the captured PR body):
     Nothing needs a person to check by hand. Known gap: the browser asks for a site icon that does not exist, which is harmless. All 32 browser checks pass on desktop and mobile, the unit test passes, and the accessibility scan found no problems.
     
 
-### 10.5 Q1 and Q2: sequential, killed in child 2, resumed, child 3 blocked
+### 10.5 Q1 to Q3: sequential, stopped in child 2, resumed, child 3 blocked
 
 Task E10 (AC-34, AC-28 live). Recorded 2026-10-26 after the CTO-2 pre-launch checks (suite green at 371, CTO-1 guard
 clean, port 4173 free, ledger readable). Q uses the static-shop issues 311 to 313 (R-E3, 10.7). **Q1 did not reach its
@@ -2877,7 +2877,7 @@ Recorded by task E11 on 2026-10-26 from the results in 10.3 to 10.5; no paid ses
 below is `pass`, `fail` or `open`. Open means a check was not decided by any run.
 
 **Results roll-up.** 18 of 20 rows pass, 2 fail and none are open. The failures are the Q1 kill trigger (the runs
-stopped themselves instead, which still exercised resume) and the denial-free rail on B1.2 and Q3.2. One check stays
+stopped themselves instead, which still exercised resume) and the denial-free rail on B1.1, B1.2 and Q3.2. One check stays
 open inside a passing row: B1.2 check 6 (revision), covered by B1.1.
 
 | build-prompt AC | result | evidence |
@@ -2887,7 +2887,7 @@ open inside a passing row: B1.2 check 6 (revision), covered by B1.1.
 | Simulated bulk run records a revision on each issue that needed one | pass | B1.1 check 6: #302 v2, with the `Spec revision v2` comment, body marker, `spec-revised` flag and history note, and none on #301 or #303. B1.2 check 6 is open (nothing needed revising), so the AC holds across the two runs |
 | Simulated sequential run respects the dependency order and creates stacked branches with the correct PR bases | pass | Q1.1 Q1-2 to Q1-4 (311 first, base `main`, index order 311, 312, 313); Q2.1 checks 3 and 4; Q3.2 check 3 (#312 base `feat/311-stock-labels`, `merge-base --is-ancestor` true) |
 | Simulated sequential run stops cleanly when one child is forced to `blocked` | pass | Q3.2 checks 5 to 7: #313 `blocked` at `git-branch.sh create`, index `311:done 312:done 313:blocked`, parent `blocked`, report comment on all three issues, no agent dispatch for #313 |
-| Resume works for a milestone run interrupted in its second child | pass | Q2.1 checks 2 to 4 (resume entered the sequence, child 2 run with the parent's `auto`, index `312:running`); Q3.1 check 1 and Q3.2 check 1 (resumed a blocked milestone and continued #312 with no earlier stage redone). The interruption was a stop (the spec gate, then a QA block), not a kill |
+| Resume works for a milestone run interrupted in its second child | pass | Q2.1 checks 2 to 4 (resume of a milestone stopped between children: entered the sequence, started child 2 with the parent's `auto`, index `312:running`); Q3.1 check 1 (`## Resume` on a child marked `running` with no state, which the harness reset, so #312 restarted from `spec_analysis` by design); Q3.2 check 1 (resumed a milestone blocked in child 2 and continued #312 at `qa`, no earlier stage redone). The interruption was a stop (between children, then a QA block), not a kill: a child left `running` mid-stage by a kill was never resumed, and Q2.1's pending spec gate was reset, not answered |
 | Results recorded in `tests/agent-smoke/README.md` | pass | this section and 10.1 to 10.5 |
 
 | spec AC | result | evidence |
@@ -2904,7 +2904,7 @@ open inside a passing row: B1.2 check 6 (revision), covered by B1.1.
 | AC-34 child 2's PR base is child 1's branch, with the stacked introduction | pass | Q3.2 checks 3 and 4 (PR #8; the introduction names #311 and "must be merged after it") |
 | AC-34 child 3 forced to `blocked`, clean stop, index `done, done, blocked`, report on all three | pass | Q3.2 checks 5 to 7 |
 | AC-35 results in 10 in 9's form, no transcripts | pass | this section |
-| Rail: no denials in any run (`smoke_denials` `[]`) | fail | B1.1 and B1.2 check 16 (the `jq --arg` form, fixed in 035f956, and one improvised command); Q3.2 check 9 (a `curl` probe and a `for ... test -f` loop). M1, M3, Q1.1, Q2.1 and Q3.1 are clean |
+| Rail: no denials in any run (`smoke_denials` `[]`) | fail | B1.1 and B1.2 check 16 (the `jq --arg` form, fixed in 035f956 but not re-run live, and one improvised command); Q3.2 check 9 (a `curl` probe and a `for ... test -f` loop). M1, M3, Q1.1, Q2.1 and Q3.1 are clean |
 
 ### 10.7 Notes (prompt 06)
 
@@ -2914,7 +2914,9 @@ open inside a passing row: B1.2 check 6 (revision), covered by B1.1.
 - Q cap too small and the plan split. R-E1 sized Q1 at 8 assuming about 3 per child; child 1 cost 4.59, so the orchestrator
   stopped before child 2 (Q1.1). James then approved splitting the plan's Q2 into Q2 (resume, kill in child 2) and Q3
   (finish, child 3 forced to `blocked`), still inside $45. Q2.1 stopped at #312's spec gate (see 10.5).
-- The B1 `jq` `$k` denial (10.4) was fixed in 035f956 (`--arg` moved after the filter); Q2.1 shows no denials.
+- The B1 `jq` `$k` denial (10.4) was fixed in 035f956 (`--arg` moved after the filter). No bulk run followed the fix, so it
+  is unverified live (Q2.1 to Q3.2 are sequential and never run that filter). The filter had escaped `skills.bats` test 18
+  because its fence had no `sh` tag; the three `bulk.md` filters are now `sh` fences, and the test fails on the old form.
 - Q fixture tuning (the 9.5 precedent, where #103's AC was made material in the mock): #312's body gained a fourth AC
   stating the disabled look of the Notebook button, because Q2.1's spec-analyser flagged its absence as a material change
   that gates even under `--auto`. The fix is in `smoke_ms_bodies` so the run is reproducible. #313 was left as it was

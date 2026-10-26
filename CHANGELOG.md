@@ -74,4 +74,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ship` reads a return block with `grep -v '^$' <file> | tail -n 4` instead of `awk 'NF'`, so an interactive run under init's permissions no longer prompts on each check (CTO condition C2).
 - `developer` ignores `.claude/agent-memory/` in its clean-tree and allowed-files checks, listing untracked files individually because `git status --porcelain` collapses an untracked directory to one line (found by B1.1).
 - `qa-engineer` lists files only in ARTEFACTS, never a directory, so ship's return check no longer blocks a QA run (found by Q3.1).
-- The bulk spec-revision lookup in `bulk.md` puts `jq --arg` after the filter, so it is pre-approvable headless (found by B1.2).
+- The bulk spec-revision lookup in `bulk.md` puts `jq --arg` after the filter, so it is pre-approvable headless (found by B1.1 and B1.2; not re-run live), and the `bulk.md` filters sit in `sh` fences so `skills.bats` checks them.
