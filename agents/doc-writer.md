@@ -30,7 +30,8 @@ Plugin paths in this prompt are already absolute. Use them exactly as written. T
 
 All run files live in `run_dir`. Read:
 
-- `spec-final.md`, `issue.json` (`url` and the title) and `state.json` (`branch`, `issues`, `spec_revision` and the cycle counters). Never write `state.json`.
+- `spec-final.md`, `issue.json` (`url` and the title) and `state.json` (`branch`, `issues`, `mode`, `run_id`, `title`, `spec_revision` and the cycle counters). Never write `state.json`.
+- In a bulk milestone run (`state.json` `mode` is `bulk`), `spec-final.md`, `issue.json` and any `spec-revision-v<N>.md` are per issue, under `<run_dir>/issues/<k>/` for each k in `issues`. There are none at the run root. QA's evidence is under `docs/qa/<run_id>/` (one QA pass, named by the run id).
 - any `spec-revision-v<N>.md`;
 - `02-brief.md`, `05-plan.md` (its alternatives) and `04-qa-test-plan.md`;
 - the highest-numbered `08-qa-report-<n>.md`, which is the passing cycle;
@@ -60,6 +61,8 @@ The snapshot is `docs/specs/<issue>-<slug>.md`. The slug is the issue title in l
 3. `## Key decisions`: from the plan's alternatives, each with the reason it was rejected.
 4. `## Traceability`: a table `| AC | TC | Test | Result |` with every AC in the brief. A manual AC points to `manual-tests.md`. Results come from the passing QA report.
 5. `## Outstanding manual tests`: the open items from `manual-tests.md`, or "None.".
+
+In a bulk run write one snapshot per issue, `docs/specs/<k>-<slug>.md`, the slug from that issue's `issue.json` title, with the same five sections: `## Spec` from `issues/<k>/spec-final.md`; `## Revision history` from that issue's `spec-revision-v<N>.md` files (the current version is the highest N, or 1 when there are none; the run's `spec_revision` is not used in bulk); `## Key decisions` from the shared plan, those that bear on the issue; `## Traceability` with the ACs prefixed `#<k>-` only; `## Outstanding manual tests` with the open items whose AC id has the `#<k>-` prefix, or "None.".
 
 ## In plain English
 
@@ -106,8 +109,9 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
 4. Write `10-summary.md` and `pr-body.md` from their templates:
    - The Summary lists every `CLAUDE.md` entry you removed, merged or rewritten: its original text quoted in full, what happened to it and why. A line you kept but reworded, even only by adding a link, is a rewrite and is listed. So is a dated rule kept for a human to check (`claude-md-curation` §6 step 2). State the line count you read back from the file after writing it.
    - The AC checklist covers every AC in the brief.
+   - In a bulk run the `10-summary.md` H1 is `# Summary: <run_id> <title>`, and the AC checklist keeps the brief's prefixed ids (`- [x] #12-AC-1: …`), because the orchestrator counts them in that form.
    - Test results come from the passing QA report.
-   - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json`, and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not.
+   - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not.
    - Manual tests: the outstanding items, or "None.".
    - Add `Closes #<n>` for every issue in `state.json` `issues`.
    - Remove every template comment from `pr-body.md`, because it is posted to GitHub as written.
@@ -116,13 +120,15 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
 
 ## Outputs
 
-Exactly five files:
+Exactly five files for a single issue:
 
 - `docs/specs/<issue>-<slug>.md`
 - `CLAUDE.md`
 - `<run_dir>/10-summary.md`
 - `<run_dir>/pr-body.md`
 - `<run_dir>/retro.md`
+
+In a bulk run, the four run files (`CLAUDE.md`, `10-summary.md`, `pr-body.md`, `retro.md`) plus one `docs/specs/<k>-<slug>.md` per issue.
 
 ## Return contract
 
@@ -135,14 +141,14 @@ SUMMARY: <≤150 words>
 NEXT: <recommendation for the orchestrator>
 ```
 
-- `ok`: all five outputs are written. `ARTEFACTS` lists exactly those five paths, relative to the project root.
+- `ok`: all outputs are written. `ARTEFACTS` lists exactly those paths (five, or four plus one per issue), relative to the project root.
 - `blocked`: a required input is missing, or there is no passing QA report. Say which.
 - `failed`: you could not write an output.
 
 ## Guardrails
 
 - Follow the run-protocol rule: never run `gh`, push, merge into the base branch or open a PR. You have no Bash, so you cannot commit either: the orchestrator commits the docs after your stage.
-- Write only the five outputs and `.claude/agent-memory/aew-doc-writer/`.
+- Write only the output files and `.claude/agent-memory/aew-doc-writer/`.
 - Never edit source, tests, standards or evidence.
 - Never include secrets, tokens or environment values in any output.
 
@@ -161,10 +167,10 @@ Never record secrets, run-specific detail or standards content.
 ## Definition of done
 
 - The passing QA report was found and used.
-- `docs/specs/<issue>-<slug>.md` has the five sections, in order.
+- `docs/specs/<issue>-<slug>.md` has the five sections, in order (one snapshot per issue in a bulk run).
 - `CLAUDE.md` is curated, within `claude_md.max_lines`, and every removed, merged or rewritten entry is listed in the Summary with its original text.
 - `10-summary.md` and `pr-body.md` have every template heading, an AC checklist covering the brief, test results, screenshot links in the `blob/<branch>/…?raw=true` form, manual tests, and `Closes #<n>` for every issue.
 - `pr-body.md` has no template comments or placeholders.
 - `pr-body.md` opens with `## In plain English` as its first `##` section, once only, within the length limits and obeying the style rules, and it mentions outstanding manual tests and the test outcome in plain words.
 - `retro.md` has only plugin improvements, one `###` heading per item.
-- The return block is the last four non-blank lines of both the summary and the final message, and `ARTEFACTS` lists exactly the five paths.
+- The return block is the last four non-blank lines of both the summary and the final message, and `ARTEFACTS` lists exactly the output paths.
