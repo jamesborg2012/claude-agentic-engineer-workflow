@@ -536,10 +536,11 @@ git-branch.sh')"
         ship/SKILL.md | SKILL.md) p=skills/ship/SKILL.md ;;
         mode-selection.md | bulk.md | sequential.md) p=skills/ship-milestone/references/$cf ;;
         prompt/SKILL.md) p=skills/prompt/SKILL.md ;;
+        resume/SKILL.md) p=skills/resume/SKILL.md ;;
         *) p=skills/ship/references/$cf ;;
       esac
       [ "$(grep -cxF -- "$h" "$REPO_ROOT/$p" 2> /dev/null || true)" -eq 1 ] || bad="$bad${f#"$REPO_ROOT"/}: unresolved: $c"$'\n'
-    done < <(grep -oE '`(prompt/SKILL|ship-milestone/SKILL|ship/SKILL|SKILL|mode-selection|bulk|sequential|preflight|dispatch|gates|routing|pr|final-report)\.md` `## [^`]+`' "$f" | sort -u || true)
+    done < <(grep -oE '`(prompt/SKILL|resume/SKILL|ship-milestone/SKILL|ship/SKILL|SKILL|mode-selection|bulk|sequential|preflight|dispatch|gates|routing|pr|final-report)\.md` `## [^`]+`' "$f" | sort -u || true)
     total=$((total + n))
     [ "$f" != "$REPO_ROOT/skills/ship/SKILL.md" ] || ship_n=$n
     [ "$f" != "$REPO_ROOT/skills/ship-milestone/SKILL.md" ] || ms_n=$n
@@ -611,4 +612,19 @@ git-branch.sh')"
   [ "$n" -ge 10 ] || { printf 'only %s printed checks found\n' "$n" >&2; return 1; }
   bad=$(preapprovable_offenders "$REPO_ROOT" "${files[@]}" | grep ': S1 ' || true)
   report_offenders "silent checks (S1)" "$bad"
+}
+
+@test "ship-milestone: no stage sections, dispatch rows or gate steps (it reuses ship)" {
+  local d="$REPO_ROOT/skills/ship-milestone" f bad="" n=0
+  [ -d "$d" ] || { echo "skills/ship-milestone is missing" >&2; return 1; }
+  while IFS= read -r f; do
+    n=$((n + 1))
+    bad="$bad$(absent_regex "$f" '^## Stage: 
+^## Gate: 
+^\| D[0-9]+ \|
+^\| Row \| Agent and mode \|
+^[0-9]+\. (Set pending|Apply the answer):')"
+  done < <(find "$d" -type f -name '*.md')
+  [ "$n" -eq 4 ] || bad="${bad}want 4 files under skills/ship-milestone, found $n"$'\n'
+  report_offenders "pipeline copy in ship-milestone (AC-25)" "$bad"
 }
