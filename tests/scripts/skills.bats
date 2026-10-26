@@ -527,6 +527,13 @@ git-branch.sh')"
   grep -qF '"Read(/${CLAUDE_PLUGIN_ROOT}/**)"' <<< "$t1" || { echo "template 1 lacks Read(/\${CLAUDE_PLUGIN_ROOT}/**)" >&2; return 1; }
 }
 
+@test "doc-writer: the introduction names new dependencies and plan decisions taken under --auto" {
+  local pe
+  pe=$(awk '/^## In plain English$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/agents/doc-writer.md")
+  grep -q 'new dependenc' <<< "$pe" || { echo "doc-writer intro rules do not mention new dependencies" >&2; return 1; }
+  grep -q -- '--auto' <<< "$pe" || { echo "doc-writer intro rules do not mention decisions under --auto" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')
