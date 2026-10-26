@@ -522,8 +522,6 @@ git-branch.sh')"
         prompt/SKILL.md) p=skills/prompt/SKILL.md ;;
         *) p=skills/ship/references/$cf ;;
       esac
-      # TODO(milestone-mode): Phase D adds sequential.md "## Resume"; remove this skip then.
-      if [ "$cf" = sequential.md ] && [ "$h" = '## Resume' ]; then continue; fi
       [ "$(grep -cxF -- "$h" "$REPO_ROOT/$p" 2> /dev/null || true)" -eq 1 ] || bad="$bad${f#"$REPO_ROOT"/}: unresolved: $c"$'\n'
     done < <(grep -oE '`(prompt/SKILL|ship-milestone/SKILL|ship/SKILL|SKILL|mode-selection|bulk|sequential|preflight|dispatch|gates|routing|pr|final-report)\.md` `## [^`]+`' "$f" | sort -u || true)
     total=$((total + n))
