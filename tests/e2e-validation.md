@@ -656,6 +656,9 @@ Issue #2, `/aew:ship 2 --auto`, headless, cap line $20. Four attempts on one run
 | Introduction (AC-14), S2.3 | **gap, fixed** | `check-pr-intro.sh --issues 2` exit 0, and specific and true (inline errors, the announced summary, focus, kept input, contrast in both schemes, the decision taken on James's behalf, the two VoiceOver checks, the results). But no part of the PR body said that QA added two dev dependencies the plan had left for the (skipped) plan gate. Doc-writer fix `7f188e8` |
 | Introduction (AC-14), S2.4 | **accurate** | now also: "Two browser-testing tools were added for development only, and the plan's usual approval step was skipped because the run was automatic." Check exit 0 |
 
+Merge (CP-3): James merged PR #15 with a normal merge commit (`a6936d8`, two parents) and deleted the branch; issue #2
+closed; `main` fast-forwarded.
+
 Cycles: review 0, fix 0. Duration: about 50 minutes over four attempts. Problems: the plugin-file Read under headless
 (`444a579`), the introduction gap (`7f188e8`), and two harness issues (stale dev-server CSS; unquoted `curl` rules).
 
