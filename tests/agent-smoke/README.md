@@ -2392,6 +2392,22 @@ within $45.
 
 | run | attempt | cap (USD) | cost (USD) | running total | cap raised? |
 |---|---|---|---|---|---|
+| M1 (probe) | M1.1 | 1 | 0.415012 | 0.415012 | no |
+| M3 (probe) | M3.1 | 1 | 0.487072 | 0.902084 | no |
+| M3 (probe) | M3.2 | 1 | 0.409620 | 1.311704 | no |
+| B1 (bulk) | B1.1 | 15 | 4.963957 | 6.275661 | no |
+| B1 (bulk) | B1.2 | 15 | 5.603024 | 11.878685 | no |
+| Q1 (sequential) | Q1.1 | 8 | 4.591567 | 16.470252 | no |
+| Q2 (resume) | Q2.1 | 10 | 1.447647 | 17.917899 | no |
+| Q3 (resume) | Q3.1 | 12 | 5.074982 | 22.992881 | no |
+| Q3 (resume) | Q3.2 | 12 | 2.918497 | 25.911378 | no |
+
+The total is **$25.91** of the $45 stop, over 9 sessions (the sum of the nine `ledger-06` files; the rows are in
+start-time order). No session was refused, killed or raised, and none passed its cap. M3.1 was an operator error (it was
+launched with `--sequential` as an argument), so it is in the ledger but not counted as a probe. The caps that ran were
+not the planned set: James approved the B1 re-run (B1.2), the split of Q2 into Q2 (cap 10) and Q3 (cap 12), and Q3.2,
+each inside $45. The nine caps add up to $75, more than the planned $37, because the launcher reserves a cap only while
+a session runs and counts the real cost afterwards, so the stop was checked against costs plus one live reservation.
 
 ### 10.2 Harness
 
@@ -2857,6 +2873,39 @@ Spend: Q3.2 2.918497 of cap 12. Ledger running total 25.911393 of the $45 stop (
 
 ### 10.6 Acceptance criteria (build prompt 06)
 
+Recorded by task E11 on 2026-10-26 from the results in 10.3 to 10.5; no paid session was started for it. Every row
+below is `pass`, `fail` or `open`. Open means a check was not decided by any run.
+
+**Results roll-up.** 18 of 20 rows pass, 2 fail and none are open. The failures are the Q1 kill trigger (the runs
+stopped themselves instead, which still exercised resume) and the denial-free rail on B1.2 and Q3.2. One check stays
+open inside a passing row: B1.2 check 6 (revision), covered by B1.1.
+
+| build-prompt AC | result | evidence |
+|---|---|---|
+| Mode recommendation on three fixture milestones: three small related issues give bulk; five issues with a large one give sequential; a dependency chain gives sequential in the stacked order | pass | `tests/scripts/gh-milestone.bats` (all three fixtures); M1.1 M-1 to M-8 (bulk, `select` order 21, 22, 23); M3.2 M-1 to M-8 (sequential, order 42, 43, 41, stacking 41 on 43). M1.1 M-9 passes with a wording note: the "same area" and "low risk" judgement is named, but in different words from the plan's |
+| Simulated bulk run completes, one PR with closing keywords for all three issues, an introduction that passes `check-pr-intro.sh` | pass | B1.2 checks 1, 8, 9: one `pr create`, `Closes #301`, `#302`, `#303`, `check-pr-intro.sh --issues 3` exit 0 |
+| Simulated bulk run records a revision on each issue that needed one | pass | B1.1 check 6: #302 v2, with the `Spec revision v2` comment, body marker, `spec-revised` flag and history note, and none on #301 or #303. B1.2 check 6 is open (nothing needed revising), so the AC holds across the two runs |
+| Simulated sequential run respects the dependency order and creates stacked branches with the correct PR bases | pass | Q1.1 Q1-2 to Q1-4 (311 first, base `main`, index order 311, 312, 313); Q2.1 checks 3 and 4; Q3.2 check 3 (#312 base `feat/311-stock-labels`, `merge-base --is-ancestor` true) |
+| Simulated sequential run stops cleanly when one child is forced to `blocked` | pass | Q3.2 checks 5 to 7: #313 `blocked` at `git-branch.sh create`, index `311:done 312:done 313:blocked`, parent `blocked`, report comment on all three issues, no agent dispatch for #313 |
+| Resume works for a milestone run interrupted in its second child | pass | Q2.1 checks 2 to 4 (resume entered the sequence, child 2 run with the parent's `auto`, index `312:running`); Q3.1 check 1 and Q3.2 check 1 (resumed a blocked milestone and continued #312 with no earlier stage redone). The interruption was a stop (the spec gate, then a QA block), not a kill |
+| Results recorded in `tests/agent-smoke/README.md` | pass | this section and 10.1 to 10.5 |
+
+| spec AC | result | evidence |
+|---|---|---|
+| AC-32 mode probes M1 to M3: recommendation, no AskUserQuestion, no run dir, no `gh` write | pass | M1.1 and M3.2 checks M-1 to M-8; M3.1 is an operator error and is not counted |
+| AC-33 one PR closing all three issues, intro passes `--issues 3` | pass | B1.2 checks 8 and 9 |
+| AC-33 revision comment, marker and flag on each revised issue, on no other | pass | B1.1 check 6 (B1.2 check 6 open) |
+| AC-33 `ready-for-review` on all three | pass | B1.2 check 10 |
+| AC-33 milestone report comment on each issue | pass | B1.2 check 11 (B1.1 check 11 also passes) |
+| AC-33 valid `state.json` (`done`) | pass | B1.2 checks 1 and 2; B1.1 check 1 fails on the developer clean-tree bug (fixed in a34996f and 12021ad) |
+| AC-34 Q1 ships child 1 with PR base `main` | pass | Q1.1 Q1-2 and Q1-3 |
+| AC-34 Q1 is killed in child 2 on its own `state.json` | fail | Q1.1 Q1-1 and Q2.1 check 1: no run was killed. The model stopped itself on the budget before child 2 (Q1.1); #312 reached its spec gate under `--auto` (Q2.1) |
+| AC-34 Q2 resumes child 2 from its recorded stage, no child-1 work redone | pass | Q2.1 checks 2 to 4, Q3.2 check 1 |
+| AC-34 child 2's PR base is child 1's branch, with the stacked introduction | pass | Q3.2 checks 3 and 4 (PR #8; the introduction names #311 and "must be merged after it") |
+| AC-34 child 3 forced to `blocked`, clean stop, index `done, done, blocked`, report on all three | pass | Q3.2 checks 5 to 7 |
+| AC-35 results in 10 in 9's form, no transcripts | pass | this section |
+| Rail: no denials in any run (`smoke_denials` `[]`) | fail | B1.1 and B1.2 check 16 (the `jq --arg` form, fixed in 035f956, and one improvised command); Q3.2 check 9 (a `curl` probe and a `for ... test -f` loop). M1, M3, Q1.1, Q2.1 and Q3.1 are clean |
+
 ### 10.7 Notes (prompt 06)
 
 - R-E3: Q1 and Q2 run on the static-shop issues 311 to 313 (milestone 3, "Product stock"), not on the chain fixture
@@ -2875,3 +2924,20 @@ Spend: Q3.2 2.918497 of cap 12. Ledger running total 25.911393 of the $45 stop (
 - Launcher copy: the plan's `KRUN` line uses `${KSTAGE:-}`, because `--env-check` runs under `set -u` without a
   `KSTAGE` and the bare form would abort it. The copy's header comment also names `ledger-06` and "$45", beside the
   usage word, so the `diff` has those two comment hunks as well.
+- Known limitation for prompt 07: a sequential child blocked because `git-branch.sh create` failed never records a
+  branch. `/aew:resume m-<n>` then stops on "no branch", and the suggested `ship <k> --from spec_analysis` would branch
+  from `main`, losing the stack (`sequential.md` `## Resume`).
+- For prompt 07: the B1 retro items all show "created #1" because the mock replies to every retro `issue create` with
+  one canned issue number. This is a mock artefact, not a ship defect.
+- B1.1 failed at `develop` on a pre-existing developer bug: untracked `.claude/agent-memory/` files failed the clean-tree
+  precondition. It was fixed in a34996f, and again in 12021ad to list untracked files individually, since
+  `git status --porcelain` collapses an untracked directory to one line. B1.2 then completed. B1.2 check 6 is open
+  because nothing needed revising; the revision path is B1.1's.
+- Budget: the model budgets against its own `--max-budget-usd` cap and may decline the next child (Q1.1, cap 8, child 1
+  cost 4.59), so a cap must cover every child it is meant to run.
+- Material spec gates under `--auto` stop and are unanswerable headless (Q2.1, #312). The fixture was tuned afterwards
+  (see above), as 9.5 did for #103.
+- Not exercised live: a per-issue bulk gate answer, a `failed` child, `/aew:ship <k> --from` on a stopped child, and the
+  SessionStart hint naming `spec_analysis` for a sequential parent (Risk 5). Risk 3 (stacked PRs after the base merges)
+  needs a real merge and is left to prompt 07.
+- M3.1 is an operator error (the mode was passed as an argument), not a ship defect, and is not counted as a probe.
