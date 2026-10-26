@@ -514,6 +514,13 @@ git-branch.sh')"
   report_offenders "prompt contract" "$bad"
 }
 
+@test "ship: the plan-approval question itself carries the summary and the plan path" {
+  local g
+  g=$(awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md")
+  grep -q 'question text' <<< "$g" || { echo "plan-approval: the summary is not part of the question text" >&2; return 1; }
+  grep -q '05-plan.md' <<< "$g" || { echo "plan-approval: no plan path" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')
