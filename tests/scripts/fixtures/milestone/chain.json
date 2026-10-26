@@ -1,0 +1,51 @@
+[
+  {
+    "number": 43,
+    "title": "Payment step",
+    "labels": [],
+    "state": "OPEN",
+    "body": "Needs the cart.\n\n## Acceptance criteria\n- one\n- two\n",
+    "blockedBy": [
+      {
+        "number": 42
+      }
+    ],
+    "url": "https://github.com/acme/shop/issues/43",
+    "milestone": {
+      "number": 4,
+      "title": "Checkout flow",
+      "description": "",
+      "dueOn": null
+    }
+  },
+  {
+    "number": 41,
+    "title": "Confirmation page",
+    "labels": [],
+    "state": "OPEN",
+    "body": "Depends on #43\n\n## Acceptance criteria\n- one\n- two\n",
+    "blockedBy": [],
+    "url": "https://github.com/acme/shop/issues/41",
+    "milestone": {
+      "number": 4,
+      "title": "Checkout flow",
+      "description": "",
+      "dueOn": null
+    }
+  },
+  {
+    "number": 42,
+    "title": "Cart totals",
+    "labels": [],
+    "state": "OPEN",
+    "body": "Base work.\n\n## Acceptance criteria\n- one\n- two\n",
+    "blockedBy": [],
+    "url": "https://github.com/acme/shop/issues/42",
+    "milestone": {
+      "number": 4,
+      "title": "Checkout flow",
+      "description": "",
+      "dueOn": null
+    }
+  }
+]

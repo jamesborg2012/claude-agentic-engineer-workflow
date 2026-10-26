@@ -1,0 +1,48 @@
+{
+  "milestone": {
+    "number": 2,
+    "title": "Shop polish"
+  },
+  "issues": [
+    {
+      "number": 21,
+      "title": "Tidy the basket icon",
+      "labels": [
+        "shop"
+      ],
+      "depends_on": [],
+      "ac_count": 3,
+      "stack_on": null
+    },
+    {
+      "number": 22,
+      "title": "Align product card prices",
+      "labels": [
+        "shop"
+      ],
+      "depends_on": [],
+      "ac_count": 2,
+      "stack_on": null
+    },
+    {
+      "number": 23,
+      "title": "Fix wishlist empty state",
+      "labels": [
+        "shop"
+      ],
+      "depends_on": [],
+      "ac_count": 4,
+      "stack_on": null
+    }
+  ],
+  "closed": [],
+  "order": [
+    21,
+    22,
+    23
+  ],
+  "cycle": null,
+  "stack_conflicts": [],
+  "recommend": "bulk",
+  "reasons": []
+}
