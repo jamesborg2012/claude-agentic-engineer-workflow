@@ -56,6 +56,7 @@ Preflight checks the branch and never fast-forwards it.
 1. `cat .aew/runs/current`. A missing or empty file passes.
 2. Otherwise `jq -r .status .aew/runs/<cur>/state.json`, where `<cur>` is the id in `current`. If that `state.json` is missing, pass with a warning (`aew: run <cur> has no state.json; ignoring it.`).
 3. Pass when the status is `done` or `failed`, or when `<cur>` is this issue and the call is `--from` or `resume`.
+   Milestone runs: also pass when one of `<cur>` and this run is a milestone run `m-<p>` and the other is its child. Check it with `jq -r '[.history[] | select(.note == "milestone " + $m)] | length' --arg m <mid> .aew/runs/<other>/state.json`, where `<mid>` is whichever of the two ids is `m-<p>` and `<other>` is the other one: `1` or more passes; `0`, or no output (no such `state.json`), does not.
 4. `<cur>` is another run and its status is active (`running`, `blocked`, `awaiting_input`, `awaiting_plan_approval`): stop with `Run <cur> is active (<status>): finish it with /aew:resume <cur>, or check it with /aew:status <cur>.`
 5. `<cur>` is this issue, without `--from`: stop with `Run <n> is active (<status>): continue it with /aew:resume <n>, or restart a stage with /aew:ship <n> --from <stage>.`
 

@@ -86,6 +86,7 @@ Read each reference at the step that names it.
 | `${CLAUDE_PLUGIN_ROOT}/skills/ship/references/routing.md` | the stage table, status routing, review loop, developer blocked, QA loop, cycle limits, script failures | every stage |
 | `${CLAUDE_PLUGIN_ROOT}/skills/ship/references/pr.md` | commit rules, the standards, docs and memory commits, push and pull request, manual tests, retro, finish | standards, docs, pr |
 | `${CLAUDE_PLUGIN_ROOT}/skills/ship/references/final-report.md` | the report format, counting, blocked and failed runs | Final report |
+| `${CLAUDE_PLUGIN_ROOT}/skills/ship-milestone/references/sequential.md` | a milestone child (`mode` `sequential-child`): its parent and dependency, and the hand-back when it ends | Step 3, docs, Gate pending, Blocked path, Final report |
 
 For the stage diagram, see `${CLAUDE_PLUGIN_ROOT}/skills/run-protocol/references/state-machine.md`. For script output contracts, see `${CLAUDE_PLUGIN_ROOT}/skills/github-ops/SKILL.md`.
 
@@ -132,6 +133,8 @@ State is initialised before the fetch (a recorded deviation from DESIGN's order)
 - 3.6 `gh-labels.sh stage <n> analysing`.
 - 3.7 The slug: `jq -r '.title | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | .[0:40] | rtrimstr("-") | if . == "" then "issue-<n>" else . end' .aew/runs/<n>/issue.json`. Then `git-branch.sh create <n> <slug>` (it prints the branch name), then `state.sh set branch <name>`.
 - 3.8 Go to `## Stage: spec_analysis` step 2 (Step 3 has done its Entry).
+
+Milestone child: in a `sequential-child` run, a stop at 3.3 or 3.4 prints its message, then goes to `sequential.md` `## After a child` instead of stopping.
 
 ## Step 4. Restart at a stage (--from)
 
@@ -222,7 +225,7 @@ In a bulk run, step 1's label goes on every issue, and `bulk.md` `## Spec analys
 
 1. Entry: `state.sh stage docs`, then `gh-labels.sh stage <n> documenting`.
 2. Check required files: `dispatch.md` `## Required inputs per stage`.
-3. Dispatch row D13.
+3. Dispatch row D13. A `sequential-child` run adds `stacked_on: <dep>` when `sequential.md` `## Parent and dependency of a child` gives a dependency.
 4. Return check: `dispatch.md` `## Return check`.
 5. Exit: `ok` runs `pr.md` `## Docs and memory commits`, then `## Stage: pr`.
 6. Failure: `routing.md` `## Agent status routing`.
@@ -240,6 +243,8 @@ Reached when a gate's Ask step gets no answer: AskUserQuestion is not among your
 
 Print `aew ship #<n>: waiting at the <gate-id> gate.`, then the questions with their recommended answers (or the plan summary and the `05-plan.md` path), then the line `Answer with /aew:resume <id>`. Stop: nothing after the gate runs.
 
+Milestone child: a `sequential-child` run stops here too, and its milestone index entry stays `running`. After the `Answer with` line, also print `Or continue the whole milestone with /aew:resume m-<p>`, where `m-<p>` is its parent from `sequential.md` `## Parent and dependency of a child`.
+
 ## Blocked path
 
 In this order:
@@ -249,7 +254,7 @@ In this order:
 3. `gh-labels.sh stage <n> blocked`.
 4. `state.sh status blocked --note "<reason, one line>"`.
 5. Keep `current` as it is.
-6. Go to `## Final report`, then stop.
+6. Go to `## Final report`, then stop (a `sequential-child` run is handed back there instead of stopping).
 
 A failed `gh` script call in step 2 or 3 never skips step 4. The final report names the call that failed.
 
@@ -260,3 +265,5 @@ In a bulk run, steps 2 and 3 run once per issue in `issues`, and a failure for o
 Follow `final-report.md` `## Format`, `final-report.md` `## Counting` and `final-report.md` `## Blocked and failed runs` for every outcome: `done`, `blocked` and `failed`.
 
 In a bulk run, print this report with the `bulk.md` `## Overrides` changes, then go to `bulk.md` `## Report`.
+
+Milestone child: when `mode` is `sequential-child` (read it with `jq -r .mode .aew/runs/<id>/state.json`, because `current` may be cleared), print the report, then go to `sequential.md` `## After a child` instead of stopping. This covers `done`, the blocked path and the plan-gate stop.
