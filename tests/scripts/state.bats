@@ -55,6 +55,32 @@ rdir() { printf '%s\n' "$PROJECT/.aew/runs/$1"; }
   assert_json "$(rdir m-3)/state.json" '.run_id == "m-3" and .issues == [4,5] and .mode == "bulk"'
 }
 
+@test "init --mode bulk creates an issues/<k> dir per issue" {
+  st init m-3 --issues 4,5 --mode bulk --title "Sprint 3"
+  assert_success
+  [ -d "$(rdir m-3)/issues/4" ]
+  [ -d "$(rdir m-3)/issues/5" ]
+  [ -z "$(ls -A "$(rdir m-3)/issues/4")" ]
+  [ -z "$(ls -A "$(rdir m-3)/issues/5")" ]
+  [ "$(ls "$(rdir m-3)/issues" | wc -l | tr -d ' ')" = 2 ]
+  gh_mock_issue 4
+  run "$SCRIPTS/gh-issue.sh" fetch 4 "$(rdir m-3)/issues/4"
+  assert_success
+  [ -f "$(rdir m-3)/issues/4/issue.json" ]
+}
+
+@test "init in other modes creates no issues dir" {
+  st init 41 --issues 41 --mode single
+  assert_success
+  st init m-4 --issues 4,5 --mode sequential
+  assert_success
+  st init 42 --issues 42 --mode sequential-child
+  assert_success
+  [ ! -e "$(rdir 41)/issues" ]
+  [ ! -e "$(rdir m-4)/issues" ]
+  [ ! -e "$(rdir 42)/issues" ]
+}
+
 @test "init refusals create nothing" {
   st init 12 --issues 12 --mode single
   assert_success
@@ -64,7 +90,8 @@ rdir() { printf '%s\n' "$PROJECT/.aew/runs/$1"; }
   for args in "12 --issues 12 --mode single" "0 --issues 1 --mode single" "abc --issues 1 --mode single" \
     "../x --issues 1 --mode single" "20 --issues  --mode single" "20 --issues 1,,2 --mode single" \
     "20 --issues 1,1 --mode single" "20 --issues x --mode single" "20 --issues 1" \
-    "20 --issues 1 --mode solo" "20 --issues 1 --mode single --bogus"; do
+    "20 --issues 1 --mode solo" "20 --issues 1 --mode single --bogus" \
+    "m-9 --issues 4,4 --mode bulk"; do
     # shellcheck disable=SC2086  # word splitting of the case string is intended
     run --separate-stderr "$SCRIPTS/state.sh" init $args
     assert_failure 1

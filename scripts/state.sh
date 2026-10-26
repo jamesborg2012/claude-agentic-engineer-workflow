@@ -8,6 +8,7 @@
 # Subcommands:
 #   init <run-id> --issues <n,...> --mode <mode> [--auto] [--title <t>]
 #       Create the run dir, state.json, log.md and set it as the current run.
+#       Mode bulk also creates issues/<k>/ per issue.
 #   get [field]                  Whole state (JSON) or one top-level field.
 #   stage <stage> [--note <n>]   Set the stage; status becomes running.
 #   status <status> [--note <n>] Set the status; the stage is kept.
@@ -142,6 +143,11 @@ cmd_init() {
   base=$(config_get default_branch) || exit 1
   ts=$(now)
   mkdir -p "$dir" || die "cannot create $dir"
+  if [ "$mode" = bulk ]; then
+    for a in ${issues//,/ }; do
+      mkdir -p "$dir/issues/$a" || die "cannot create $dir/issues/$a"
+    done
+  fi
   TMP=$(mktemp "$dir/.state.json.XXXXXX") || die "cannot create temp file in $dir"
   jq -n --arg id "$id" --argjson issues "[$issues]" --arg title "$title" --arg mode "$mode" \
     --argjson auto "$auto" --arg base "$base" --arg ts "$ts" '{
