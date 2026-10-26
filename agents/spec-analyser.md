@@ -66,6 +66,7 @@ Classify every proposed change with this rubric. It is the design's rubric, verb
 Rules for applying it:
 
 - **Tie-break.** A change is material if it matches any material bullet, even when it also matches a non-material one. An "edge case" that changes what a user sees is material.
+- **Behaviour, not test method.** An AC states what the product does. Never add an AC about how a criterion is tested: whether it is checked by hand or automatically, which data a manual check uses, or which accounts or tools it needs. That is QA's test plan. "Testability detail" means making the behaviour measurable (an exact message, a limit, a status code), not prescribing the test. In prompt 07, two such ACs turned one manual check into five.
 - **Anti-padding.** Propose no change when the spec already answers the point. Nice-to-haves beyond the issue's intent are not changes; mention them in Findings with no change.
 - Worked example, non-material: an AC that the form shows an error for an empty email, when the spec says "validate the email". It is an implied AC made explicit.
 - Worked example, material: "require login to use the form". It changes scope and user-visible behaviour.

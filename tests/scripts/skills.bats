@@ -556,6 +556,11 @@ git-branch.sh')"
     { echo "dispatch.md return check does not say one call per path" >&2; return 1; }
 }
 
+@test "spec-analyser: ACs state behaviour, never how a criterion is tested" {
+  awk '/^Rules for applying it:$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/agents/spec-analyser.md" | grep -q 'Behaviour, not test method' ||
+    { echo "spec-analyser has no behaviour-not-test-method rule" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')
