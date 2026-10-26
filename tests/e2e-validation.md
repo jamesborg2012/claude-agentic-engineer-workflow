@@ -17,6 +17,19 @@ Recorded 2026-10-26, before the install.
 | Plugins at user scope before the install | `context7@claude-plugins-official 58267944f921`, `dev-workflow@jamesborg 1.0.0`, `figma@claude-plugins-official 2.2.157`, `frontend-design@claude-plugins-official 58267944f921`, `superpowers@claude-plugins-official 7.0.0`, `warp@claude-code-warp 2.4.0` (all enabled). aew not listed. |
 | Docker | installed at `/usr/local/bin/docker`, daemon not running |
 
+### Install checks (AC-2, AC-3)
+
+| Check | Result |
+|---|---|
+| Plugin repo at install | `233eb13` on `feature/e2e-validation`, clean tree |
+| `claude plugin marketplace add <repo>` | `✔ Successfully added marketplace: jamesborg-plugins (declared in user settings)` |
+| `claude plugin install aew@jamesborg-plugins --scope user` | `✔ Successfully installed plugin: aew@jamesborg-plugins (scope: user)`; the three dependencies were already installed at user scope, so nothing else was pulled in |
+| `installPath` | `/Users/jamesborg/.claude/plugins/cache/jamesborg-plugins/aew/0.1.0`, a copy of the working tree at install time (untracked files such as `.idea/` included), recorded with `gitCommitSha` `233eb13…`. The docs (V-3) say a relative-path plugin from a local marketplace loads in place from the source directory; the install probe (A7) shows which path a session actually loads. |
+| User-scope list after the install | `aew@jamesborg-plugins 0.1.0 true user`, `context7@claude-plugins-official 58267944f921 true user`, `frontend-design@claude-plugins-official 58267944f921 true user`, `superpowers@claude-plugins-official 7.0.0 true user` |
+| Isolated proof, attempt 1 (`CLAUDE_CONFIG_DIR=$E2E/iso-config`, empty: `[]`) | marketplace added; install warned `dependency "superpowers@claude-plugins-official" was not installed (no marketplace you have added lists it)` (likewise context7 and frontend-design) `"aew" will not load without them`. As V-2 says, a fresh config does not know `claude-plugins-official`. |
+| Isolated proof, attempt 2 | `claude plugin uninstall aew@jamesborg-plugins -y`, `claude plugin marketplace add anthropics/claude-plugins-official` (plugin list still empty), then aew alone: `✔ Successfully installed plugin: aew@jamesborg-plugins (scope: user) (+ 3 dependencies: superpowers, context7, frontend-design)`. List: aew 0.1.0, context7 58267944f921, frontend-design 58267944f921, superpowers 7.0.0, all `true user`. No login was needed. |
+| Real config untouched by the isolated proof | `claude plugin list --json \| shasum` `6f13a16a…` before and after; the isolated config was then removed |
+
 ## Platform facts
 
 Checked against code.claude.com/docs on 2026-10-26 through one batched claude-code-guide dispatch (A1); "CLI help"
