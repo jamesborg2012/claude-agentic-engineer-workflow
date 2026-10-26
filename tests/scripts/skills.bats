@@ -445,7 +445,12 @@ No aew runs in this project.
 aew status: no run <id>.
 aew status: "<token>" is not a run id (an issue number, or m-<number> for a milestone run).
 aew status: unexpected argument "<token>".
-Usage: /aew:status [<run-id>]')"
+Usage: /aew:status [<run-id>]
+.aew/runs/<id>/index.json
+| Child | Index | Status | Stage | PR |
+startswith("milestone m-")
+Part of milestone run m-<n>.
+/aew:resume m-<n>')"
   for s in running awaiting_input awaiting_plan_approval blocked done failed; do
     [ "$(grep -c "^| \`$s\` |" "$f" || true)" -eq 1 ] || bad="$bad| \`$s\` | row (want exactly one)"$'\n'
   done
@@ -454,7 +459,9 @@ gh-issue.sh
 gh-labels.sh
 gh-pr.sh
 gh-retro.sh
-git-branch.sh')"
+git-branch.sh
+gh-milestone.sh
+coming in a later release')"
   bad="$bad$(absent_regex "$f" '^disable-model-invocation
 (^|[^A-Za-z0-9_-])gh (auth|issue|pr|label|api|repo)
 (^|[^A-Za-z0-9_-])git (add|commit|switch|checkout|push|merge|rebase|reset|stash|fetch|pull|branch|status)')"
