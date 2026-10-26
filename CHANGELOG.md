@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tests/scripts/skills.bats`: 18 static checks of the entry skills (paths, agent names, stages and routing, citations, bad-argument messages, frontmatter YAML, pre-approvable commands, printed checks).
 - `README.md` command reference and a Mermaid diagram of the pipeline.
 - Orchestrator smoke harness (`ship-run.sh` launcher with real-GitHub rails, allowlists and a spend ledger) and the recorded prompt-05 runs P0, P1, S1, G2, run F1 and R2, I1 and I2, and G1 in `tests/agent-smoke/README.md` §9 ($26.82 of a $60 stop).
+- `scripts/check-pr-intro.sh`: checks that a PR body opens with a plain-English introduction (first `##` section, 100-250 words or 80 per issue plus 80 for a bulk PR, no backticks, paths, AC/TC/WP ids, tables or headings), with bats tests and fixtures (build prompt 05b).
 
 ### Changed
 
@@ -53,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - run-protocol `state-machine.md` follows `ship`'s routing: one rule for a plan challenge, a developer `blocked` re-plans once (full mode only), spec-ambiguity re-enters at `brief`, and an unanswered gate stays pending.
 - Every Bash command the entry skills run is pre-approvable headless (no shell variables, substitutions or pipes in conditions), and every check prints its outcome.
 - Every commit aew makes ends with the single trailer `Co-Authored-By: Claude <noreply@anthropic.com>`, with no model name (developer, qa-engineer, ship, init and the preflight memory hint).
+
+- Every PR aew opens starts with `## In plain English`, a short introduction for the reviewer (build prompt 05b): the PR body template, the doc-writer (written last; one retry input, `intro_check_output`; the stacked variant from a `stacked_on` dispatch field) and `init`'s PR body. `ship` runs `check-pr-intro.sh` before it creates or updates the PR, re-dispatches the doc-writer once on a failure, and never blocks the PR: a persistent failure becomes a final-report warning and a retro item.
+- `docs/DESIGN.md` §8.7 specifies the introduction; §9 states that every completed run ends in a PR (single, bulk, each sequential child and `init`), that blocked runs open none, and that a resume or re-run rewrites the introduction; §10 names the bulk and stacked variants.
 
 ### Fixed
 

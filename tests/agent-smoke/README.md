@@ -936,6 +936,62 @@ Notes for E5:
 - `smoke-shop-loop` is left as the doc-writer left it: stage `docs`, HEAD `36fd498`, uncommitted `CLAUDE.md`, `docs/specs/201-add-to-basket.md` and the agent memory, plus `10-summary.md`, `pr-body.md` and `retro.md` under `.aew/runs/951/`. Snapshot `snap-951-docs` holds the pre-run state (stage `qa`); outputs are in `out-951-docs`.
 - The doc-writer's `ARTEFACTS` order differs from the template's but lists exactly the five paths.
 
+#### 951 chain rebuild and doc-writer, introduction (prompt 05b)
+
+Build prompt 05b (task 7 of `docs/superpowers/plans/2026-10-26-light-plain-english-pr-intro.md`). The prompt-04/05
+`$SMOKE` workspace had been deleted (9, top), so there was no `smoke-shop-loop` or `snap-951-docs` to restore. The 951
+chain was rebuilt exactly as this section records it, on 2026-10-26 with Claude Code 2.1.308 and plugin HEAD
+`d16c14c` (`c0edf1e` plus the changelog commit, no plugin file changed): `smoke_shop shop loop 951 …` and the 8.3 seeds, QA phase B cycle 1, the E3 developer fix, QA cycle 2, then
+`cp -Rp "$P" "$SMOKE/snap-951-docs"` and the E4 doc-writer dispatch (`run_dir: $RUN`, `ALLOW=()`, section 3's command
+unchanged). Each step ran from a script file with `< /dev/null`. The helpers were not pasted: a loader
+(`$SMOKE/lib.sh`, outside the repo) `eval`s the code blocks of sections 2, 3, 4 and 8.3, the 961 developer `ALLOW` and
+`SETTINGS` lines, E3's `ALLOW+=` line and 9.2's loader, each extracted from this README with `awk`. Costs are in the 05b
+ledger (9.10), stop at $15; caps were QA 8, fix 5 and doc-writer 3 (E4 used 5).
+
+| run | check | result | notes |
+|---|---|---|---|
+| 951 c1 (05b) | 1 to 5, 10, 13 (light) | pass | `failed` return block on `final.txt` and `08-qa-report-1.md`; `qa_failures_complete` exits 0; headings equal the template's; SUMMARY `1/4 automated TCs pass`. Failures: TC-1 (AC-1), TC-2 and TC-3 (AC-2), all `impl_bug`; TC-5 (AC-4) untriaged, `manual`. `manual-tests.md` holds the one TC-5 confirmation-email line. Eight `TC-{1..4}-{desktop,mobile}.jpg`; one QA commit `ea3cede`; port 4173 free after; `permission_denials` `[]`; preload of the three skills. Cost 0.57. Same outcome as the 8.4 history. |
+| 951 fix (05b) | F1 to F3, F5, F6 (light) | pass | Two commits, `9facc55 fix(basket): write the count into the header status text (#201)` and `ebe8da6 fix(a11y): name the icon-only basket button (#201)`; changed files `site/app.js` and `site/index.html` only. `06-dev-report.md` `Mode: fix (cycle 1)`, `STATUS: ok`, NEXT `qa-engineer phase B (cycle 2)`. No block decision; `[]`; port free. Cost 0.45. |
+| 951 c2 (05b) | Q1 to Q4, Q7 (light) | pass | `ok` on `final.txt` and `08-qa-report-2.md`, headings equal; TC-1 to TC-4 `pass (desktop, mobile)`, TC-5 `manual`; `docs/qa/201/report.md` present and `cmp`-equal to `08-qa-report-2.md` (the d4b2c86 `cp` held); `manual-tests.md` unchanged (one TC-5 line); commit `8890039`; port free; `[]`. Cost 0.45. |
+| 951 docs (05b) | D1 | pass | `wc -l` 23 (was 37), cap 40; `git diff --quiet -- CLAUDE.md` exits 1. |
+| 951 docs (05b) | D2 | fail (as written; expected since `2645b80`) | The const/var line is gone; the dated `Until 2026-11-30 the sale banner copy is frozen …` line is kept. `10-summary.md`: "kept unchanged; the end date is after today (2026-10-26), so it stays." That is the rule in force since `2645b80` (`fix(claude-md-curation): keep dated rules until their end date passes`, on `main` before this branch; the S1 note in 9.4 asked for it), so D2's planted line is no longer a must-drop line. Not this branch's concern: the branch does not touch `skills/claude-md-curation/`. D2 should be rewritten to plant an expired date. |
+| 951 docs (05b) | D3 | pass | Two added lines, neither in `docs/standards/*` (`grep -Fxf` prints nothing): a pointer to `web.md#tooling-and-commands` (replacing the Install, Serve, `node --test`, `npx playwright test` and Node lines, so the E4 under-pruning concern is gone) and the order-flow line with a spec link. |
+| 951 docs (05b) | D4 | pass | 16 removed non-blank lines, every one found with `grep -F` in `10-summary.md`. |
+| 951 docs (05b) | D5 | pass | Removed lines are all stated by `web.md` or obvious (tooling, ES modules, spec naming, file layout, integer pence, const/var, landmarks, accessible names, comments); kept: `npm install` not in `site/`, the separate chromium install, screenshots to `docs/qa/`, the freeze. |
+| 951 docs (05b) | D6 | pass | One `docs/specs/201-add-to-basket.md`; headings Spec, Revision history, Key decisions, Traceability, Outstanding manual tests; AC diff empty; the AC-4 row points to `manual-tests.md` (`manual, outstanding`). |
+| 951 docs (05b) | D7 | pass | 0 template comments; `Closes #201`; eight `blob/feat/201-add-to-basket/…?raw=true` links, none non-matching; link set equals the eight screenshots. |
+| 951 docs (05b) | D8 | pass | `^## ` headings equal the templates' for `10-summary.md`, `pr-body.md` (now opening `## In plain English`) and `retro.md`; `valid_return_block` `ok` for `final.txt` and `10-summary.md`; ARTEFACTS lists the five paths. Two plugin-level retro items (developer first pass shipped the defects the standards warned about; no doc-writer rule for a CLAUDE.md that mostly restates the standards). |
+| 951 docs (05b) | D9 | pass | HEAD `8890039` unchanged; status ` M CLAUDE.md` and `?? docs/specs/201-add-to-basket.md` only (no agent-memory file this time). |
+| 951 docs (05b) | D10 | pass | Preloaded `aew:run-protocol` and `aew:claude-md-curation`; `permission_denials` `[]`; tools Read 17, Write 5, Glob 2 (plus the main thread's one Agent call); `$REPO` status clean. Cost 0.46. |
+| 951 docs (05b) | D11 first section | pass | `head -n 1 pr-body.md` is `## In plain English`; it is the first `##` heading; `grep -c '^## In plain English$'` is 1. |
+| 951 docs (05b) | D12 check | pass | `"$REPO/scripts/check-pr-intro.sh" "$RUN/pr-body.md"`: no output, exit 0 (200 words). |
+| 951 docs (05b) | D13 content | pass (by reading) | No AC-/TC-/WP- id, no backtick. The outstanding manual test is named in plain words ("one check still needs a person. Place a real order and confirm the confirmation email lists the basket items"), and the outcome is one line ("All 8 automated checks pass on desktop and mobile, the unit test passes, and the accessibility scan found no problems"). The plan's helper grep `grep -ciE 'manual\|by hand'` counts 0, because the text says "needs a person"; the requirement (plain words) is met, so no prompt fix was made. |
+
+The introduction, verbatim (D13):
+
+> Issue #201 asked for shoppers to see the basket count in the shop header change when they add a product, and for
+> the basket button in the header to work with screen readers.
+>
+> Now, adding a product moves the header from "Items in basket: 0" to 1, then 2 for a second product. The basket
+> button is announced as "View basket" and can be reached with the keyboard. The page fits both a desktop and a
+> phone-sized screen without sideways scrolling.
+>
+> The first test pass found that the count never changed on screen and that the button had no name. A fix wrote the
+> count into the visible text and gave the button a text label. The team chose a label over hidden text because the
+> project's own rules prefer it and it is a smaller change.
+>
+> The confirmation email for placed orders is sent by a separate order service outside this project, so nothing
+> changed for it here.
+>
+> Needs attention: one check still needs a person. Place a real order and confirm the confirmation email lists the
+> basket items.
+>
+> All 8 automated checks pass on desktop and mobile, the unit test passes, and the accessibility scan found no
+> problems.
+
+No `agents/doc-writer.md` fix was needed, so there was no re-run from `snap-951-docs`. The fixture's expected
+`pr-body.md` headings are not listed in this README (D8 diffs against the template), so no fixture note changed.
+
 #### 971 and 972: report-less gate probes (E5, AC-23)
 
 Both run on the kept `smoke-shop-loop` project after the doc-writer, strictly one after the other (`state.sh init` re-points `.aew/runs/current`), each from one script file with `< /dev/null`, and each with a fresh run dir (`.aew/runs/971`, `.aew/runs/972`) holding only `state.json` and `log.md`, so no copied or earlier report can satisfy the gate. Per run: `cp -Rp` of `$P` to `snap-<id>`, `O=$SMOKE/out-<id>` (cleared), `state.sh init <id> --issues 201 --mode single --title "Add to basket"`, `state.sh set branch feat/201-add-to-basket`, then `state.sh stage develop` (971) or `state.sh stage qa` (972, `fix_cycle` 0, so the gate expects `08-qa-report-1.md`). `ALLOW=()` (the probes need no Bash), cap 2, the 961 `SETTINGS` capture hook for `SubagentStop` payloads, section 3's command otherwise unchanged. The probe wording is added to the dispatch fields and states that it overrides any rule to always write a report. This is a deviation from the plan's fixed E5 wording, made before the first dispatch rather than after a harness fault: it only reinforces "write nothing", so the block checks (G1, G2) are unchanged, but the corrective-turn refusal (G3) follows the probe's override and says nothing about how an agent answers the gate in a real run:
@@ -1140,7 +1196,7 @@ smoke_ship_allow() {
   # 1. every lane: the scripts by absolute path, bare (ship) and quoted (init), the skills' shared forms, and the
   #    standards-setter's date (it runs in both lanes)
   echo --allowedTools
-  for s in state gh-issue gh-labels git-branch gh-pr gh-retro detect-stack; do
+  for s in state gh-issue gh-labels git-branch gh-pr gh-retro detect-stack check-pr-intro; do
     printf '%s\n' "Bash($REPO/scripts/$s.sh *)" "Bash(\"$REPO/scripts/$s.sh\" *)"
   done
   printf '%s\n' "Bash(gh auth status)" "Bash(git status *)" "Bash(git switch *)" "Bash(git add *)" "Bash(git commit *)" \
@@ -2145,3 +2201,163 @@ Cap raises, harness faults, fixes and deviations, newest last.
   and the RW1 to RW5 rewrite (`af322b5`, `0d4d711`, `b9d2cc3`, `ce2af3e`, `c0789aa`, `dff7d82`, then `8840a5d` and
   `a1d8273` after review; 9.9 above). Open for prompt 07: 9.1's open items, the P0b.2 status wording, the G1.1
   budget self-pause, and the canary sentence in `preflight.md`.
+
+### 9.10 Introduction on the PR (prompt 05b)
+
+Build prompt 05b, task 8 of `docs/superpowers/plans/2026-10-26-light-plain-english-pr-intro.md`. Runs A and B use the
+static-shop fixture and Run C uses the nextjs fixture. They ran on 2026-10-26 with Claude Code 2.1.308, model
+`claude-opus-5-5` and plugin HEAD `d16c14c` (`c0edf1e` plus the changelog and CLAUDE.md commit).
+
+The prompt-05 `$SMOKE` had been deleted, so the harness was rebuilt from this README. The helpers come from 9.2's
+loader (`$SMOKE/lib.sh`, as in 8.4's 05b block). The launcher is 9.2's reference copy, extracted with
+`awk '/^#### Launcher$/…'`. The only change is harness-only: `ship-run.sh` was run from a copy that uses
+`ledger-05b` and stops at 15 instead of `ledger-05` and 60 (the `diff` is those four lines). shellcheck reports
+nothing on that copy. The 951 sessions (8.4) do not use the launcher. They reserve and record their cost in the same
+`ledger-05b/` through a small wrapper, which uses the same tsv format, the same lock and the same $15 test.
+
+#### Spend ledger (prompt 05b, stop at $15)
+
+The caps were QA 8, fix 5, doc-writer 3, Run A 10, Run B 4 and Run C 3. Rows are in start-time order. Run C ran
+alongside QA cycle 1, and their reservations together (8 + 3) stayed under 15. No session was refused, and none hit
+its cap or was killed.
+
+| run | attempt | cap (USD) | cost (USD) | running total | cap raised? |
+|---|---|---|---|---|---|
+| 951 QA phase B cycle 1 (8.4) | qa1 | 8 | 0.5705 | 0.5705 | no |
+| Run C, `/aew:init` | C.1 | 3 | 0.9352 | 1.5057 | no |
+| 951 developer fix (8.4) | fix1 | 5 | 0.4528 | 1.9585 | no |
+| 951 QA phase B cycle 2 (8.4) | qa2 | 8 | 0.4549 | 2.4134 | no |
+| 951 doc-writer, task 7 (8.4) | docs | 3 | 0.4603 | 2.8737 | no |
+| Run A, `/aew:ship 201 --auto` | S5b.1 | 10 | 4.3308 | 7.2045 | no |
+| Run B, `/aew:resume 201` | B.1 | 4 | 0.9018 | **8.1063** | no |
+
+The total is **$8.11** of the $15 stop, over 7 sessions.
+
+#### Run A (S5b.1): `/aew:ship 201 --auto` to a mocked PR
+
+This is 9.4's S1 form on a fresh `smoke_ship_project s5b shop`. It uses 9.5's mock-only AC-4 body: the `awk`
+whole-line replacement changes only `$GHM/issues/201/body` to `4. Out of scope: the order service sends the email.`.
+The allow file is regenerated from the current `smoke_ship_allow ship`: 93 lines, including the two
+`check-pr-intro.sh` rules.
+
+| run | check | result | notes |
+|---|---|---|---|
+| A | S1 1 completed | pass | Result `success`, 120 turns, 911 s, cost 4.3308. `state.json` reads `pr`, `done`. |
+| A | S1 2 state valid | pass | `smoke_state_valid` passes. `spec_revision` 1, `fix_cycle` 0, `review_cycle` 0, `pr` 7, `auto` true. `current` is cleared. |
+| A | S1 5 final labels | pass | Exactly `aew:ready-for-review`. |
+| A | S1 6 `gh` routes (no new gh call) | pass | `s1_flags` gives `0 0 3`. `diff <(expected_s1 0 0 3) <(smoke_norm calls.log)` is empty. The introduction check adds no `gh` call. |
+| A | S1 9 PR and state | pass | `.pr` is 7. Call 16 is `pr create --head feat/201-add-to-basket --base main --title Add to basket --body-file …/aew-pr.GyDQKx`. |
+| A | S1 12 tree clean | pass | Status is empty on `feat/201-add-to-basket`, with four commits (developer, QA evidence, docs, agent memory). |
+| A | S1 17 denials | **fail** | `smoke_denials` shows one denial: `grep -v '^$' .aew/runs/201/06-dev-report.md \| tail -n 4`, refused as "requires approval" under `--permission-prompts none`. That is the developer-report return check exactly as `skills/ship/SKILL.md` now words it (`6a66e42`, on `main` before this branch, changed it from `awk 'NF' …`). 9.2's `smoke_ship_allow` has no rule for it. The model read the report's last lines with the Read tool instead. This is not caused by this branch: the harness allowlist (or the skill's form) needs a fix, which is open below. Launcher exit 0, `audit clean (137 Bash commands)`, no guard files, `$W/ghcfg` empty, `git -C "$REPO" status` showed only this README. |
+| A | body: first section | pass | The captured `$GHM/files/016-aew-pr.GyDQKx` starts with `## In plain English` on line 1, which is also its first `##` heading. `grep -c '^## In plain English$'` gives 1. |
+| A | body: check | pass | `check-pr-intro.sh` exits 0 on the captured body (249 words). The body already had `Closes #201`, so `gh-pr.sh` appended no closing line. Its tail `## Closes` section is outside the introduction anyway. |
+| A | check run by the orchestrator | pass | On the main thread, after `git-branch.sh push`: `jq '.issues \| length'` (1), then `…/check-pr-intro.sh .aew/runs/201/pr-body.md --issues 1` (no output, exit 0), then `state.sh get pr` (`null`) and `gh-pr.sh create`. No retry, because the first check passed. |
+| A | no blocked path | pass | `aew:blocked` appears 0 times in `calls.log`. |
+
+The Run A introduction, verbatim (Run B's final introduction is byte-identical):
+
+> Issue #201 asked for the shop's basket count to update when a shopper adds a product, and for the icon-only basket
+> button in the header to have a name that screen readers can announce. Before this change, the count in the header
+> stayed at zero after a click, and the button had no name at all.
+>
+> Shoppers now see the header read "Items in basket: 1" after adding one product and "Items in basket: 2" after a
+> second one. The basket button is announced as "View basket" and can be reached with the Tab key. Nothing else on
+> the page looks different.
+>
+> The fix was small. The count was being saved in a hidden spot that nothing displayed, so it now goes into the
+> visible text. The button gets a text label. The plan rejected hidden text for the button, because a label is
+> already the repo's usual pattern, and rejected rewriting the whole sentence in code, because that would copy
+> wording that already lives in the page.
+>
+> Along the way, the run settled two open points. "Straight away" means the count changes in the same moment as the
+> click. Adding the same product twice counts it twice. The confirmation email stays with the separate order service
+> and is not part of this work.
+>
+> Nothing needs a manual check. Opening the basket is left for a later issue.
+>
+> All 18 browser checks pass on desktop and mobile, the 3 unit tests pass, and the accessibility scan found no
+> problems.
+
+#### Run B (B.1): resume at `docs`, PR update
+
+Run B ran on Run A's project straight after it. First the harness snapshotted the project and the mock
+(`$SMOKE/snap-s5b-A`) and copied Run A's `pr-body.md`. Then `state.sh` alone made the finished run look interrupted
+at `docs`: `state.sh current set 201` and `state.sh stage docs --note "harness: 05b Run B, interrupted at docs"`
+(status `running`, `pr` still 7). `skills/resume/SKILL.md` Step 3 stops on a `done` run, so this was the closest
+supported path: resume Step 5.3 re-enters `## Stage: docs` at step 1. `state.json` was never edited by hand. Then
+`/aew:resume 201` ran with cap 4.
+
+| run | check | result | notes |
+|---|---|---|---|
+| B | doc-writer re-dispatched | pass | The main thread made one Agent call, to `aew:doc-writer`, after `state.sh stage docs --note "resume"` and `gh-labels.sh stage 201 documenting`. Resume read `skills/ship/SKILL.md`, `preflight.md`, `dispatch.md` and `pr.md`. It made no Skill call and re-ran no earlier stage. |
+| B | update, not a second create | pass | The new `calls.log` lines are `auth status`, `issue edit +aew:documenting`, **`pr edit 7 --body-file …`**, the retro routes and `issue edit +aew:ready-for-review`. The run made no `pr create` call: `state.sh get pr` gave 7, then `gh-pr.sh update 7 .aew/runs/201/pr-body.md --run 201` ran. The push printed "Everything up-to-date". The final state is `pr`, `done`, `current` cleared and labels `aew:ready-for-review`. |
+| B | one introduction, check passes | pass | The `pr edit` body (`$GHM/files/027-aew-pr.ZmeCaz`) starts with `## In plain English`, and `grep -c '^## In plain English$'` gives 1. `check-pr-intro.sh` exits 0 (249 words). It has exactly one `Closes #201`. The orchestrator ran the check (`--issues 1`, no output) before `gh-pr.sh update`. |
+| B | introduction differs from A only as expected | pass, with a caveat | The introduction and the rest of the body are byte-identical to Run A's. The doc-writer read its earlier outputs and checked them against the run files. It judged them complete ("I found the files already written and changed none of them") and wrote nothing (`pr-body.md`, `10-summary.md` and `retro.md` `cmp`-equal to the snapshot). The final state was the same as Run A's, so the same introduction is correct. The run shows that a resume yields one introduction through `update`. It does **not** show the doc-writer rewriting an introduction after a state change, because nothing in the final state changed. |
+| B | hygiene | fail (same as A's check 17) | There was one denial, `grep -v '^$' .aew/runs/201/08-qa-report-1.md \| tail -n 4` (the `docs` required-inputs check). The model fell back to `tail -n 6`. Launcher exit 0, `audit clean (40 Bash commands)`, no guard files, `$W/ghcfg` empty. The docs and memory commits were skipped because nothing had changed, and the tree was clean. Cost 0.9018. |
+
+#### Run C (C.1): `/aew:init`, introduction on the init PR
+
+This is 9.7's I1 form on a fresh `smoke_ship_project init5b next`, with `smoke_ship_allow init` (52 lines, including
+the two `check-pr-intro.sh` rules).
+
+| run | check | result | notes |
+|---|---|---|---|
+| C | init body first section | pass | `gh-pr.sh open chore/aew-init "chore: set up aew" .aew/runs/init-pr-body.md --base main` became call 14, `pr create … --body-file .aew/runs/init-pr-body.md --base main`. The captured `$GHM/files/014-init-pr-body.md` starts with `## In plain English`, its first `##` heading, and the count is 1. |
+| C | init body check | pass | `check-pr-intro.sh` exits 0 (192 words). Init ran it once on the main thread before `gh-pr.sh open` (no output), and its report says "the PR introduction passed its check". |
+| C | I1 1, 2, 3, 7, 10, 11, 12 (light) | pass | `chore/aew-init`, one commit `chore: set up aew`, pushed (local and origin both `e159557…`); config `valid`; standards `README.md`, `nextjs.md`, `tailwind.md`; status empty and no `init-*` file left; `[]` denials, `$W/ghcfg` empty, AskUserQuestion 0; one `aew:standards-setter` dispatch. `calls.log`: `auth status`, 11 `label create`, `pr list`, `pr create`. Launcher exit 0, `audit clean (29 Bash commands)`. Cost 0.9352. |
+
+The Run C introduction, verbatim:
+
+> This change gets the project ready for the agentic workflow plugin. The plugin can now take a GitHub issue and
+> carry it through spec, plan, build, review, testing and a pull request.
+>
+> It found a Next.js app styled with Tailwind. It saved the project's settings, wrote coding standards for both,
+> added a short guide for agents, and told git to ignore the plugin's working files. It also created the issue labels
+> the workflow uses.
+>
+> Nobody answered questions during setup, so it used its own best guesses. Please check these before merging:
+>
+> - The install and type check commands. There is no lock file, so it assumed npm.
+> - The local address the app runs on. It guessed the usual Next.js port.
+>
+> It did not set up browser testing tools. That happens the first time a test run needs them. It also did not save
+> any permission rules, so you may see more approval prompts at first. You can add the suggested rules by hand later.
+>
+> Once this is merged, pick an issue and ship it with the workflow. If the project's tech changes, run setup again.
+> It only adds what is missing.
+
+#### Failure path (free, no Claude session)
+
+This is a canned body: `tests/scripts/fixtures/pr-intro/valid.md` with one sentence added to its introduction,
+"The fix is in `site/app.js` for AC-1.". It was written to a scratch directory outside the repo.
+
+| run | check | result | notes |
+|---|---|---|---|
+| failure path | check output and exit | pass | `check-pr-intro.sh <canned>` prints `FAIL: introduction contains a backtick`, `FAIL: introduction contains a file path: site/app.js` and `FAIL: introduction contains an AC/TC/WP identifier: AC-1`, and exits 1. The unchanged `valid.md` exits 0. A missing file prints `check-pr-intro.sh: error: no such file: …` on stderr and exits 2. |
+| failure path | orchestrator retry and never-block | not exercised live | No paid session hit a failing introduction: A, B and C all passed first time. Two behaviours are specified in `skills/ship/references/pr.md` `## Push and pull request` step 2 and `## Retro`, and in `skills/init/SKILL.md` §12, but no session ran them: the one doc-writer retry with `intro_check_output`, and the PR still opened with a `Warning: PR introduction failed the check: …` line and a retro item. |
+
+#### Acceptance criteria (build prompt 05b)
+
+| build-prompt AC | evidence |
+|---|---|
+| The doc-writer fixture run produces a `pr-body.md` whose first section is `## In plain English`, passes `check-pr-intro.sh`, and mentions the outstanding manual test and the test outcome in plain words | 951 docs (05b), D11 to D13 (8.4): pass, introduction quoted there |
+| `check-pr-intro.sh` tests cover a valid intro, a missing section, too long, backticks, a path, an `AC-3` identifier and a table, and all pass | `tests/scripts/check-pr-intro.bats` with the fixtures in `tests/scripts/fixtures/pr-intro/` (static, `tests/run-script-tests.sh`); the free failure-path row above |
+| A simulated `ship --auto` run (mocked `gh`) posts a PR body that starts with the introduction | Run A: the `pr create` body opens with the one introduction, the check passes, and the orchestrator ran it |
+| A simulated resume rewrites the introduction rather than adding a second one | Run B: `pr edit` (no second create), one introduction, check passes. Caveat: the doc-writer kept its earlier, still-accurate body rather than rewriting it, so the "rewrite" is shown only as "replace the whole body, one section" |
+| No change to blocked-run behaviour, issue bodies or comments | Runs A and B: no `aew:blocked` label and no issue comment or body edit (no `issue-comment` or `issue-edit-body` route). Run A's routes equal `expected_s1 0 0 3`. The static diff check is the plan's task 9 (P-AC4) |
+| `init` produces the init variant | Run C: the init body opens with the introduction, which says what was set up, what to check (commands, port, permissions) and what happens next, and passes the check |
+
+#### Notes (prompt 05b)
+
+- Open (not this branch): S1 check 17 fails in A and B on `grep -v '^$' <file> | tail -n 4`. Since `6a66e42`, that is
+  ship's return-block form (`SKILL.md` lines 57 and 68, `dispatch.md` lines 66 and 75, `routing.md` line 52).
+  Headless with `--permission-prompts none` it is denied as "requires approval", and `smoke_ship_allow` has no rule
+  for it. The model fell back to Read or `tail -n 6` each time and reached the right result. Fix the harness
+  allowlist (for example `Bash(grep -v *)`) or the skill form, and check it against 9.9's pre-check rules.
+- Open (harness): the mock's canned `issue-list.out` is `[]`, so `gh-retro.sh`'s de-duplication cannot see earlier
+  items. Run B therefore filed the same three retro titles again, and every `created #1` comes from the single canned
+  URL (as in S1).
+- 8.4 D2 is out of date since `2645b80`: an unexpired dated rule now stays. Plant an expired date to keep D2
+  meaningful.
+- Plugin HEAD was `d16c14c` for every session. It differs from `c0edf1e` only in `CHANGELOG.md` and `CLAUDE.md`, and
+  it was committed (07:36Z) before the first session started (07:38Z). The launcher's HEAD guard passed for A, B and C.

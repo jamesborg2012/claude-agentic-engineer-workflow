@@ -23,7 +23,7 @@ The `Next:` line by outcome:
 - `blocked`: `Resume with /aew:resume <id>`.
 - `failed`: `restart with /aew:ship <n> --from <stage>`.
 
-Warnings follow as `Warning: <text>` lines, one each: preflight check 6, the ahead-only warning of check 4, leftover dirty paths, a failed retro, and a failed `gh` call on the blocked path (name the call).
+Warnings follow as `Warning: <text>` lines, one each: preflight check 6, the ahead-only warning of check 4, leftover dirty paths, a failed retro, `PR introduction failed the check: <first FAIL line>` (after the one retry, from `pr.md`), and a failed `gh` call on the blocked path (name the call).
 
 ## Counting
 

@@ -13,7 +13,7 @@ This is the main-thread orchestrator for one issue. It is the only part of aew t
 
 The plugin root is `${CLAUDE_PLUGIN_ROOT}`.
 
-- The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Call each one by its absolute path, written out in the command, because the Bash tool has no `CLAUDE_PLUGIN_ROOT` variable. In this file and the references, a bare `state.sh …` (or `gh-issue.sh …`, `gh-labels.sh …`, `git-branch.sh …`, `gh-pr.sh …`, `gh-retro.sh …`) means that absolute path.
+- The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Call each one by its absolute path, written out in the command, because the Bash tool has no `CLAUDE_PLUGIN_ROOT` variable. In this file and the references, a bare `state.sh …` (or `gh-issue.sh …`, `gh-labels.sh …`, `git-branch.sh …`, `gh-pr.sh …`, `gh-retro.sh …`, `check-pr-intro.sh …`) means that absolute path.
 - Never write a `<placeholder>` inside a `${CLAUDE_PLUGIN_ROOT}/…` path.
 - The references are read with Read and are not substituted: read every literal `${CLAUDE_PLUGIN_ROOT}` in them as the root above.
 - A skill that reads this file with Read (`resume`, `prompt`) states the root itself, and the same rule applies to this file.
