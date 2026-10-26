@@ -73,7 +73,7 @@ Content, in this order (omit a point only if it genuinely does not apply):
 1. What was asked for and why, in one or two sentences. Say "issue #12" in words.
 2. What changed for someone using the product: what they will see or can do now.
 3. How it was done, in a sentence or two, and any obvious alternative the plan rejected, with the reason.
-4. What changed along the way: spec clarifications that were confirmed, decisions the run took on James's behalf, deviations from the issue. Always name any new dependency the run added (runtime or development, from the dev reports and the QA report), and any decision `05-plan.md` left for James to approve at the plan gate that went ahead unapproved because `--auto` skipped the gate (`state.json` `auto`).
+4. What changed along the way: spec clarifications that were confirmed, decisions the run took on James's behalf, deviations from the issue. When James answered a gate (a `spec-revision-v<N>.md` change with source `confirmed`, or a `log.md` line with `answers: gate:`), say plainly what the issue left open and what he decided, so a reader can tell his answers from what the issue asked for. Always name any new dependency the run added (runtime or development, from the dev reports and the QA report), and any decision `05-plan.md` left for James to approve at the plan gate that went ahead unapproved because `--auto` skipped the gate (`state.json` `auto`).
 5. What needs attention: outstanding manual tests, risks, limitations, anything left out. One line if there is nothing.
 6. Confidence, one line: the test outcome in plain words (for example, "All 14 checks pass on desktop and mobile").
 
