@@ -45,6 +45,7 @@ Field notes, taken from each agent's Inputs:
 - `n` for D10 and D11 is the cycle number `k` given by the step that dispatches. For D9 it is `review_cycle + 1`, and for D12 `fix_cycle + 1`.
 - `fix_from` (D10) is a comma-separated list of file names in the run dir, such as `07-review-<k>.md`, `08-qa-report-<k>.md` or `09-triage-<k>.md`. Each must exist.
 - `triage` (D12) is a run-dir path, `<rd>/09-triage-<k>.md`. Send it only when the QA loop sent you.
+- `intro_check_output` (D13, optional) is the stdout of a failed `check-pr-intro.sh`, sent on the one retry from `pr.md` `## Push and pull request` step 2 and absent otherwise. `stacked_on` (D13, optional) is set only when milestone mode stacks the PR on an unmerged issue's branch, and is absent for a single-issue run.
 - `base` (D9) is `state.base_branch`.
 - Developer `mode: package` and standards-setter `mode: init` are not in this table: package mode belongs to fan-out, and `init` dispatches its own agent.
 
