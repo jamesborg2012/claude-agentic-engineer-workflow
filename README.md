@@ -14,8 +14,34 @@ This repo is both the plugin and a personal marketplace, `jamesborg-plugins`.
 
 ```bash
 claude plugin marketplace add /path/to/claude-agentic-engineer-workflow
-claude plugin install aew@jamesborg-plugins
+claude plugin install aew@jamesborg-plugins --scope user
 ```
+
+The install pulls in the three dependencies below. On a machine where Claude Code has never run an
+interactive session, `claude-plugins-official` isn't registered yet, and the install warns
+`dependency "superpowers@claude-plugins-official" was not installed (no marketplace you have added
+lists it)`. Add it first with `claude plugin marketplace add anthropics/claude-plugins-official`,
+then uninstall and install aew again.
+
+**Check the dependencies installed.** To see the install pull them in from a clean state without
+touching your own config, use a throwaway config directory:
+
+```bash
+export CLAUDE_CONFIG_DIR="$(mktemp -d)"
+claude plugin marketplace add anthropics/claude-plugins-official
+claude plugin marketplace add /path/to/claude-agentic-engineer-workflow
+claude plugin install aew@jamesborg-plugins --scope user   # "(+ 3 dependencies: superpowers, context7, frontend-design)"
+claude plugin list --json | jq -r '.[].id'                 # aew, context7, frontend-design, superpowers
+unset CLAUDE_CONFIG_DIR
+```
+
+**Refresh after a change.** None is needed. Because the marketplace is a local folder and aew's
+source is a relative path, aew is read from the checkout itself: `claude plugin update` reports
+`aew is read from its folder, … nothing to update`. Committed or uncommitted edits take effect at
+the next session start (or `/reload-plugins`), and every session runs whatever branch the
+checkout has. The `installPath` that `claude plugin list --json` reports
+(`~/.claude/plugins/cache/jamesborg-plugins/aew/0.1.0`) is a copy made at install time and is not
+what loads.
 
 To try it for one session without installing it, run `claude --plugin-dir .` from the repo. The
 dependencies below must already be installed, because a `--plugin-dir` session doesn't install them.
