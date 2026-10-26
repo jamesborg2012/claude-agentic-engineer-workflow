@@ -572,6 +572,7 @@ Otherwise it recommends **sequential**.
 - **`select` wording.** The prompt's `gh-milestone.sh issues` fetch is the new `select` subcommand of the same script, which reuses its `gh` call.
 - **C4.** The run dir gains `issues/<k>/` and `index.json` (§7.1), with no renamed artefact. The stacked PR carries the stacked introduction only, with no extra summary line.
 - **AC-24 over AC-25.** AC-25 lets `preflight.md` gain only the bulk path overrides, but `preflight.md` `## Check 5. No other active run` also gains the two-way milestone exception that AC-24 requires, as one continuation line.
+- **Developer clean tree (found by B1).** The developer's full and fix preconditions and its allowed-files check ignore paths under `.claude/agent-memory/`, like preflight's restart form and `resume`. Agents that run before `develop` may write memory, and ship commits it only at the docs stage, so without this the developer blocked every bulk run (and single runs whenever an early agent wrote memory). Outside the approved plan; James approved the fix and a B1 re-run on 2026-10-26.
 
 ## 11. Hooks (`hooks/hooks.json` → `scripts/hooks/`)
 
