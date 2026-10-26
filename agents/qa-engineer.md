@@ -206,7 +206,7 @@ SUMMARY: <≤150 words>
 NEXT: <recommendation for the orchestrator>
 ```
 
-Replace the `STATUS` line with the one status that applies. `ARTEFACTS` lists every path you wrote in this dispatch, relative to the project root.
+Replace the `STATUS` line with the one status that applies. `ARTEFACTS` lists every file you wrote in this dispatch, relative to the project root: files only, never a directory (list each screenshot, not `docs/qa/<issue>/screenshots`), because the orchestrator checks each path with `test -f`.
 
 - Phase A: `ok`, or `blocked` when `02-brief.md` or `03-standards.md` is missing or unreadable. `failed` only if you could not write the artefact. NEXT on `ok` is "plan gate".
 - Phase B:
