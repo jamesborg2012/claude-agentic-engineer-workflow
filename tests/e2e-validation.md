@@ -233,6 +233,16 @@ sandbox's dev server itself, and QA takes ui-qa §3 step 1 ("an instance is alre
 running"). A free launch with a $1000 cap (exit 3 at the budget stop, nothing reserved) proved the launcher's C-1 check
 accepts this allow file together with the sandbox's merged settings.
 
+**Ship's `awk` reads (added 2026-10-27, James's decision at the S4 checkpoint).** DESIGN §3 lists `awk` among the
+forms init leaves unapproved, which a headless run must allow itself. The allow file now carries exactly the four
+programs ship prescribes, each as `Bash(awk '<program>' *)` (program fixed, only file arguments after it):
+`/^## Questions$/…` (gate questions), `/^## Challenges to the spec$/…` (plan challenges), the `## Failures` TC count
+and the `## (Root cause|Where the divergence started)` triage read. No `awk *`. Two of the programs contain
+parentheses, which the launcher's one-rule-per-line check refused, so the check was refined: a Bash line must start
+with `Bash`, end with its closing parenthesis, and have no second rule after a closing parenthesis. Self-test 81 of 81
+(new: an exact awk rule with parentheses accepted; `Bash(awk 'x' *) Bash(gh *)` refused; every earlier bypass still
+refused). The canary was re-run after the change (fourth run, all eleven rows pass).
+
 **Credential incident playbook (CTO C-4).** An audit hit on a credential pattern (exit 4) is a P0 stop for James:
 (1) no further sessions; (2) James revokes the PAT; (3) if the hit could have reached the keychain token, James
 revokes the GitHub CLI OAuth grant (github.com → Settings → Applications) and logs in again; (4) James checks the
@@ -285,6 +295,8 @@ a killed or crashed session, charged at its cap.
 | S3 | S3.1 | 10 | 10.38 | 26.85 | no (ran $0.38 over, James's call to let it finish) | yes | usage |
 | S3 | S3.2 | 2 | 0.94 | 27.79 | reserve, approved by James | no | result |
 | S3 | S3.3 | 2 | 0.93 | 28.72 | reserve, approved by James | no | result |
+| S4 | S4.1 | 12 | 1.94 | 30.66 | no | no | result |
+| S4 | S4.2 | 10 | 9.74 | 40.40 | no (S4's line: 11.68 of 12) | yes | usage |
 
 ## Sandbox fixtures
 
@@ -708,6 +720,42 @@ closed; `main` fast-forwarded.
 Cycles: review 0, fix 0. Duration: 30 minutes plus two re-runs of about 3 minutes. Problems: five plugin fixes
 (`22b901f`, `468ed5f`, `97291e4`, `88f26c7`, `d141b4d`).
 
+## S4
+
+Issue #4, "Email the admin on each submission", whose AC 4 ("the admin actually receives the email") is the one
+non-automatable check. Run `4`, `/aew:ship 4 --auto`.
+
+| Attempt | Drive | Cap | Cost | What happened |
+|---|---|---|---|---|
+| S4.1 | headless | 12 | 1.94 | spec analysis ran 24 minutes (22:04 to 22:28; S1 to S3 took about 4), then a **material** question the headless run cannot ask: the issue rules out choosing a mail provider, but AC 4 needs real delivery. Gate left pending (`awaiting_input`, label `aew:awaiting-input`), as designed. The fallback the plan names (the §9.5 precedent): an attended resume |
+| S4.2 | attended, `/aew:resume 4` | 10 | 9.74 (`/usage`) | James answered "SMTP via nodemailer (recommended)" → spec v2 → brief (56 ACs) → standards → plan (no gate) → develop (two WPs in sequence; **the developer ran `npm run build`, pass**, the first live check of `97291e4`) → review (approved) → QA → docs → PR #17. 33 minutes after the answer |
+
+James's answer (verbatim):
+
+```text
+Q1. Which real mail transport should issue #4 ship, given that choosing a production provider is out of scope but AC 4 needs a real email to arrive?
+→ SMTP via nodemailer (recommended)
+```
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| [P] Manual-testing section added to the issue | pass | issue #4's body has `<!-- aew:manual-tests -->` … `<!-- /aew:manual-tests -->` between the v2 spec and the collapsed v1; no line of B2's read-back is lost; v1 (`prev_of`, k=1) is byte-identical to B2's read-back |
+| [P] Label set | pass | `aew:manual-test-required aew:ready-for-review aew:spec-revised` |
+| [P] Listed in the PR | pass | PR #17 `## Manual tests` lists them; the final report counts them as outstanding |
+| Exactly one manual test | **fail, fixed** | five: TC-10 (delivery, the real one), TC-41 ("the manual steps exist and no test sends mail"), TC-54 (TC-10 with two SMTP targets), TC-55 and TC-56 (accented name and emoji arrive intact). Cause: the spec analyser auto-added AC 13 ("criterion 4 is checked by hand") and AC 17 ("the manual check uses an accented name and an emoji") as non-material changes; the brief and QA then honestly made them manual. Fix `637e591` (ACs state behaviour, never test method). Not re-run live (about $12); James's call at the merge |
+| Everything else automated | pass | `08-qa-report-1.md`: 51 TCs `pass`, the 5 above `manual` |
+| CR-1, CR-3 | pass | `state.json` valid, `done`; PR #17 base `main`, `Closes #4` |
+| CR-4 | pass | `npm ci`, lint 0, Vitest 221 passed, `tsc` 0, build 0 |
+| CR-5 | pass | 5 commits, plain trailer |
+| CR-6 | none | no guard text in the S4.1 stream or the 11 S4.2 transcripts |
+| CR-7 | 1, harness | S4.1: the orchestrator's prescribed `awk '/^## Questions$/…' 01-spec-analysis.md` was denied: the narrowed allow file had no `awk` rule (DESIGN §3: headless runs must allow ship's `awk` reads themselves). Harmless here (the gate went pending), but the QA-routing `awk` reads would block a headless run whose QA fails. **James's decision (2026-10-27, CP for C-1):** add ship's four exact `awk` programs as rules and refine the launcher's one-rule check so a rule may contain parentheses while rule lists stay refused (see Rails and launchers). S4.2: no prompt, settings unchanged |
+| CR-8 | pass | review 0, fix 0; 24 minutes of analysis, 19 minutes at the gate, 33 minutes to the PR |
+| Introduction (AC-14) | **accurate** | check exit 0. It says a person still has to check the email (and the four extra checks); "The issue left the mail provider open. James chose SMTP … using the nodemailer library. That is a new dependency" (fixes `22b901f` and `7f188e8` seen working in a fresh run); the 10-second wait and why; no personal data in logs; the skipped plan gate |
+| Slow stage | recorded | 24 minutes of spec analysis before the gate; the run's own retro attributes its slow stage to the 18-minute wait for James and misses this (triaged in Phase F) |
+
+Cycles: review 0, fix 0. Problems: the spec analyser's test-method ACs (`637e591`); the harness `awk` gap (James's
+decision).
+
 ## Guard false positives
 
 ## Fix log
@@ -725,6 +773,7 @@ Cycles: review 0, fix 0. Duration: 30 minutes plus two re-runs of about 3 minute
 | `97291e4` | no stage ran `commands.build` (developer: lint, format, typecheck, unit; QA and review never build) | S3.2 report | next full run (S4) | test red, then green; DESIGN records it |
 | `88f26c7` | `gh-retro.sh` warned on every run after the first that the `retro` label already exists | S3.2 | S3.3 | bats red, then green; no warning in S3.3 |
 | `d141b4d` | the orchestrator checked ARTEFACTS with a `for` loop, denied headless (recurred) | S3.2, S3.3 | next headless run | test red, then green |
+| `637e591` | the spec analyser added ACs about how a criterion is tested, turning one manual check into five | S4.2 | not re-run (about $12) | test red, then green |
 
 ## Retro triage
 
