@@ -2758,6 +2758,35 @@ Spend: Q1.1 4.591567 of cap 8. Ledger running total 16.470267 of the $45 stop (M
 0.409620, B1.1 4.963957, B1.2 5.603024, Q1.1 4.591567). Q2 (cap 12) would still fit under $45, but cannot run until Q1 is
 re-run or James decides to start Q2 from this state.
 
+#### Q2.1 (James's split plan: resume m-3, kill in child 2)
+
+James approved splitting the plan's Q2 into Q2 (kill in child 2) and Q3 (finish). Q2.1 continued Q1.1's project with no
+rebuild (`current` `m-3`, index 311 done, 312 and 313 pending, port 4173 free, ledger 16.470267, trees clean). Prompt
+`/aew:resume m-3`, cap 10, kill `312:brief`. Launcher exit 0, `audit clean (32 Bash commands)`, cost 1.447647, result
+`success`, no `killed-at`. **Q2.1 did not reach `brief`**: child 2 stopped at the spec gate. Per R-E1 no re-run and no
+Q3 was started.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q2.1 | 1 killed at child 2 `brief` | fail | No `killed-at`. #312 stopped at `spec_analysis`, `awaiting_input` (`gate:spec 01-spec-analysis.md`) before any `brief` stage. |
+| Q2.1 | 2 resume entered the sequence | pass | Reads: `ship/SKILL.md`, `ship-milestone/SKILL.md`, `sequential.md`, `preflight.md`, `dispatch.md`, `routing.md`, `gates.md`; no `Skill` call. `m-3` set back to `running` (note "resume"); #311 not re-run (`issue view 311`: 1; `issue view 312`: 1). |
+| Q2.1 | 3 child 2 run | pass | `312/state.json` valid, mode `sequential-child`, `auto` true (from the parent), branch `feat/312-notebook-out-of-stock`, base `feat/311-stock-labels` (stacked, `merge-base --is-ancestor` true), note `milestone m-3`. |
+| Q2.1 | 4 index | pass | `311:done:- 312:running:311 313:pending:312`. |
+| Q2.1 | 5 nothing for #313 | pass | `.aew/runs/313` absent; no `feat/313*` branch; labels empty. |
+| Q2.1 | 6 parent and current | pass | `m-3` sequential, `running`, branch `null`; `current` is `312`. |
+| Q2.1 | 7 hygiene | pass | `smoke_denials` `[]`; `ghcfg` empty; plugin repo clean; project tree only modified `.claude/agent-memory/aew-spec-analyser/` files; port 4173 free (no QA reached). R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Finding (not a skill defect): under `--auto`, the spec-analyser found one material change for #312 ("visibly disabled
+style for the disabled Notebook button", a user-visible change per the rubric) and the gate stands even under `--auto`
+(as in R-E2: only non-material changes are applied without a gate). The headless session has no AskUserQuestion, so the
+child waits at `awaiting_input` with the question printed and `Answer with /aew:resume 312 / continue the milestone with
+/aew:resume m-3`. #312's body (the Q fixture text) leaves the disabled look open, which the analyser judged material.
+A fixture change (state the disabled look in 312's AC, or answer the gate) is needed before the kill at `brief` can be
+reached; that is a decision for James.
+
+Spend: Q2.1 1.447647 of cap 10. Ledger running total 17.917914 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647 on top of
+10.4's 11.878700). Q3 (cap 12) not started.
+
 ### 10.6 Acceptance criteria (build prompt 06)
 
 ### 10.7 Notes (prompt 06)
@@ -2765,6 +2794,10 @@ re-run or James decides to start Q2 from this state.
 - R-E3: Q1 and Q2 run on the static-shop issues 311 to 313 (milestone 3, "Product stock"), not on the chain fixture
   (`chain.json`), because the runs need real, buildable work in the fixture app; `select` is proven on both listings
   in the free checks (10.2).
+- Q cap too small and the plan split. R-E1 sized Q1 at 8 assuming about 3 per child; child 1 cost 4.59, so the orchestrator
+  stopped before child 2 (Q1.1). James then approved splitting the plan's Q2 into Q2 (resume, kill in child 2) and Q3
+  (finish, child 3 forced to `blocked`), still inside $45. Q2.1 stopped at #312's spec gate (see 10.5).
+- The B1 `jq` `$k` denial (10.4) was fixed in 035f956 (`--arg` moved after the filter); Q2.1 shows no denials.
 - Launcher copy: the plan's `KRUN` line uses `${KSTAGE:-}`, because `--env-check` runs under `set -u` without a
   `KSTAGE` and the bare form would abort it. The copy's header comment also names `ledger-06` and "$45", beside the
   usage word, so the `diff` has those two comment hunks as well.
