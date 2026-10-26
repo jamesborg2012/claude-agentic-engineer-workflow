@@ -753,6 +753,9 @@ Q1. Which real mail transport should issue #4 ship, given that choosing a produc
 | Introduction (AC-14) | **accurate** | check exit 0. It says a person still has to check the email (and the four extra checks); "The issue left the mail provider open. James chose SMTP … using the nodemailer library. That is a new dependency" (fixes `22b901f` and `7f188e8` seen working in a fresh run); the 10-second wait and why; no personal data in logs; the skipped plan gate |
 | Slow stage | recorded | 24 minutes of spec analysis before the gate; the run's own retro attributes its slow stage to the 18-minute wait for James and misses this (triaged in Phase F) |
 
+Merge (CP-3): James merged PR #17 with a normal merge commit (`515c610`, two parents) and deleted the branch; issue #4
+closed; `main` fast-forwarded.
+
 Cycles: review 0, fix 0. Problems: the spec analyser's test-method ACs (`637e591`); the harness `awk` gap (James's
 decision).
 
