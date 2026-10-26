@@ -1196,7 +1196,7 @@ smoke_ship_allow() {
   # 1. every lane: the scripts by absolute path, bare (ship) and quoted (init), the skills' shared forms, and the
   #    standards-setter's date (it runs in both lanes)
   echo --allowedTools
-  for s in state gh-issue gh-labels git-branch gh-pr gh-retro detect-stack check-pr-intro; do
+  for s in state gh-issue gh-labels git-branch gh-pr gh-retro gh-milestone detect-stack check-pr-intro; do
     printf '%s\n' "Bash($REPO/scripts/$s.sh *)" "Bash(\"$REPO/scripts/$s.sh\" *)"
   done
   printf '%s\n' "Bash(gh auth status)" "Bash(git status *)" "Bash(git switch *)" "Bash(git add *)" "Bash(git commit *)" \
@@ -1207,6 +1207,9 @@ smoke_ship_allow() {
   if [ "$k" != init ]; then
     printf '%s\n' "Bash(claude plugin list --json)" "Bash(git fetch origin main)" \
       "Bash(awk *)" "Bash(test *)" "Bash(tail -n *)" "Bash(grep -c *)"
+    # prompt 06: ship's return check `grep -v '^$' <file> | tail -n 4` since 6a66e42 (9.10 notes); CTO-3: this exact
+    # form only, never "Bash(grep -v *)"
+    printf '%s\n' "Bash(grep -v '^\$' *)"
   fi
   # 2. agent lines already recorded in this README (961 developer, 8.3 QA phase B, 951 developer additions), and the
   #    developer's, qa-engineer's and senior-engineer's git reads
@@ -2361,3 +2364,238 @@ This is a canned body: `tests/scripts/fixtures/pr-intro/valid.md` with one sente
   meaningful.
 - Plugin HEAD was `d16c14c` for every session. It differs from `c0edf1e` only in `CHANGELOG.md` and `CLAUDE.md`, and
   it was committed (07:36Z) before the first session started (07:38Z). The launcher's HEAD guard passed for A, B and C.
+
+## 10. Milestone mode (prompt 06)
+
+Headless sessions of `/aew:ship-milestone` (bulk and sequential) and `/aew:resume` on milestone runs, with only `gh`
+(the stateful mock) and `origin` (a local bare repo) faked. Section 9's rails 1 to 8 apply unchanged to every session,
+and every paid session starts through the launcher `$SMOKE/ship-run.sh` (10.2), which enforces them, the explicit
+allowlist, `--permission-prompts none` and the $45 stop. Rail 9 (re-run P0 when the launcher's environment lines
+change) does not trigger: the launcher copy below changes no environment line, the same precedent as 9.10. Transcripts,
+streams, debug logs and anything under `$SMOKE` are never committed. Each run records its results in its own
+subsection (10.3 to 10.5).
+
+### 10.1 Spend ledger (prompt 06, stop at $45)
+
+Separate from the ledgers in sections 1, 8.1 and 9.1. Caps: M1 1, M3 1, B1 15, Q1 8, Q2 12, which is 37 in total
+against a **stop of $45** (R-E1). The $8 margin fits only a probe re-run (M1.2 or M3.2, $1 each). Any larger fallback (a
+B1 raise or re-run, a Q1 raise, a Q2 re-run) stops the run sequence and asks James to raise the stop; it never starts
+within $45.
+
+- The rules of 9.1 otherwise apply: the launcher reserves a session's cap before starting it and refuses (exit 3) when
+  the costs and reservations already in the ledger plus that cap pass $45; one raise per session, to exactly 2x its
+  cap, as the next attempt, and only if the launcher accepts it; the cost is the stream's last `result` event's
+  `total_cost_usd`; a killed or crashed session counts its cap; spend can pass the cap.
+- The ledger is `$SMOKE/ledger-06/`, one `<project>-<run>.tsv` per session (cap, cost, start time; an empty cost is a
+  reservation). It must be empty before the first paid session (CTO-4). Task E11 fills the table below from it;
+  nothing else writes the table.
+
+| run | attempt | cap (USD) | cost (USD) | running total | cap raised? |
+|---|---|---|---|---|---|
+
+### 10.2 Harness
+
+Run section 2's `REPO`/`SMOKE` lines and its `smoke_render`, section 4's `valid_return_block` eval line, and section
+9's helper loader (9.2) first. Then load the section 10 helpers (bash or zsh):
+
+```sh
+eval "$(awk '/^#### Helpers \(section 10\)$/{f=1;next} f&&!b&&/^#+ /{exit} f&&/^```sh$/{b=1;next} f&&b&&/^```$/{b=0;next} f&&b' "$REPO/tests/agent-smoke/README.md")"
+command -v smoke_ms_bodies >/dev/null || echo 'section 10 helpers: extraction failed'
+```
+
+The launcher `$SMOKE/ship-run.sh` is 9.2's reference copy, extracted with `awk '/^#### Launcher$/…'` and `chmod +x`,
+with these harness-only changes and no others (the recorded `diff`; no environment or safety line changes):
+`L="$HERE/ledger-06"`; the stop `60` becomes `45` in the `awk` test and in its message; the usage comment's
+"prompt-05" becomes "prompt-06", its "$60 budget" "$45 budget" and its ledger path `ledger-06`; and the
+`<run-id>:<stage>` kill form, so that `<kill-stage>` may be `<run-id>:<stage>` and the poller then reads
+`.aew/runs/<run-id>/state.json` instead of `current`'s (Q1 kills on child 2's own state):
+
+```bash
+# after the argument block (${KSTAGE:-} because --env-check never sets it)
+KRUN=""; case ${KSTAGE:-} in *:*) KRUN=${KSTAGE%%:*}; KSTAGE=${KSTAGE#*:} ;; esac   # <run-id>:<stage> keys the kill on that run's state.json
+# in the poller, replacing the current-run read
+    id=${KRUN:-$(cat .aew/runs/current 2> /dev/null || true)}
+```
+
+`smoke_ship_allow` (9.2) is edited in place, because this README is the harness source: `gh-milestone` joins the script
+list, and group 1a gains `Bash(grep -v '^$' *)` for ship's return check `grep -v '^$' <file> | tail -n 4` (the open
+denial in 9.10). CTO-3: that exact form only, never `Bash(grep -v *)`; widen it only after a recorded denial. Every
+run in this section uses `smoke_ship_allow ship`.
+
+#### Helpers (section 10)
+
+```sh
+# smoke_ms_bodies: the six issue bodies, written to $W/bodies/<n>.md (B1: 301-303, milestone 2; Q: 311-313, milestone 3)
+# 302's AC 2 deliberately lacks the WCAG 2.2 AA clause the others carry: a non-material gap (rubric: "an accessibility requirement implied by WCAG 2.2 AA") that spec-analyser applies without a gate under --auto (R-E2). The viewport sentence stays, so no layout change can trip the tie-break into material.
+smoke_ms_bodies() {
+  mkdir -p "$W/bodies" || return 1
+  cat > "$W/bodies/301.md" <<'EOF'
+### Summary
+
+The footer shows the shop's contact email, so shoppers know how to reach the shop.
+
+### Acceptance criteria
+
+1. The footer contains a link whose text is "hello@static-shop.test" and whose `href` is "mailto:hello@static-shop.test".
+2. At desktop (1440×900) and mobile (390×844), the footer is visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+
+### Out of scope
+
+- a contact form.
+EOF
+  cat > "$W/bodies/302.md" <<'EOF'
+### Summary
+
+The footer carries the shop's copyright line.
+
+### Acceptance criteria
+
+1. The footer contains the fixed text "© 2026 Static Shop" (not computed from today's date).
+2. At desktop (1440×900) and mobile (390×844), the footer is visible without horizontal scrolling.
+EOF
+  cat > "$W/bodies/303.md" <<'EOF'
+### Summary
+
+The footer shows the shop's opening hours instead of the fixture note.
+
+### Acceptance criteria
+
+1. The footer text "Static Shop, a test fixture." is replaced by "Open Monday to Friday, 9am to 5pm.".
+2. At desktop (1440×900) and mobile (390×844), the footer is visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+EOF
+  cat > "$W/bodies/311.md" <<'EOF'
+### Summary
+
+Each product shows whether it is in stock.
+
+### Acceptance criteria
+
+1. Directly under its price, each of the three products ("Tea towel", "Mug" and "Notebook") shows the text "In stock".
+2. At desktop (1440×900) and mobile (390×844), all three products and their stock text are visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+
+### Out of scope
+
+- changing any product's stock.
+EOF
+  cat > "$W/bodies/312.md" <<'EOF'
+Depends on #311.
+
+### Summary
+
+The Notebook is out of stock.
+
+### Acceptance criteria
+
+1. The Notebook's stock text reads "Out of stock"; "Tea towel" and "Mug" still read "In stock".
+2. The Notebook's "Add to basket" button has the `disabled` attribute, so it cannot be activated by mouse or keyboard; the other two buttons still work.
+3. The page has no serious or critical accessibility violations against WCAG 2.2 AA.
+EOF
+  cat > "$W/bodies/313.md" <<'EOF'
+Depends on #312.
+
+### Summary
+
+Shoppers can hide products that are out of stock.
+
+### Acceptance criteria
+
+1. Above the product list there is a checkbox labelled "Hide out-of-stock products", unchecked on load.
+2. Checking it hides the Notebook; unchecking it shows the Notebook again.
+EOF
+}
+
+# smoke_ms_issue <n> <title> <label> <milestone-number> <milestone-title>: $W/issues/<n>.json from #201's issue.json, seeded in the mock
+smoke_ms_issue() {
+  mkdir -p "$W/issues" &&
+    jq --argjson n "$1" --arg t "$2" --arg l "$3" --argjson mn "$4" --arg mt "$5" --rawfile b "$W/bodies/$1.md" \
+      '.number = $n | .title = $t | .body = $b | .url = "https://github.com/acme/static-shop/issues/\($n)"
+       | .labels = [{name: $l}] | .milestone = {number: $mn, title: $mt}' "$SHOP_RUN/issue.json" > "$W/issues/$1.json" &&
+    smoke_ship_issue "$1" "$W/issues/$1.json"
+}
+
+# smoke_ms_listing <n>...: the gh issue list reply (gh-milestone.sh's --json fields plus milestone), in the order given
+smoke_ms_listing() {
+  local n f=()
+  for n in "$@"; do f+=("$W/issues/$n.json"); done
+  jq -s '[.[] | {number, title, labels, state, body, blockedBy: [], url, milestone}]' "${f[@]}"
+}
+
+# smoke_ms_expected <listing-file> <milestone>: select's JSON from a throwaway mock, no session (the expected values)
+smoke_ms_expected() {
+  local d="$W/free-select"
+  rm -rf "$d" && mkdir -p "$d/responses" && cp "$1" "$d/responses/issue-list.out" &&
+    (cd "$P" && GH_MOCK_DIR="$d" PATH="$SHIM:$PATH" "$REPO/scripts/gh-milestone.sh" select "$2")
+}
+
+# smoke_ms_rev <dir-with-spec-changes.json> <k>: k, its recorded changes, then its revision comments, body markers and flag
+smoke_ms_rev() {
+  printf '%s changes=%s comment=%s marker=%s flag=%s\n' "$2" \
+    "$(jq '.changes | length' "$1/spec-changes.json" 2> /dev/null || echo '?')" \
+    "$(grep -cE "^issue comment $2 .*spec-revision-v[0-9]+\.md" "$GHM/calls.log" || true)" \
+    "$(grep -c '^<!-- aew:spec v' "$GHM/issues/$2/body" || true)" \
+    "$(grep -cx 'aew:spec-revised' "$GHM/issues/$2/labels" || true)"
+}
+
+# smoke_ms_stages <k>: the stage labels added to issue k, in order (no-op stage calls add none)
+smoke_ms_stages() { awk -v k="$1" '$1 == "issue" && $2 == "edit" && $3 == k { for (i = 4; i < NF; i++)
+  if ($i == "--add-label" && $(i + 1) !~ /spec-revised|manual-test-required/) printf "%s ", $(i + 1) } END { print "" }' "$GHM/calls.log"; }
+
+# smoke_fanout <O> <subagent_type>: per main-thread message with that agent, how many calls it holds (AC-15: one line, 3)
+smoke_fanout() { jq -rR --arg a "$2" 'fromjson? | select(.type == "assistant" and .parent_tool_use_id == null) | .message as $m
+  | $m.content[]? | select(.type == "tool_use" and .name == "Agent" and .input.subagent_type == $a) | [$m.id, .id] | @tsv' "$1/stream.jsonl" \
+  | sort -u | cut -f1 | uniq -c | awk '{print $1}'; }
+
+# smoke_agent_prompts <O>: every Agent call on any thread: type TAB the first 160 characters of its prompt
+smoke_agent_prompts() { jq -rR 'fromjson? | select(.type == "assistant") | .message.content[]? | select(.type == "tool_use" and .name == "Agent")
+  | [.input.subagent_type, (.input.prompt // "" | gsub("\n"; " ") | .[0:160])] | @tsv' "$1/stream.jsonl"; }
+```
+
+#### Free checks (section 10)
+
+```sh
+/bin/bash -n "$SMOKE/ship-run.sh" && npx --yes shellcheck "$SMOKE/ship-run.sh"           # no output
+diff <(awk '/^#### Launcher$/{f=1} f&&/^```bash$/{b=1;next} b&&/^```$/{exit} b' "$REPO/tests/agent-smoke/README.md") "$SMOKE/ship-run.sh"   # only the X-8 lines, ledger-06, 45 and the usage word
+# 9.2's harness checks: claude --version, the real-gh canary, the keychain check (unchanged)
+smoke_ship_project dry shop && smoke_ms_bodies &&
+  smoke_ms_issue 301 "Footer contact email" footer 2 "Shop footer" && smoke_ms_issue 302 "Footer copyright line" footer 2 "Shop footer" &&
+  smoke_ms_issue 303 "Footer opening hours" footer 2 "Shop footer" && smoke_ms_issue 311 "Stock labels" stock 3 "Product stock" &&
+  smoke_ms_issue 312 "Notebook out of stock" stock 3 "Product stock" && smoke_ms_issue 313 "Stock filter toggle" stock 3 "Product stock"
+smoke_ms_listing 301 302 303 > "$W/b1-listing.json"; smoke_ms_listing 313 311 312 > "$W/q-listing.json"
+smoke_ms_expected "$W/b1-listing.json" 2 | jq -c '{recommend, reasons, order, ac: [.issues[].ac_count]}'   # bulk, [], [301,302,303], [2,2,2]
+smoke_ms_expected "$W/q-listing.json" 3 | jq -c '{recommend, order, stack: [.issues[] | [.number, .stack_on]], stack_conflicts}'   # sequential, [311,312,313], [[311,null],[312,311],[313,312]], []
+for n in 311 312 313; do jq -r '.title | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | .[0:40] | rtrimstr("-")' "$W/issues/$n.json"; done   # ship 3.7's filter: stock-labels, notebook-out-of-stock, stock-filter-toggle
+for f in small-related.json chain.json; do jq -c '[.[] | {number, title, labels: [.labels[].name], milestone}]' "$REPO/tests/scripts/fixtures/milestone/$f"; done   # X-1.3: record; the bulk titles read as one area, low risk
+grep -ohE '`[a-z][a-z0-9.-]*( [^`]*)?`' "$REPO"/skills/ship-milestone/SKILL.md "$REPO"/skills/ship-milestone/references/*.md | awk '{print $1}' | tr -d '`' | sort -u   # each leading word is covered by smoke_ship_allow ship (record any gap and add its rule to 9.2 before E8)
+rm -rf "$SMOKE/ship-dry"
+```
+
+`small-related.json` (milestone 2 "Shop polish", shared `shop` label) and `chain.json` (milestone 4) are Phase A1's
+names.
+
+Recorded 2026-10-26 (Task E7; no Claude session, nothing in the ledger):
+
+| check | result | notes |
+|---|---|---|
+| helper loader | pass | `command -v smoke_ms_bodies` finds the function after 9.2's loader. |
+| launcher syntax and shellcheck | pass | `/bin/bash -n` and `npx shellcheck` print nothing. |
+| launcher `diff` against 9.2's reference | pass | Hunks: the usage line's "prompt-06"; the header's `ledger-06` and "$45"; the `KRUN` line; `L="$HERE/ledger-06"`; the two `60` to `45` in the budget test and message; the poller's `id=${KRUN:-…}`. No environment, rail or safety line differs. |
+| B1 `select` | pass | `{"recommend":"bulk","reasons":[],"order":[301,302,303],"ac":[2,2,2]}` |
+| Q `select` | pass | `{"recommend":"sequential","order":[311,312,313],"stack":[[311,null],[312,311],[313,312]],"stack_conflicts":[]}` |
+| ship 3.7 slug filter | pass | `stock-labels`, `notebook-out-of-stock`, `stock-filter-toggle`. |
+| AC-5 fixtures (X-1.3) | pass, by eye | `small-related.json`: #21 "Tidy the basket icon", #22 "Align product card prices", #23 "Fix wishlist empty state", all `shop`, milestone 2 "Shop polish": one area, nothing risk-sounding. `chain.json`: #43 "Payment step", #41 "Confirmation page", #42 "Cart totals", no labels, milestone 4 "Checkout flow". |
+| allowlist coverage | pass | Every script and shell word in `skills/ship-milestone/` is covered by `smoke_ship_allow ship` (`gh-milestone.sh` by absolute path, bare and quoted; `grep -v '^$' *`, `grep -c *`, `jq *`, `test *`, `state.sh`); the only bare `gh` mentions are prose. The only `gh` rule is `Bash(gh auth status)`; `Bash(grep -v *)` count 0. |
+| ledger | pass | `$SMOKE/ledger-06/` exists and is empty. |
+
+### 10.3 M1 and M3: mode probes
+
+### 10.4 B1: `/aew:ship-milestone 2 --bulk --auto` to one mocked PR
+
+### 10.5 Q1 and Q2: sequential, killed in child 2, resumed, child 3 blocked
+
+### 10.6 Acceptance criteria (build prompt 06)
+
+### 10.7 Notes (prompt 06)
+
+- Launcher copy: the plan's `KRUN` line uses `${KSTAGE:-}`, because `--env-check` runs under `set -u` without a
+  `KSTAGE` and the bare form would abort it. The copy's header comment also names `ledger-06` and "$45", beside the
+  usage word, so the `diff` has those two comment hunks as well.
