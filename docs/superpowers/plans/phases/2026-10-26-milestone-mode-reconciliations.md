@@ -18,3 +18,4 @@
 - R-E3 record AC-34 deviation (Q uses static-shop issues 311–313, not the chain fixture) in §10.7.
 - R-E4 add a `system/init` row (no `mcp__notion`, `mcp__claude_ai_*` tools listed) to M-8, B1-16, Q2-14.
 - R-E5 citation resolver: add a `resume/SKILL.md` mapping (E3, since E edits skills.bats) so D's citations into resume's Step 4/5 are checked.
+- R-W2: B3 added a TODO(milestone-mode) resolver skip for B1's citation of `sequential.md` `## Resume`; D1 must remove that skip once it writes ## Resume.
