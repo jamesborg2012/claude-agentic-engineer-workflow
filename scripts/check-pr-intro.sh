@@ -146,7 +146,7 @@ if grep -qE '^[[:space:]]*\|' "$SECTION" ||
   fail "introduction contains a table"
 fi
 
-HIT=$(grep -m 1 '^#' "$SECTION" || true)
+HIT=$(grep -m 1 -E '^#{1,6}[[:space:]]' "$SECTION" || true)
 if [ -n "$HIT" ]; then
   fail "introduction contains a heading: $HIT"
 fi

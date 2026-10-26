@@ -95,6 +95,13 @@ setup() {
   assert_equal "$output" "FAIL: introduction contains a heading: ### Outstanding"
 }
 
+@test "a line starting with an issue reference (#12) is not a heading" {
+  local f="$BATS_TEST_TMPDIR/h.md"
+  sed 's/^Shoppers can now/#12 was the request. Shoppers can now/' "$FX/valid.md" > "$f"
+  run --separate-stderr "$CHECK" "$f"
+  assert_success
+}
+
 @test "several violations are each reported on their own FAIL line" {
   local f="$BATS_TEST_TMPDIR/many.md"
   { cat "$FX/valid.md"; } | sed 's/^Shoppers can now/Shoppers (AC-1, `x`) can now/' > "$f"
