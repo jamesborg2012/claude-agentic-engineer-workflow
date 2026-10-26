@@ -8,14 +8,22 @@
 # Subcommands:
 #   init <run-id> --issues <n,...> --mode <mode> [--auto] [--title <t>]
 #       Create the run dir, state.json, log.md and set it as the current run.
+#       Mode bulk also creates issues/<k>/ per issue.
 #   get [field]                  Whole state (JSON) or one top-level field.
 #   stage <stage> [--note <n>]   Set the stage; status becomes running.
 #   status <status> [--note <n>] Set the status; the stage is kept.
 #   bump fix_cycle|review_cycle  Increment a counter and print the new value.
 #   set <field> <value>          title | branch | base_branch | pr | spec_revision | auto
 #   current [set <run-id>|clear] Print, switch or clear the current run.
+#   index init <run-id> [--stack-on <k>:<dep>[,<k>:<dep>...]]
+#       Write .aew/runs/<run-id>/index.json for a sequential run: every child
+#       pending, stack_on null unless given. Refuses if index.json exists.
+#   index set <run-id> <issue> <pending|running|done|blocked|failed>
+#       Set one child's status; any status may follow any other.
+#       index.json is {"run_id","order":[n,...],"children":[{"issue","stack_on","status"}]}.
+#       index acts on the run id given, not on .aew/runs/current.
 #
-# All subcommands except init and "current set" act on the run named in
+# All subcommands except init, "current set" and index act on the run named in
 # .aew/runs/current. Stage, status and mode values come from
 # templates/state.schema.json. Exit 1 on any invalid input; nothing is written.
 # Options: -h, --help
@@ -142,6 +150,11 @@ cmd_init() {
   base=$(config_get default_branch) || exit 1
   ts=$(now)
   mkdir -p "$dir" || die "cannot create $dir"
+  if [ "$mode" = bulk ]; then
+    for a in ${issues//,/ }; do
+      mkdir -p "$dir/issues/$a" || die "cannot create $dir/issues/$a"
+    done
+  fi
   TMP=$(mktemp "$dir/.state.json.XXXXXX") || die "cannot create temp file in $dir"
   jq -n --arg id "$id" --argjson issues "[$issues]" --arg title "$title" --arg mode "$mode" \
     --argjson auto "$auto" --arg base "$base" --arg ts "$ts" '{
@@ -264,11 +277,80 @@ cmd_current() {
   esac
 }
 
+# cmd_index init|set: own .aew/runs/<run-id>/index.json (explicit run id, never current).
+cmd_index() {
+  local op=${1:-} id dir res a so="" issue st
+  case "$op" in
+    init | set) ;;
+    "") die "index: missing subcommand (init or set)" ;;
+    *) die "index: unknown subcommand: $op" ;;
+  esac
+  shift
+  id=${1:-}
+  [ -n "$id" ] || die "index $op: missing run id"
+  shift
+  is_run_id "$id" || die "invalid run id: $id"
+  dir=$(run_dir "$id") || exit 1
+  [ -f "$dir/state.json" ] || die "no state.json for run $id"
+  jq -e 'type == "object"' "$dir/state.json" > /dev/null 2>&1 || die "state.json is not valid JSON: $dir/state.json"
+  jq -e '.mode == "sequential"' "$dir/state.json" > /dev/null || die "index: run $id is not a sequential run"
+  if [ "$op" = init ]; then
+    local has_so=0
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --stack-on)
+          [ $# -ge 2 ] || die "index init: --stack-on needs a value"
+          so=$2
+          has_so=1
+          shift 2
+          ;;
+        *) die "index init: unknown option: $1" ;;
+      esac
+    done
+    [ ! -e "$dir/index.json" ] || die "index.json already exists for run $id"
+    if [ "$has_so" -eq 1 ]; then
+      [[ $so =~ ^[1-9][0-9]*:[1-9][0-9]*(,[1-9][0-9]*:[1-9][0-9]*)*$ ]] || die "index init: --stack-on must be <k>:<dep>[,<k>:<dep>...]"
+    fi
+    res=$(jq -c --arg so "$so" '
+      .issues as $o
+      | ($so | if . == "" then [] else split(",") | map(split(":") | {k: (.[0] | tonumber), d: (.[1] | tonumber)}) end) as $p
+      | ($p | map(.k)) as $ks
+      | if ($ks | length) != ($ks | unique | length) then {err: "index init: repeated issue in --stack-on"}
+        elif any($p[]; (.k as $k | $o | index($k)) == null) then {err: "index init: --stack-on issue is not in the run"}
+        elif any($p[]; (.d as $d | $o | index($d)) == null) then {err: "index init: --stack-on dependency is not in the run"}
+        elif any($p[]; (.d as $d | $o | index($d)) >= (.k as $k | $o | index($k))) then {err: "index init: --stack-on dependency must come earlier in the run order"}
+        else {run_id, order: $o, children: [$o[] as $i | {issue: $i, stack_on: (($p[] | select(.k == $i) | .d) // null), status: "pending"}]}
+        end' "$dir/state.json") || die "cannot build index.json"
+  else
+    [ $# -eq 2 ] || die "index set: usage: index set <run-id> <issue> <status>"
+    issue=$1
+    st=$2
+    [[ $issue =~ ^[1-9][0-9]*$ ]] || die "index set: invalid issue: $issue"
+    case "$st" in
+      pending | running | done | blocked | failed) ;;
+      *) die "index set: invalid status: $st" ;;
+    esac
+    [ -f "$dir/index.json" ] || die "no index.json for run $id"
+    jq -e 'type == "object" and (.children | type == "array")' "$dir/index.json" > /dev/null 2>&1 || die "index.json is not valid: $dir/index.json"
+    jq -e --argjson i "$issue" 'any(.children[]; .issue == $i)' "$dir/index.json" > /dev/null || die "index set: issue $issue is not in run $id"
+    if jq -e --argjson i "$issue" --arg s "$st" 'any(.children[]; .issue == $i and .status == $s)' "$dir/index.json" > /dev/null; then
+      return 0
+    fi
+    res=$(jq -c --argjson i "$issue" --arg s "$st" '.children |= map(if .issue == $i then .status = $s else . end)' "$dir/index.json") || die "cannot update index.json"
+  fi
+  a=$(printf '%s' "$res" | jq -r '.err // empty') || die "cannot build index.json"
+  [ -z "$a" ] || die "$a"
+  TMP=$(mktemp "$dir/.index.json.XXXXXX") || die "cannot create temp file in $dir"
+  printf '%s\n' "$res" | jq . > "$TMP" || die "cannot write index.json"
+  mv -f "$TMP" "$dir/index.json" || die "cannot write $dir/index.json"
+  TMP=""
+}
+
 [ $# -gt 0 ] || die "missing subcommand (see --help)"
 sub=$1
 shift
 case "$sub" in
-  init | get | stage | status | bump | set | current) ;;
+  init | get | stage | status | bump | set | current | index) ;;
   *) die "unknown subcommand: $sub (see --help)" ;;
 esac
 require_cmd jq git
@@ -280,4 +362,5 @@ case "$sub" in
   bump) cmd_bump "$@" ;;
   set) cmd_set "$@" ;;
   current) cmd_current "$@" ;;
+  index) cmd_index "$@" ;;
 esac

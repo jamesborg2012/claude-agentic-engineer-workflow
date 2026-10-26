@@ -1,0 +1,21 @@
+# Pending reconciliations (from phase reviews)
+- R-B1: failed bulk run Next line = `remove .aew/runs/m-<mn>, then rerun /aew:ship-milestone <mn> --bulk` (B fixed). C CD-4/CD-5/H-12/C1 GREEN must add ` --bulk`. E X-3 use `<mn>`.
+- R-B2: B3 resolver already maps `ship/SKILL.md`; E drops its resolver extension (C-5).
+- R-B3: D I-D4: set parent status before calling milestone/final reports (B derives outcome from parent status).
+- R-A1: B BD-3/B-1 and D number-vs-string notes closed — A confirms `issues: []` on empty, numbers stored as numbers.
+- (superseded by R-D0)
+- R-C1 citations: in ship-milestone files cite `ship/SKILL.md` and `ship-milestone/SKILL.md` explicitly, never bare `SKILL.md` (C's CD-12 stands; B3 resolver maps `ship/SKILL.md` — confirm it also maps `ship-milestone/SKILL.md`). D's I-D9 (bare = ship's) and B-5 wording change to match. Decline C reviewer's "use bare SKILL.md" suggestion.
+- R-C2 `mode` in ship Run variables: C's H-2 owns it; D drops its H1 and the GREEN check for `auto`, `mode`, `review_cycle`.
+- R-C3 D2 depends_on: [D1, C5] (not C2); C edits no preflight.md; D2 step 0 "after C5".
+- R-C4 C3 adds prefixed AC id on manual-tests.md lines (applied by reviewer).
+- R-D0 headings: reviewers B and D crossed; final = `sequential.md` `# Sequential mode` / `## Start` (symmetric with bulk.md). Orchestrator applied to B (lines 82,97,103,304).
+- R-D1 ownership: D owns `sequential.md ## Resume` and the preflight Check 5 two-way exception (PD-D3, I-D6). E1 only routes resume into `## Resume`; E drops its Check-5 sentence and decision 3, cites I-D6.
+- R-D2 E records AC-25 vs AC-24 (preflight.md gets the Check 5 exception, not only bulk overrides) as a deviation (AC-31).
+- R-D3 D1 adopts B's names `<mn>`/`<mid>`/`<mrd>` instead of `m-<n>` where B defines them.
+- R-D4 D: Stop and Finish cite only `## Milestone report` (which runs `## Final report`) — applied by reviewer; satisfies R-B3.
+- R-E1 budget (orchestrator decision, flag at plan approval): $45 stop kept. Only a probe re-run fits as a fallback; any larger fallback (B1 raise/re-run, Q1 raise, Q2 re-run) stops the run sequence and asks James to raise the stop. Plan states this.
+- R-E2 B1 revision path: seed one B1 issue with a NON-material gap that spec-analyser fixes without a gate under --auto (material changes gate even with --auto), and require >=1 revised issue (revision record + `spec revision: #<k> v<N>` note); if none revised, check 6 is `open`, not pass.
+- R-E3 record AC-34 deviation (Q uses static-shop issues 311–313, not the chain fixture) in §10.7.
+- R-E4 add a `system/init` row (no `mcp__notion`, `mcp__claude_ai_*` tools listed) to M-8, B1-16, Q2-14.
+- R-E5 citation resolver: add a `resume/SKILL.md` mapping (E3, since E edits skills.bats) so D's citations into resume's Step 4/5 are checked.
+- R-W2: B3 added a TODO(milestone-mode) resolver skip for B1's citation of `sequential.md` `## Resume`; D1 must remove that skip once it writes ## Resume.

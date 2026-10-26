@@ -187,6 +187,11 @@ The run id is the issue number, or `m-<milestone-number>` for milestone runs.
 | `manual-tests.md` | qa-engineer |
 | `10-summary.md`, `pr-body.md`, `retro.md` | doc-writer |
 | `prompt.md` (prompt mode only) | brief-compiler |
+| `issues/<k>/` (bulk only: per issue `issue.json`, `00-issue-original.md`, `01-spec-analysis.md`, `spec-final.md`, `spec-changes.json`, `spec-revision-v<N>.md`) | as for the root files |
+| `index.json` (sequential only: `order`, each child's `stack_on` and milestone status) | `state.sh index` only |
+| `milestone-report.md` (milestone runs) | orchestrator, with Write |
+
+A sequential run's children are ordinary runs `.aew/runs/<k>/` beside `m-<n>`, linked by the index and by the child's history note `milestone m-<n>`. A bulk issue's spec version is the history note `spec revision: #<k> v<N>` (no schema change).
 
 `.aew/runs/current` holds the active run id. Hooks use it.
 
@@ -518,19 +523,29 @@ Runs on the main thread.
   - retro items filed.
 - **Procedure detail.** The preflight order and messages, run start, `--from`, dispatch rows and return checks, gate steps, routing table, PR steps and final-report format are in `skills/ship/SKILL.md` and `skills/ship/references/` (`preflight.md`, `dispatch.md`, `gates.md`, `routing.md`, `pr.md`, `final-report.md`); this section doesn't restate them.
 - **Recorded deviations (build prompt 05).** C1: the orchestrator commits the doc-writer's outputs (§8.7). C3: standards-setter init mode (§8.3). C4: state before fetch (Steps). C5: the simulated runs ship the static-shop fixture's issue #201, not issue 1 (`tests/agent-smoke/README.md` §9). The direct `gh auth status` (§4). A blocked prompt-mode run posts no report comment and sets no `aew:blocked` label, because prompt mode sets no labels (§7.3's blocked rule; Phase C PC-3). On a corrupt `state.json`, `status` names the corrupt file and still lists the other runs. The final report prints `ACs passed: n/a` when `10-summary.md` is absent or `stage` is not `pr`.
-- **Prompt mode and resume.** `/aew:prompt` marks its run with the `history` note `prompt` (written before the fetch), and a run is a prompt-mode run when that note exists and `branch` is null; the one check is in `skills/ship/references/gates.md` and is used unchanged by `resume` and `status`. `resume` continues `single` runs only until milestone mode (§10, prompt 06); `status` shows every mode.
+- **Prompt mode and resume.** `/aew:prompt` marks its run with the `history` note `prompt` (written before the fetch), and a run is a prompt-mode run when that note exists and `branch` is null; the one check is in `skills/ship/references/gates.md` and is used unchanged by `resume` and `status`. `resume` continues every mode: a bulk run like a single one, and a sequential run (or any of its children) at its first unfinished child, through `skills/ship-milestone/references/sequential.md`. `status` shows every mode, and a sequential run's children.
 
 ## 10. Milestone mode
 
 `ship-milestone <milestone> [--bulk|--sequential] [--auto]`
 
+Procedure detail: `skills/ship-milestone/` (`SKILL.md`, `references/mode-selection.md`, `bulk.md`, `sequential.md`); the deterministic part is `gh-milestone.sh select` and `state.sh index`.
+
 **Mode selection.** If no mode is given, the orchestrator recommends one and asks James to confirm. It recommends **bulk** when all of these hold:
 
 - 5 issues or fewer;
-- each issue small (5 ACs or fewer once analysed);
+- each issue small (5 ACs or fewer by a quick count of the issue's acceptance-criteria list);
 - the same area of the codebase;
 - low risk;
 - no blocking dependencies.
+
+Dependency rules:
+
+- A dependency blocks bulk unless it is a closed issue of this milestone.
+- Order is Kahn's algorithm over the open in-milestone edges, lowest issue number first.
+- A stacked child branches from the latest of its dependencies in `order`; two open dependencies that are not one chain stop a sequential run before anything is written.
+- Stacking is decided without a `gh` call: a dependency shipped earlier in the run has an open PR, so its dependant stacks on its branch.
+- aew never merges or retargets a stacked PR, so merge them in order.
 
 Otherwise it recommends **sequential**.
 
@@ -548,6 +563,17 @@ Otherwise it recommends **sequential**.
 - An issue that depends on an unmerged one branches from that issue's branch (a stacked PR), and this is noted in the PR, including in its introduction (the stacked variant, §8.7).
 - The plan gate applies per issue unless `--auto`.
 - The sequence stops on `blocked` and posts a milestone report.
+
+**Recorded deviations (prompt 06).**
+
+- **C1.** The AC count is the script's quick count of the issue body's acceptance-criteria list, not a spec analysis; the wording above replaces "once analysed". James confirmed this at plan approval on 2026-10-26.
+- **C2.** A dependency cycle or stack conflict stops before any write and asks in its stop message, not through AskUserQuestion.
+- **C3.** Bulk QA evidence goes to `docs/qa/m-<n>/` (not §6's `docs/qa/<issue>/`).
+- **`select` wording.** The prompt's `gh-milestone.sh issues` fetch is the new `select` subcommand of the same script, which reuses its `gh` call.
+- **C4.** The run dir gains `issues/<k>/` and `index.json` (§7.1), with no renamed artefact. The stacked PR carries the stacked introduction only, with no extra summary line.
+- **AC-24 over AC-25.** AC-25 lets `preflight.md` gain only the bulk path overrides, but `preflight.md` `## Check 5. No other active run` also gains the two-way milestone exception that AC-24 requires, as one continuation line.
+- **Developer clean tree (found by B1).** The developer's full and fix preconditions and its allowed-files check ignore paths under `.claude/agent-memory/`, like preflight's restart form and `resume`. Agents that run before `develop` may write memory, and ship commits it only at the docs stage, so without this the developer blocked every bulk run (and single runs whenever an early agent wrote memory). Outside the approved plan; James approved the fix and a B1 re-run on 2026-10-26.
+- **QA ARTEFACTS are files (found by Q3).** The qa-engineer's return contract now says ARTEFACTS lists files only, never a directory, because ship checks each path with `test -f`; a run listed `docs/qa/<issue>/screenshots` and was blocked after two invalid returns.
 
 ## 11. Hooks (`hooks/hooks.json` → `scripts/hooks/`)
 

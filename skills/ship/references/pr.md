@@ -2,6 +2,8 @@
 
 Read at the standards, docs and pr stages. `<id>`, `<n>`, `<rd>` and the script names are as in `SKILL.md` `## Run variables` and `SKILL.md` `## Plugin root`. Script failures follow `routing.md` `## Script failures`.
 
+In a bulk run, `bulk.md` `## Overrides` changes the commit suffix, the docs commit message and the `issue.json` path (the PR URL and the retro repo), and makes the manual-tests, flag and `ready-for-review` calls once per issue.
+
 ## Commit rules
 
 Every commit the orchestrator makes follows these rules.

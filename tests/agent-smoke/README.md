@@ -1196,7 +1196,7 @@ smoke_ship_allow() {
   # 1. every lane: the scripts by absolute path, bare (ship) and quoted (init), the skills' shared forms, and the
   #    standards-setter's date (it runs in both lanes)
   echo --allowedTools
-  for s in state gh-issue gh-labels git-branch gh-pr gh-retro detect-stack check-pr-intro; do
+  for s in state gh-issue gh-labels git-branch gh-pr gh-retro gh-milestone detect-stack check-pr-intro; do
     printf '%s\n' "Bash($REPO/scripts/$s.sh *)" "Bash(\"$REPO/scripts/$s.sh\" *)"
   done
   printf '%s\n' "Bash(gh auth status)" "Bash(git status *)" "Bash(git switch *)" "Bash(git add *)" "Bash(git commit *)" \
@@ -1207,6 +1207,9 @@ smoke_ship_allow() {
   if [ "$k" != init ]; then
     printf '%s\n' "Bash(claude plugin list --json)" "Bash(git fetch origin main)" \
       "Bash(awk *)" "Bash(test *)" "Bash(tail -n *)" "Bash(grep -c *)"
+    # prompt 06: ship's return check `grep -v '^$' <file> | tail -n 4` since 6a66e42 (9.10 notes); CTO-3: this exact
+    # form only, never "Bash(grep -v *)"
+    printf '%s\n' "Bash(grep -v '^\$' *)"
   fi
   # 2. agent lines already recorded in this README (961 developer, 8.3 QA phase B, 951 developer additions), and the
   #    developer's, qa-engineer's and senior-engineer's git reads
@@ -2361,3 +2364,582 @@ This is a canned body: `tests/scripts/fixtures/pr-intro/valid.md` with one sente
   meaningful.
 - Plugin HEAD was `d16c14c` for every session. It differs from `c0edf1e` only in `CHANGELOG.md` and `CLAUDE.md`, and
   it was committed (07:36Z) before the first session started (07:38Z). The launcher's HEAD guard passed for A, B and C.
+
+## 10. Milestone mode (prompt 06)
+
+Headless sessions of `/aew:ship-milestone` (bulk and sequential) and `/aew:resume` on milestone runs, with only `gh`
+(the stateful mock) and `origin` (a local bare repo) faked. Section 9's rails 1 to 8 apply unchanged to every session,
+and every paid session starts through the launcher `$SMOKE/ship-run.sh` (10.2), which enforces them, the explicit
+allowlist, `--permission-prompts none` and the $45 stop. Rail 9 (re-run P0 when the launcher's environment lines
+change) does not trigger: the launcher copy below changes no environment line, the same precedent as 9.10. Transcripts,
+streams, debug logs and anything under `$SMOKE` are never committed. Each run records its results in its own
+subsection (10.3 to 10.5).
+
+### 10.1 Spend ledger (prompt 06, stop at $45)
+
+Separate from the ledgers in sections 1, 8.1 and 9.1. Caps: M1 1, M3 1, B1 15, Q1 8, Q2 12, which is 37 in total
+against a **stop of $45** (R-E1). The $8 margin fits only a probe re-run (M1.2 or M3.2, $1 each). Any larger fallback (a
+B1 raise or re-run, a Q1 raise, a Q2 re-run) stops the run sequence and asks James to raise the stop; it never starts
+within $45.
+
+- The rules of 9.1 otherwise apply: the launcher reserves a session's cap before starting it and refuses (exit 3) when
+  the costs and reservations already in the ledger plus that cap pass $45; one raise per session, to exactly 2x its
+  cap, as the next attempt, and only if the launcher accepts it; the cost is the stream's last `result` event's
+  `total_cost_usd`; a killed or crashed session counts its cap; spend can pass the cap.
+- The ledger is `$SMOKE/ledger-06/`, one `<project>-<run>.tsv` per session (cap, cost, start time; an empty cost is a
+  reservation). It must be empty before the first paid session (CTO-4). Task E11 fills the table below from it;
+  nothing else writes the table.
+
+| run | attempt | cap (USD) | cost (USD) | running total | cap raised? |
+|---|---|---|---|---|---|
+| M1 (probe) | M1.1 | 1 | 0.415012 | 0.415012 | no |
+| M3 (probe) | M3.1 | 1 | 0.487072 | 0.902084 | no |
+| M3 (probe) | M3.2 | 1 | 0.409620 | 1.311704 | no |
+| B1 (bulk) | B1.1 | 15 | 4.963957 | 6.275661 | no |
+| B1 (bulk) | B1.2 | 15 | 5.603024 | 11.878685 | no |
+| Q1 (sequential) | Q1.1 | 8 | 4.591567 | 16.470252 | no |
+| Q2 (resume) | Q2.1 | 10 | 1.447647 | 17.917899 | no |
+| Q3 (resume) | Q3.1 | 12 | 5.074982 | 22.992881 | no |
+| Q3 (resume) | Q3.2 | 12 | 2.918497 | 25.911378 | no |
+
+The total is **$25.91** of the $45 stop, over 9 sessions (the sum of the nine `ledger-06` files; the rows are in
+start-time order). No session was refused, killed or raised, and none passed its cap. M3.1 was an operator error (it was
+launched with `--sequential` as an argument), so it is in the ledger but not counted as a probe. The caps that ran were
+not the planned set: James approved the B1 re-run (B1.2), the split of Q2 into Q2 (cap 10) and Q3 (cap 12), and Q3.2,
+each inside $45. The nine caps add up to $75, more than the planned $37, because the launcher reserves a cap only while
+a session runs and counts the real cost afterwards, so the stop was checked against costs plus one live reservation.
+
+### 10.2 Harness
+
+Run section 2's `REPO`/`SMOKE` lines and its `smoke_render`, section 4's `valid_return_block` eval line, and section
+9's helper loader (9.2) first. Then load the section 10 helpers (bash or zsh):
+
+```sh
+eval "$(awk '/^#### Helpers \(section 10\)$/{f=1;next} f&&!b&&/^#+ /{exit} f&&/^```sh$/{b=1;next} f&&b&&/^```$/{b=0;next} f&&b' "$REPO/tests/agent-smoke/README.md")"
+command -v smoke_ms_bodies >/dev/null || echo 'section 10 helpers: extraction failed'
+```
+
+The launcher `$SMOKE/ship-run.sh` is 9.2's reference copy, extracted with `awk '/^#### Launcher$/…'` and `chmod +x`,
+with these harness-only changes and no others (the recorded `diff`; no environment or safety line changes):
+`L="$HERE/ledger-06"`; the stop `60` becomes `45` in the `awk` test and in its message; the usage comment's
+"prompt-05" becomes "prompt-06", its "$60 budget" "$45 budget" and its ledger path `ledger-06`; and the
+`<run-id>:<stage>` kill form, so that `<kill-stage>` may be `<run-id>:<stage>` and the poller then reads
+`.aew/runs/<run-id>/state.json` instead of `current`'s (Q1 kills on child 2's own state):
+
+```bash
+# after the argument block (${KSTAGE:-} because --env-check never sets it)
+KRUN=""; case ${KSTAGE:-} in *:*) KRUN=${KSTAGE%%:*}; KSTAGE=${KSTAGE#*:} ;; esac   # <run-id>:<stage> keys the kill on that run's state.json
+# in the poller, replacing the current-run read
+    id=${KRUN:-$(cat .aew/runs/current 2> /dev/null || true)}
+```
+
+`smoke_ship_allow` (9.2) is edited in place, because this README is the harness source: `gh-milestone` joins the script
+list, and group 1a gains `Bash(grep -v '^$' *)` for ship's return check `grep -v '^$' <file> | tail -n 4` (the open
+denial in 9.10). CTO-3: that exact form only, never `Bash(grep -v *)`; widen it only after a recorded denial. Every
+run in this section uses `smoke_ship_allow ship`.
+
+#### Helpers (section 10)
+
+```sh
+# smoke_ms_bodies: the six issue bodies, written to $W/bodies/<n>.md (B1: 301-303, milestone 2; Q: 311-313, milestone 3)
+# 302's AC 2 deliberately lacks the WCAG 2.2 AA clause the others carry: a non-material gap (rubric: "an accessibility requirement implied by WCAG 2.2 AA") that spec-analyser applies without a gate under --auto (R-E2). The viewport sentence stays, so no layout change can trip the tie-break into material.
+smoke_ms_bodies() {
+  mkdir -p "$W/bodies" || return 1
+  cat > "$W/bodies/301.md" <<'EOF'
+### Summary
+
+The footer shows the shop's contact email, so shoppers know how to reach the shop.
+
+### Acceptance criteria
+
+1. The footer contains a link whose text is "hello@static-shop.test" and whose `href` is "mailto:hello@static-shop.test".
+2. At desktop (1440×900) and mobile (390×844), the footer is visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+
+### Out of scope
+
+- a contact form.
+EOF
+  cat > "$W/bodies/302.md" <<'EOF'
+### Summary
+
+The footer carries the shop's copyright line.
+
+### Acceptance criteria
+
+1. The footer contains the fixed text "© 2026 Static Shop" (not computed from today's date).
+2. At desktop (1440×900) and mobile (390×844), the footer is visible without horizontal scrolling.
+EOF
+  cat > "$W/bodies/303.md" <<'EOF'
+### Summary
+
+The footer shows the shop's opening hours instead of the fixture note.
+
+### Acceptance criteria
+
+1. The footer text "Static Shop, a test fixture." is replaced by "Open Monday to Friday, 9am to 5pm.".
+2. At desktop (1440×900) and mobile (390×844), the footer is visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+EOF
+  cat > "$W/bodies/311.md" <<'EOF'
+### Summary
+
+Each product shows whether it is in stock.
+
+### Acceptance criteria
+
+1. Directly under its price, each of the three products ("Tea towel", "Mug" and "Notebook") shows the text "In stock".
+2. At desktop (1440×900) and mobile (390×844), all three products and their stock text are visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+
+### Out of scope
+
+- changing any product's stock.
+EOF
+  cat > "$W/bodies/312.md" <<'EOF'
+Depends on #311.
+
+### Summary
+
+The Notebook is out of stock.
+
+### Acceptance criteria
+
+1. The Notebook's stock text reads "Out of stock"; "Tea towel" and "Mug" still read "In stock".
+2. The Notebook's "Add to basket" button has the `disabled` attribute, so it cannot be activated by mouse or keyboard; the other two buttons still work.
+3. The Notebook's disabled button looks disabled: a muted grey background and `cursor: not-allowed`, with its text still readable.
+4. The page has no serious or critical accessibility violations against WCAG 2.2 AA.
+EOF
+  cat > "$W/bodies/313.md" <<'EOF'
+Depends on #312.
+
+### Summary
+
+Shoppers can hide products that are out of stock.
+
+### Acceptance criteria
+
+1. Above the product list there is a checkbox labelled "Hide out-of-stock products", unchecked on load.
+2. Checking it hides the Notebook; unchecking it shows the Notebook again.
+EOF
+}
+
+# smoke_ms_issue <n> <title> <label> <milestone-number> <milestone-title>: $W/issues/<n>.json from #201's issue.json, seeded in the mock
+smoke_ms_issue() {
+  mkdir -p "$W/issues" &&
+    jq --argjson n "$1" --arg t "$2" --arg l "$3" --argjson mn "$4" --arg mt "$5" --rawfile b "$W/bodies/$1.md" \
+      '.number = $n | .title = $t | .body = $b | .url = "https://github.com/acme/static-shop/issues/\($n)"
+       | .labels = [{name: $l}] | .milestone = {number: $mn, title: $mt}' "$SHOP_RUN/issue.json" > "$W/issues/$1.json" &&
+    smoke_ship_issue "$1" "$W/issues/$1.json"
+}
+
+# smoke_ms_listing <n>...: the gh issue list reply (gh-milestone.sh's --json fields plus milestone), in the order given
+smoke_ms_listing() {
+  local n f=()
+  for n in "$@"; do f+=("$W/issues/$n.json"); done
+  jq -s '[.[] | {number, title, labels, state, body, blockedBy: [], url, milestone}]' "${f[@]}"
+}
+
+# smoke_ms_expected <listing-file> <milestone>: select's JSON from a throwaway mock, no session (the expected values)
+smoke_ms_expected() {
+  local d="$W/free-select"
+  rm -rf "$d" && mkdir -p "$d/responses" && cp "$1" "$d/responses/issue-list.out" &&
+    (cd "$P" && GH_MOCK_DIR="$d" PATH="$SHIM:$PATH" "$REPO/scripts/gh-milestone.sh" select "$2")
+}
+
+# smoke_ms_rev <dir-with-spec-changes.json> <k>: k, its recorded changes, then its revision comments, body markers and flag
+smoke_ms_rev() {
+  printf '%s changes=%s comment=%s marker=%s flag=%s\n' "$2" \
+    "$(jq '.changes | length' "$1/spec-changes.json" 2> /dev/null || echo '?')" \
+    "$(grep -cE "^issue comment $2 .*spec-revision-v[0-9]+\.md" "$GHM/calls.log" || true)" \
+    "$(grep -c '^<!-- aew:spec v' "$GHM/issues/$2/body" || true)" \
+    "$(grep -cx 'aew:spec-revised' "$GHM/issues/$2/labels" || true)"
+}
+
+# smoke_ms_stages <k>: the stage labels added to issue k, in order (no-op stage calls add none)
+smoke_ms_stages() { awk -v k="$1" '$1 == "issue" && $2 == "edit" && $3 == k { for (i = 4; i < NF; i++)
+  if ($i == "--add-label" && $(i + 1) !~ /spec-revised|manual-test-required/) printf "%s ", $(i + 1) } END { print "" }' "$GHM/calls.log"; }
+
+# smoke_fanout <O> <subagent_type>: per main-thread message with that agent, how many calls it holds (AC-15: one line, 3)
+smoke_fanout() { jq -rR --arg a "$2" 'fromjson? | select(.type == "assistant" and .parent_tool_use_id == null) | .message as $m
+  | $m.content[]? | select(.type == "tool_use" and .name == "Agent" and .input.subagent_type == $a) | [$m.id, .id] | @tsv' "$1/stream.jsonl" \
+  | sort -u | cut -f1 | uniq -c | awk '{print $1}'; }
+
+# smoke_agent_prompts <O>: every Agent call on any thread: type TAB the first 160 characters of its prompt
+smoke_agent_prompts() { jq -rR 'fromjson? | select(.type == "assistant") | .message.content[]? | select(.type == "tool_use" and .name == "Agent")
+  | [.input.subagent_type, (.input.prompt // "" | gsub("\n"; " ") | .[0:160])] | @tsv' "$1/stream.jsonl"; }
+```
+
+#### Free checks (section 10)
+
+```sh
+/bin/bash -n "$SMOKE/ship-run.sh" && npx --yes shellcheck "$SMOKE/ship-run.sh"           # no output
+diff <(awk '/^#### Launcher$/{f=1} f&&/^```bash$/{b=1;next} b&&/^```$/{exit} b' "$REPO/tests/agent-smoke/README.md") "$SMOKE/ship-run.sh"   # only the X-8 lines, ledger-06, 45 and the usage word
+# 9.2's harness checks: claude --version, the real-gh canary, the keychain check (unchanged)
+smoke_ship_project dry shop && smoke_ms_bodies &&
+  smoke_ms_issue 301 "Footer contact email" footer 2 "Shop footer" && smoke_ms_issue 302 "Footer copyright line" footer 2 "Shop footer" &&
+  smoke_ms_issue 303 "Footer opening hours" footer 2 "Shop footer" && smoke_ms_issue 311 "Stock labels" stock 3 "Product stock" &&
+  smoke_ms_issue 312 "Notebook out of stock" stock 3 "Product stock" && smoke_ms_issue 313 "Stock filter toggle" stock 3 "Product stock"
+smoke_ms_listing 301 302 303 > "$W/b1-listing.json"; smoke_ms_listing 313 311 312 > "$W/q-listing.json"
+smoke_ms_expected "$W/b1-listing.json" 2 | jq -c '{recommend, reasons, order, ac: [.issues[].ac_count]}'   # bulk, [], [301,302,303], [2,2,2]
+smoke_ms_expected "$W/q-listing.json" 3 | jq -c '{recommend, order, stack: [.issues[] | [.number, .stack_on]], stack_conflicts}'   # sequential, [311,312,313], [[311,null],[312,311],[313,312]], []
+for n in 311 312 313; do jq -r '.title | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | .[0:40] | rtrimstr("-")' "$W/issues/$n.json"; done   # ship 3.7's filter: stock-labels, notebook-out-of-stock, stock-filter-toggle
+for f in small-related.json chain.json; do jq -c '[.[] | {number, title, labels: [.labels[].name], milestone}]' "$REPO/tests/scripts/fixtures/milestone/$f"; done   # X-1.3: record; the bulk titles read as one area, low risk
+grep -ohE '`[a-z][a-z0-9.-]*( [^`]*)?`' "$REPO"/skills/ship-milestone/SKILL.md "$REPO"/skills/ship-milestone/references/*.md | awk '{print $1}' | tr -d '`' | sort -u   # each leading word is covered by smoke_ship_allow ship (record any gap and add its rule to 9.2 before E8)
+rm -rf "$SMOKE/ship-dry"
+```
+
+`small-related.json` (milestone 2 "Shop polish", shared `shop` label) and `chain.json` (milestone 4) are Phase A1's
+names.
+
+Recorded 2026-10-26 (Task E7; no Claude session, nothing in the ledger):
+
+| check | result | notes |
+|---|---|---|
+| helper loader | pass | `command -v smoke_ms_bodies` finds the function after 9.2's loader. |
+| launcher syntax and shellcheck | pass | `/bin/bash -n` and `npx shellcheck` print nothing. |
+| launcher `diff` against 9.2's reference | pass | Hunks: the usage line's "prompt-06"; the header's `ledger-06` and "$45"; the `KRUN` line; `L="$HERE/ledger-06"`; the two `60` to `45` in the budget test and message; the poller's `id=${KRUN:-…}`. No environment, rail or safety line differs. |
+| B1 `select` | pass | `{"recommend":"bulk","reasons":[],"order":[301,302,303],"ac":[2,2,2]}` |
+| Q `select` | pass | `{"recommend":"sequential","order":[311,312,313],"stack":[[311,null],[312,311],[313,312]],"stack_conflicts":[]}` |
+| ship 3.7 slug filter | pass | `stock-labels`, `notebook-out-of-stock`, `stock-filter-toggle`. |
+| AC-5 fixtures (X-1.3) | pass, by eye | `small-related.json`: #21 "Tidy the basket icon", #22 "Align product card prices", #23 "Fix wishlist empty state", all `shop`, milestone 2 "Shop polish": one area, nothing risk-sounding. `chain.json`: #43 "Payment step", #41 "Confirmation page", #42 "Cart totals", no labels, milestone 4 "Checkout flow". |
+| allowlist coverage | pass | Every script and shell word in `skills/ship-milestone/` is covered by `smoke_ship_allow ship` (`gh-milestone.sh` by absolute path, bare and quoted; `grep -v '^$' *`, `grep -c *`, `jq *`, `test *`, `state.sh`); the only bare `gh` mentions are prose. The only `gh` rule is `Bash(gh auth status)`; `Bash(grep -v *)` count 0. |
+| ledger | pass | `$SMOKE/ledger-06/` exists and is empty. |
+
+### 10.3 M1 and M3: mode probes
+
+Task E8 (AC-32, cut 1). Recorded 2026-10-26 after the CTO-4 pre-launch checks: James confirmed the $45 stop and C1 at plan
+approval (2026-10-26T09:47:30Z), `$SMOKE/ledger-06/` was empty, the CTO-1 guard printed nothing, the suite was green (371).
+One project (`$SMOKE/ship-ms`, `smoke_ship_project ms shop`) for both probes; the mock's `calls.log` and counters were moved
+aside between runs. M1: `small-related.json` (milestone 2), prompt `/aew:ship-milestone 2`. M3: `chain.json` (milestone 4),
+prompt `/aew:ship-milestone 4` with no mode flag. The plan's "`--sequential` in M-1" is the mode in the printed rerun line;
+M3.1 misread it as an argument (see below). Each launcher run: cap 1, exit 0, `audit clean (11 Bash commands)`, `ghcfg` empty.
+
+| run | check | result | notes |
+|---|---|---|---|
+| M1.1 | M-1 rationale then rerun line | pass | One rationale paragraph (3 issues, each small with 2 to 4 ACs, shared `shop` label, no dependency, no cycle), then `Rerun with /aew:ship-milestone 2 --bulk (or --sequential).` No `Mode: … (given)` line. |
+| M1.1 | M-2 no AskUserQuestion | pass | `system/init` `.tools \| index("AskUserQuestion")`: `null`. The result says the tool is unavailable. |
+| M1.1 | M-3 recommendation matches `select` | pass | Expected `recommend` `bulk`, `reasons` `[]`, order `[21,22,23]`, no stacking; printed mode `bulk`, the issues #21, #22, #23. |
+| M1.1 | M-4 no run dir | pass | `.aew/runs` absent. |
+| M1.1 | M-5 `gh` routes | pass | `smoke_norm`: `auth-status`, `issue-list` (one `select` call). |
+| M1.1 | M-6 tree and branches | pass | `git status --porcelain` empty; branches: `main` only. |
+| M1.1 | M-7 no Agent, Write or Edit | pass | None on the main thread (Reads of ship's `SKILL.md`, `preflight.md`, `mode-selection.md`; Bash preflight reads, `gh-milestone.sh select 2`, `test -e .aew/runs/m-2`, `cat .aew/runs/current`). |
+| M1.1 | M-8 denials, ghcfg, MCP | pass | `smoke_denials` `[]`; `ghcfg` empty; launcher exit 0, `audit clean`; R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). Cost 0.415012. |
+| M1.1 | M-9 "same area" and "low risk" named | pass, wording differs | The judgement left bulk standing (no flip to sequential). Quote: "Bulk fits this milestone. It has only three issues (#21 …, #22 …, #23 …). Each one is small, with two to four acceptance criteria. They all carry the same `shop` label, and none of them depends on another …". "Same area" is named by the shared label; "low risk" is not said in words, only "small" and "no dependency". `mode-selection.md`'s Rationale item 2 asks for "few issues, each small, no blocking dependencies", which the text meets exactly; the check's wording is stricter than the skill. Not a defect. |
+| M3.1 | mis-launch | not a probe | Launched with `--sequential` as an argument, so the mode was given and the run began: preflight and `select` ran, `sequential.md` was read, then the session stopped itself on the $1 cap ("about $0.58 left"). Nothing was written (no run dir, one `auth-status` and one `issue-list` call, tree clean, `main` only, audit clean), so no state needed cleaning. Cost 0.487072. My misreading of the plan, not a skill defect. Its checks are not counted. |
+| M3.2 | M-1 rationale then rerun line | pass | `aew ship-milestone m-4 Checkout flow: 3 open issue(s), recommended mode sequential.`, a paragraph naming both dependencies, `Order: #42 → #43 → #41`, `Stacked: #41 on #43, #43 on #42`, `Rerun with /aew:ship-milestone 4 --sequential (or --bulk).` |
+| M3.2 | M-2 no AskUserQuestion | pass | `null`. |
+| M3.2 | M-3 order and stacking match | pass | Expected `recommend` `sequential`, reasons `#41 depends on #43`, `#43 depends on #42`, order `[42,43,41]`, `stack_on` 41→43, 43→42, 42→none; the printed order and stacked lines equal them. |
+| M3.2 | M-4 no run dir | pass | `.aew/runs` absent. |
+| M3.2 | M-5 `gh` routes | pass | `auth-status`, `issue-list`. |
+| M3.2 | M-6 tree and branches | pass | Empty; `main` only. |
+| M3.2 | M-7 no Agent, Write or Edit | pass | None. |
+| M3.2 | M-8 denials, ghcfg, MCP | pass | `[]`; empty; launcher exit 0, `audit clean (11 Bash commands)`; R-E4 `system/init` row `[]`. Cost 0.409620. |
+
+Spend (E11 fills 10.1's table): M1.1 0.415012, M3.1 0.487072, M3.2 0.409620, total 1.311704 of the $45 stop. The
+M3 re-run used the one probe re-run the margin allows; the caps still to come (B1 15, Q1 8, Q2 12) fit under $45.
+
+### 10.4 B1: `/aew:ship-milestone 2 --bulk --auto` to one mocked PR
+
+Task E9 (AC-33). Recorded 2026-10-26 after the CTO-2 pre-launch checks (CTO-1 guard printed nothing, suite green at
+371, port 4173 free). One attempt, `B1.1`, cap 15, project `$SMOKE/ship-b1` (`smoke_ship_project b1 shop`, issues
+301 to 303 from `smoke_ms_bodies`, the listing on `issue-list.1` and `.2`), launcher exit 0, `audit clean (112 Bash
+commands)`, cost 4.963957 (118 turns, 759 s, `claude-opus-5-5`). **The run did not complete.** It stopped `blocked` at
+`develop`, so no PR was opened. Per R-E1 no re-run was started: a B1 re-run does not fit the $45 stop and needs James.
+
+| run | check | result | notes |
+|---|---|---|---|
+| B1.1 | 1 completed | fail | Result `success`, but `state.json` is `bulk`, `develop`, `blocked`, issues `301,302,303` (expected `pr`, `done`). Cause: the developer's precondition (`agents/developer.md` line 62, `git status --porcelain` must be empty) saw `?? .claude/` (the agents' memory files under `.claude/agent-memory/`, which ship commits only at `docs`). It blocked, ship re-planned once (`senior-engineer` `mode: plan` with the blocked note), the developer blocked again with the same reason, and the run went to the blocked path. |
+| B1.1 | 2 state valid, current | pass | `smoke_state_valid`: valid. `current` is set, not cleared (a blocked run stays current for resume). |
+| B1.1 | 3 branch | fail | `feat/m2-shop-footer` exists locally at `abfb8a0` (the fixture commit); the bare origin has no such branch (never pushed), so the equality check fails. |
+| B1.1 | 4 per-issue artefacts | pass | Each of 301, 302 and 303 holds `00-issue-original.md`, `01-spec-analysis.md`, `issue.json`, `spec-changes.json`, `spec-final.md`; 302 also holds `spec-revision-v2.md`. |
+| B1.1 | 5 spec-analyser fan-out (AC-15) | pass | `smoke_fanout`: `3`. Three `aew:spec-analyser` calls (`spec_version: 2`) in one main-thread message. |
+| B1.1 | 6 revisions (AC-33, R-E2) | pass | 301 `changes=0 comment=0 marker=0 flag=0`; 302 `changes=1 comment=1 marker=1 flag=1`; 303 all 0. History note `spec revision: #302 v2`. The analyser added the missing WCAG 2.2 AA accessibility criterion to 302 as a non-material change, with no gate under `--auto`, as R-E2 predicted. Exactly one issue revised. |
+| B1.1 | 7 brief | pass | Heading `# Brief: m-2 Shop footer` (line 6, after the template's comment block); 19 lines carry `#30[123]-AC-n` ids; one brief-compiler prompt with `issues: 301,302,303`. |
+| B1.1 | 8 one PR | fail | `pr create` calls: 0. |
+| B1.1 | 9 closing keywords and intro | fail | No PR body exists, so `Closes #301/302/303` and `check-pr-intro.sh <pr-body.md> --issues 3` could not run (the check on a missing file prints `missing <pr-body.md>`, exit 1). Not exercised, not a skill result. |
+| B1.1 | 10 stage labels | fail | Added in order on each issue: `aew:analysing`, `aew:planning`, `aew:building`, `aew:planning`, `aew:building`, `aew:blocked` (the repeat is the re-plan). Final labels: `aew:blocked` (+ `aew:spec-revised` on 302); no `aew:ready-for-review`. The labels are right for a blocked run. |
+| B1.1 | 11 milestone report | pass | `issue comment` with `milestone-report.md` on 301, 302 and 303: 3; `$RUN/milestone-report.md` exists. |
+| B1.1 | 12 retro and select calls | fail | Retro `issue list --repo acme/aew-retro`: 0 (the pr stage was never reached). `--milestone` listing calls: 1 (the `.2` canned reply went unused; Risk 4 record: one `select` call). |
+| B1.1 | 13 files on the branch | fail | `docs/specs`, `docs/qa/m-2`, `tests/e2e` on `feat/m2-shop-footer`: empty. Develop, QA and docs never ran. |
+| B1.1 | 14 commit subjects | fail | `main..feat/m2-shop-footer` is empty (no commit). |
+| B1.1 | 15 final report | fail | Two blocks: `aew ship m-2 Shop footer: blocked` (Reason, `Next: Resume with /aew:resume m-2`) then `aew ship-milestone m-2 Shop footer: stopped`, `Mode: bulk`, `Shipped: none`, `Blocked:` one line per issue at develop with the reason, `Not started: none`, `Manual tests outstanding: none`, `Retro items filed: 0 ()`, `Next:`, `Warning: Mode: bulk (given)`. The blocked-path report is well-formed; the success report was not reached. |
+| B1.1 | 16 denials, ghcfg, trees, MCP | fail | `smoke_denials` lists 2 denials, both Bash commands with a shell or jq `$` variable: the per-issue spec-revision lookup `jq -r --arg k 301 '[.history[] … select(startswith("spec revision: #" + $k + " v")) … | max // 1'` and a `for f in …; do test -f "$f" …` loop. The model replaced the first with `$`-free queries and ran the second one command per file. `$W/ghcfg` empty; plugin repo clean; the project tree has `?? .claude/` (the cause of the block). Launcher exit 0, audit clean. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Findings:
+
+- **Developer clean-tree precondition vs. agent memory (blocking).** In a bulk run, spec-analyser, standards-setter,
+  qa-engineer and senior-engineer have written `.claude/agent-memory/` before `develop`, and ship commits it only at
+  `docs`, so `git status --porcelain` is never empty at the developer's first step. S1 (9.4) passed with the same
+  untracked directory (check 11 there records the memory commit at the end), so the developer's reading of its rule
+  differs between runs; the fix is to make the precondition ignore `.claude/agent-memory/` (as preflight's restart
+  form does) or commit memory before `develop`. Not changed here: a fix and a B1 re-run do not fit the $45 stop.
+- **jq `$` commands denied.** Bulk's per-issue spec-version lookup in `bulk.md`/`ship` carries a `$k` jq variable; the
+  headless allowlist `Bash(jq *)` did not approve it. Worth a `$`-free form or an allowlist note.
+- Under `--auto` the spec stage behaved as R-E2 expected: 302 was revised without a gate, the other two were not.
+
+Spend: B1.1 4.963957 of cap 15. Ledger running total 6.275661 of the $45 stop (M1.1 0.415012, M3.1 0.487072, M3.2
+0.409620, B1.1 4.963957).
+
+PR introduction: none, because no PR was created. The bulk-variant introduction check is therefore still open.
+
+Reviewer note: the B1.1 blocking finding (developer clean-tree precondition vs. agent memory) was fixed in a34996f and
+12021ad (`agents/developer.md` now reads `git status --porcelain --untracked-files=all` and ignores
+`.claude/agent-memory/`; DESIGN §10 deviation recorded). James approved the fix and exactly one B1 re-run at cap 15 on
+2026-10-26; `B1.2` below is that run. The `$k` jq denial finding was not part of that fix and recurred.
+
+#### B1.2 (re-run after the fix)
+
+Fresh project (`smoke_ship_project b1 shop` rebuilt `$SMOKE/ship-b1` from scratch: new project, run dir, branch and mock
+state), CTO-2 re-checks after the fix (suite green at 371, CTO-1 guard clean, port 4173 free, ledger readable). Same
+issues, listing and prompt as B1.1. Launcher exit 0, `audit clean (155 Bash commands)`, cost 5.603024 (131 turns,
+922 s). **The run completed:** `bulk`, `pr`, `done`, one PR (`…/pull/7`).
+
+| run | check | result | notes |
+|---|---|---|---|
+| B1.2 | 1 completed | pass | Result `success`; `bulk`, `pr`, `done`, issues `301,302,303`. |
+| B1.2 | 2 state valid, current | pass | `smoke_state_valid`: valid; `current` cleared. |
+| B1.2 | 3 branch | pass | `feat/m2-shop-footer`; origin and local both `38f6b89`. |
+| B1.2 | 4 per-issue artefacts | pass | Each of 301, 302, 303: `00-issue-original.md`, `01-spec-analysis.md`, `issue.json`, `spec-changes.json`, `spec-final.md` (no `spec-revision-v2.md` anywhere). |
+| B1.2 | 5 spec-analyser fan-out (AC-15) | pass | `smoke_fanout`: `3`. |
+| B1.2 | 6 revisions (AC-33, R-E2) | open | All three issues `changes=0 comment=0 marker=0 flag=0`; no `spec revision:` history note. This time spec-analyser left 302 unrevised: "The project's axe check (`wcag22aa`) already covers this page, so no extra AC is needed" (its SUMMARY: "No changes needed … Accessibility … is already met"). The WCAG clause was judged covered by the project's own axe check, so the seeded gap did not trigger a revision. Per R-E2 no revised issue means open, not pass. B1.1 did revise 302 (`spec revision: #302 v2`, flag, comment, marker), so the revision path was exercised once across the two attempts, not in the run that reached `pr`. |
+| B1.2 | 7 brief | pass | `# Brief: m-2 Shop footer`; 17 lines carry `#30[123]-AC-n` ids (>= 6); one brief-compiler prompt with `issues: 301,302,303`. |
+| B1.2 | 8 one PR | pass | `pr create` calls: 1. |
+| B1.2 | 9 closing keywords and intro | pass | `Closes #301`, `#302`, `#303`: 1, 1, 1. `scripts/check-pr-intro.sh <pr-body.md> --issues 3`: no output, `exit 0`. The introduction reads as the bulk variant (verbatim below). |
+| B1.2 | 10 stage labels | pass | Each issue: `aew:analysing`, `aew:planning`, `aew:building`, `aew:testing`, `aew:documenting`, `aew:ready-for-review`; final label `aew:ready-for-review` only (no `spec-revised`, matching check 6). |
+| B1.2 | 11 milestone report | pass | 3 `issue comment` calls with `milestone-report.md`; `$RUN/milestone-report.md` exists. |
+| B1.2 | 12 retro and select calls | pass | Retro `issue list --repo acme/aew-retro`: 1; `--milestone` listing calls: 1 (Risk 4 record: one `select` call). The final report lists 3 retro items, each answered `created #1` by the single canned `issue-create.out` (mock artefact). |
+| B1.2 | 13 files on the branch | pass | `docs/specs/301-footer-contact-email.md`, `302-footer-copyright-line.md`, `303-footer-opening-hours.md`; `docs/qa/m-2/report.md` and 32 screenshots (TC-1 to TC-16, desktop and mobile); `tests/e2e/m-2-shop-footer.spec.ts` and `tests/e2e/aew.ts`. |
+| B1.2 | 14 commit subjects | pass | `main..feat/m2-shop-footer`: `chore(aew): update agent memory (#301, #302, #303)`, `docs: add the issue specs, and update CLAUDE.md (#301, #302, #303)`, `test(e2e): add shop footer tests (#301, #302, #303)`, and the developer's single `feat(footer): add hours, contact link and copyright (#301)`. |
+| B1.2 | 15 final report | pass | `Mode: bulk (given)` printed early; then `aew ship-milestone m-2 Shop footer: done`, `Mode: bulk`, `Shipped:` #301/#302/#303 → `…/pull/7`, `Blocked: none`, `Not started: none`, `Manual tests outstanding: none`, `Retro items filed: 3 (created #1, created #1, created #1)`, `Next: review and merge the PR`. QA: 32 of 32 runs, 0 axe violations, 1 unit test. |
+| B1.2 | 16 denials, ghcfg, trees, MCP | fail | `smoke_denials` lists 2 denials (expected `[]`): the same per-issue `jq -r --arg k 301 '… "spec revision: #" + $k + " v" …'` lookup as B1.1, and `grep -c $'\xc2\xa0' …/site/index.html`. The model fell back to `$`-free reads and reported the `$k` denial itself. `$W/ghcfg` empty; project tree and plugin repo clean; launcher exit 0, audit clean. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Findings:
+
+- The B1.1 blocker is fixed: develop, review, QA, docs and pr all ran, with no blocked reason.
+- **jq `$k` denial persists** (second run): bulk's per-issue spec-version lookup is still denied headless. Open item for
+  James: a `$`-free form in `bulk.md`/`ship`, or a recorded allowlist decision (CTO-3 allows widening only after a
+  recorded denial; this is the second record). The run completed regardless.
+- Check 6 stays open: under `--auto` the analyser may legitimately judge 302's accessibility gap covered by the project's
+  axe check; the seeded gap is therefore not a reliable revision trigger. B1.1 showed the revision path works.
+- The PR introduction check is now exercised (bulk variant, below).
+
+Spend: B1.2 5.603024 of cap 15. Ledger running total 11.878700 of the $45 stop (M1.1 0.415012, M3.1 0.487072, M3.2
+0.409620, B1.1 4.963957, B1.2 5.603024); Q1 (8) and Q2 (12) still fit ($31.88 against $45).
+
+PR introduction (verbatim, the start of the captured PR body):
+
+    ## In plain English
+    
+    This milestone, "Shop footer", covers issues #301, #302 and #303. Together they turn the page footer from a placeholder note into real shop information. The three changes touch the same footer, so they ship as one pull request.
+    
+    Issue #301 asked for a way to contact the shop. Shoppers now see the email address hello@static-shop.test at the bottom of the page, and clicking it opens their mail program.
+    
+    Issue #302 asked for a copyright line. The footer now says "© 2026 Static Shop". The year is typed in, not worked out from today's date, as the issue required.
+    
+    Issue #303 asked for opening hours in place of the old test note. The footer now says "Open Monday to Friday, 9am to 5pm."
+    
+    Each line sits in its own paragraph, so changing one cannot break another. The run also gave the basket button in the header a spoken label, "View basket", because screen readers could not name it and the accessibility checks would have failed. Nothing looks different.
+    
+    Nothing needs a person to check by hand. Known gap: the browser asks for a site icon that does not exist, which is harmless. All 32 browser checks pass on desktop and mobile, the unit test passes, and the accessibility scan found no problems.
+    
+
+### 10.5 Q1 to Q3: sequential, stopped in child 2, resumed, child 3 blocked
+
+Task E10 (AC-34, AC-28 live). Recorded 2026-10-26 after the CTO-2 pre-launch checks (suite green at 371, CTO-1 guard
+clean, port 4173 free, ledger readable). Q uses the static-shop issues 311 to 313 (R-E3, 10.7). **Q1 did not reach its
+planned kill, and Q2 was not started.** One attempt, `Q1.1`, cap 8, fresh project `$SMOKE/ship-q`
+(`smoke_ship_project q shop`, listing on `issue-list.1` and `.2`, kill form `312:brief`), prompt
+`/aew:ship-milestone 3 --sequential --auto`. Launcher exit 0, `audit clean (129 Bash commands)`, cost 4.591567 (112
+turns, result `success`, no `killed-at`). Child 1 (#311) ran all ten stages to its PR and cost about 4.6, so the session
+had about $3.4 of the $8 cap left. The model, which sees its budget, stopped itself before starting #312: "#311 used
+about $3.9 of the $8 budget and only about $3.45 is left. That isn't enough to take #312 through all ten stages". The
+poller's condition (#312's own `state.json` at `brief`) was never met because #312 had no run directory. Per R-E1 no
+re-run was started; Q1 needs a larger cap (a child costs about $4.6 here, so a cap of 8 cannot cover child 1 in full
+plus part of child 2) and that needs James to raise the stop.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q1.1 | Q1-1 killed in child 2 | fail | No `killed-at`; the session ended by itself (exit 0, `success`). `m-3` is `sequential`, `spec_analysis`, `running`; `current` is `m-3`. |
+| Q1.1 | Q1-2 child 1 done | pass | `311`: `done`, pr `7`, base `main`, mode `sequential-child`; `smoke_state_valid` valid. |
+| Q1.1 | Q1-3 one PR create for 311 | pass | `pr create --head feat/311-stock-labels --base main`: 1. |
+| Q1.1 | Q1-4 index | fail | `311:done:-`, `312:pending:311`, `313:pending:312`; expected `312:running:311`. The stacking and the order (311, 312, 313) are right. |
+| Q1.1 | Q1-5 stacked branch | open | #312 was never started: no run dir, no branch (only `feat/311-stock-labels`), so base branch, branch and the `milestone m-3` note on #312 are unchecked. |
+| Q1.1 | Q1-6 child 3 untouched | pass | `.aew/runs/313` absent; no `feat/313*` branch; labels on #313 empty (also #312). |
+| Q1.1 | Q1-7 parent | fail | `m-3` mode `sequential`, status `running`; the branch field was not checked against the expectation `null` (not read). `current` is `m-3` (expected 312, the child). |
+| Q1.1 | Q1-8 hygiene | pass | `smoke_denials` `[]` (the stream has a result event); `$W/ghcfg` empty; project tree and plugin repo clean; launcher exit 0, audit clean. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+The main thread Read `ship/SKILL.md`, `preflight.md`, `mode-selection.md`, `sequential.md`, then `dispatch.md`,
+`routing.md`, `gates.md`, `pr.md`, `final-report.md`. The sequence design held for child 1; no skill defect shows. The
+fault is the plan's cap: R-E1 sized Q1 at 8 on the assumption that child 1 costs about 3, but B1.2's single run of three
+issues cost 5.6, and one sequential child here costs about 4.6.
+
+Spend: Q1.1 4.591567 of cap 8. Ledger running total 16.470267 of the $45 stop (M1.1 0.415012, M3.1 0.487072, M3.2
+0.409620, B1.1 4.963957, B1.2 5.603024, Q1.1 4.591567). Q2 (cap 12) would still fit under $45, but cannot run until Q1 is
+re-run or James decides to start Q2 from this state.
+
+#### Q2.1 (James's split plan: resume m-3, kill in child 2)
+
+James approved splitting the plan's Q2 into Q2 (kill in child 2) and Q3 (finish). Q2.1 continued Q1.1's project with no
+rebuild (`current` `m-3`, index 311 done, 312 and 313 pending, port 4173 free, ledger 16.470267, trees clean). Prompt
+`/aew:resume m-3`, cap 10, kill `312:brief`. Launcher exit 0, `audit clean (32 Bash commands)`, cost 1.447647, result
+`success`, no `killed-at`. **Q2.1 did not reach `brief`**: child 2 stopped at the spec gate. Per R-E1 no re-run and no
+Q3 was started.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q2.1 | 1 killed at child 2 `brief` | fail | No `killed-at`. #312 stopped at `spec_analysis`, `awaiting_input` (`gate:spec 01-spec-analysis.md`) before any `brief` stage. |
+| Q2.1 | 2 resume entered the sequence | pass | Reads: `ship/SKILL.md`, `ship-milestone/SKILL.md`, `sequential.md`, `preflight.md`, `dispatch.md`, `routing.md`, `gates.md`; no `Skill` call. `m-3` set back to `running` (note "resume"); #311 not re-run (`issue view 311`: 1; `issue view 312`: 1). |
+| Q2.1 | 3 child 2 run | pass | `312/state.json` valid, mode `sequential-child`, `auto` true (from the parent), branch `feat/312-notebook-out-of-stock`, base `feat/311-stock-labels` (stacked, `merge-base --is-ancestor` true), note `milestone m-3`. |
+| Q2.1 | 4 index | pass | `311:done:- 312:running:311 313:pending:312`. |
+| Q2.1 | 5 nothing for #313 | pass | `.aew/runs/313` absent; no `feat/313*` branch; labels empty. |
+| Q2.1 | 6 parent and current | pass | `m-3` sequential, `running`, branch `null`; `current` is `312`. |
+| Q2.1 | 7 hygiene | pass | `smoke_denials` `[]`; `ghcfg` empty; plugin repo clean; project tree only modified `.claude/agent-memory/aew-spec-analyser/` files; port 4173 free (no QA reached). R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Finding (not a skill defect): under `--auto`, the spec-analyser found one material change for #312 ("visibly disabled
+style for the disabled Notebook button", a user-visible change per the rubric) and the gate stands even under `--auto`
+(as in R-E2: only non-material changes are applied without a gate). The headless session has no AskUserQuestion, so the
+child waits at `awaiting_input` with the question printed and `Answer with /aew:resume 312 / continue the milestone with
+/aew:resume m-3`. #312's body (the Q fixture text) leaves the disabled look open, which the analyser judged material.
+A fixture change (state the disabled look in 312's AC, or answer the gate) is needed before the kill at `brief` can be
+reached; that is a decision for James.
+
+Spend: Q2.1 1.447647 of cap 10. Ledger running total 17.917914 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647 on top of
+10.4's 11.878700). Q3 (cap 12) not started.
+
+#### Q3.1 (tuned fixture, child 2 reset, child 3 branch pre-created)
+
+Harness actions before the run (fixture operations, in a script file; nothing in the plugin repo): #312's body rewritten
+with a fourth criterion (the disabled Notebook button looks disabled: muted grey background and `cursor: not-allowed`,
+text still readable; `smoke_ms_bodies` updated, the mock re-seeded by `smoke_ms_issue 312`, the listing regenerated);
+child 2 reset so it looks interrupted before its own init (checkout `feat/311-stock-labels`, `git branch -D
+feat/312-notebook-out-of-stock` (not on origin), `rm -rf .aew/runs/312`, `state.sh current set m-3`, index left with 312
+`running`; the spec-analyser's tracked agent-memory edits restored with `git checkout -- .claude/agent-memory`);
+`git branch feat/313-stock-filter-toggle main` to force child 3's block. Prompt `/aew:resume m-3`, cap 12, no kill.
+Launcher exit 0, `audit clean (159 Bash commands)`, cost 5.074982, result `success` (122 turns). **Q3.1 did not finish
+child 2**: #312 went to `blocked` at `qa`, so no PR for #312 and child 3 was never started. One attempt; no re-run.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q3.1 | 1 resume started #312 afresh (`## Resume`, running but no state) | pass | Reads: `ship/SKILL.md`, `preflight.md`, `ship-milestone/SKILL.md`, `sequential.md`, then `dispatch.md`, `gates.md`, `routing.md`, `pr.md`, `final-report.md`; no Skill call. `312/log.md`: `spec_analysis` (milestone m-3), `brief`, `standards`, then onward. The tuned AC left no material gate (labels `analysing` once, then `planning`, `building`, `testing`; one `awaiting-input` label appears in the history from Q2.1). |
+| Q3.1 | 2 #312 stacked | pass | Branch `feat/312-notebook-out-of-stock`, base `feat/311-stock-labels`, `merge-base --is-ancestor` true; `312/state.json` valid. Commits: `feat(shop): mark the notebook out of stock (#312)`, `test(e2e): add notebook out-of-stock tests (#312)`. |
+| Q3.1 | 3 #312 finishes as a stacked PR | fail | `blocked` at `qa`: `qa: invalid return twice (ARTEFACTS names directory docs/qa/312/screenshots); 13/13 TCs pass`. QA itself passed 13 of 13, plus #311's updated tests and axe. `pr create` for 312: 0 (only #311's `--base main`). |
+| Q3.1 | 4 introduction names PR #7 and "merge after" | open | No stacked PR body exists; `check-pr-intro.sh` was not run (a missing body prints `missing <pr-body.md>`, exit 1, not a skill result). |
+| Q3.1 | 5 #313 forced block | open | Never reached: `.aew/runs/313` absent, labels empty, 0 agent dispatches for 313. Index `311:done 312:blocked 313:pending`. |
+| Q3.1 | 6 parent and milestone report | pass | `m-3` `blocked`, `child #312 blocked: qa: …`; `current` `m-3`; `issue comment … milestone-report.md` on 311, 312, 313: 3. Report: #311 shipped with PR link, #312 blocked at qa with the reason, #313 not started, `Resume with /aew:resume m-3`. The stop is clean, but for the wrong child. |
+| Q3.1 | 7 state valid | pass | `m-3`, `311`, `312` valid (313 has no run dir). Stage labels: 311 `analysing … ready-for-review`; 312 `analysing, awaiting-input, analysing, planning, building, testing, blocked`. |
+| Q3.1 | 8 hygiene | pass | `smoke_denials` `[]`; `ghcfg` empty; plugin repo only this README; project tree only agent-memory files (`aew-senior-engineer`, `aew-spec-analyser`, uncommitted because `docs` never ran); port 4173 free after the run (the QA engineer's `curl localhost:4173` probe was a denied hook entry, nothing left listening). R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Finding (a defect in the plugin, not the harness): both of the qa-engineer's returns listed the directory
+`docs/qa/312/screenshots` in `ARTEFACTS`, so ship's return check (`test -f` per artefact) failed twice and the retry rule
+sent the child to the blocked path, with QA's results all passing. Either the qa-engineer contract must list files, not
+folders, or the return check must accept a directory. Needs James's decision before any further Q run: a resume
+would very likely block again the same way.
+
+Spend: Q3.1 5.074982 of cap 12. Ledger running total 22.992896 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647, Q3.1
+5.074982, on top of 10.4's 11.878700). No Q result yet shows a stacked PR introduction.
+
+#### Q3.2 (after the qa-engineer fix, 49debc8)
+
+49debc8 (`agents/qa-engineer.md`: ARTEFACTS lists files only, never a directory) fixed Q3.1's defect; suite green at 371,
+CTO-1 guard clean. James approved one attempt at cap 12. `project q` exactly as Q3.1 left it (`m-3` `blocked`; index 311
+done, 312 blocked, 313 pending; `feat/313-stock-filter-toggle` still in place; nothing reset). Restart: the `Next:` the
+milestone report printed, `/aew:resume m-3`, cap 12, no kill. Launcher exit 0, `audit clean (140 Bash commands)`, cost
+2.918497, result `success` (133 turns). **Q3.2 ran to the planned stop**: #312 shipped as a stacked PR and #313 hit the
+forced block.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q3.2 | 1 resume of a blocked milestone, #312 continued (AC-28) | pass | Reads: `ship/SKILL.md`, `preflight.md`, `ship-milestone/SKILL.md`, `sequential.md`, `dispatch.md`, `routing.md`, `pr.md`, `final-report.md`; no Skill call. #312 resumed at `qa` (labels `testing, documenting, ready-for-review`), no earlier stage re-entered. |
+| Q3.2 | 2 #312 QA, docs, pr | pass | QA returned valid (13 of 13, axe clean); commits `test(e2e): refresh notebook out-of-stock QA report (#312)`, `docs: add the issue spec, and update CLAUDE.md (#312)`, `chore(aew): update agent memory (#312)`; `312/state.json` `done`, pr `8`, base `feat/311-stock-labels`. |
+| Q3.2 | 3 stacked PR base | pass | `pr create --head feat/312-notebook-out-of-stock --base feat/311-stock-labels`: 1 (and #311's `--base main`: 1 in all); `merge-base --is-ancestor` true. |
+| Q3.2 | 4 introduction (AC-34) | pass | Names "the PR for issue #311" and "must be merged after it" (grep `#311\|after`: 2); `check-pr-intro.sh <body> --issues 1`: no output, `exit 0`. Quote below. |
+| Q3.2 | 5 #313 forced block | pass | `313`: `blocked`, note "git-branch.sh create failed: branch already exists: feat/313-stock-filter-toggle"; labels `aew:analysing aew:blocked`; 0 agent dispatches for `runs/313`. |
+| Q3.2 | 6 index, parent, current | pass | `311:done 312:done 313:blocked`; `m-3` `blocked`, "child #313 blocked: …"; `current` `m-3`. |
+| Q3.2 | 7 milestone report comments and final report | pass | `issue comment … milestone-report.md` on 311, 312, 313: 6 (3 from Q3.1's block, 3 now). The report: #311 shipped PR 7, #312 shipped PR 8, #313 blocked with the reason; `Mode: sequential`, `Not started: none`, `Next: Resume with /aew:resume m-3`. |
+| Q3.2 | 8 state valid | pass | `m-3`, 311, 312, 313 all valid. |
+| Q3.2 | 9 hygiene | partial | `smoke_denials` lists 2 denials (expected `[]`): a `curl localhost:4173` probe and a `for f in … do test -f` loop over 312's artefacts (QA's file check, the model then ran individual commands; both harmless). `ghcfg` empty; plugin repo clean; project tree clean; port 4173 free. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Finding (plugin gap, not fixed here): #313's branch was never recorded in its state, because `git-branch.sh create` failed
+before the branch field was set. The `Next: /aew:resume m-3` the report prints then stops on "Run 313 has no branch" and
+points at `/aew:ship 313 --from spec_analysis`, which would create the branch from `main`, not on #312's, losing the
+stack. Worth a look at `sequential.md` `## Resume` for a blocked child that never got a branch.
+
+PR #8's introduction (the second paragraph on, verbatim):
+
+    Issue #312 asked for the Notebook to be shown as out of stock, because it cannot currently be bought. Shoppers now see "Out of stock" under the Notebook's price instead of "In stock". Its "Add to basket" button is greyed out, shows a "not allowed" mouse pointer, and cannot be clicked or reached with the Tab key. The Tea towel and Mug still read "In stock" and still add to the basket.
+
+    This builds on the PR for issue #311 and must be merged after it. No manual tests are outstanding.
+
+Spend: Q3.2 2.918497 of cap 12. Ledger running total 25.911393 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647, Q3.1
+5.074982, Q3.2 2.918497, on top of 10.4's 11.878700).
+
+### 10.6 Acceptance criteria (build prompt 06)
+
+Recorded by task E11 on 2026-10-26 from the results in 10.3 to 10.5; no paid session was started for it. Every row
+below is `pass`, `fail` or `open`. Open means a check was not decided by any run.
+
+**Results roll-up.** 18 of 20 rows pass, 2 fail and none are open. The failures are the Q1 kill trigger (the runs
+stopped themselves instead, which still exercised resume) and the denial-free rail on B1.1, B1.2 and Q3.2. One check stays
+open inside a passing row: B1.2 check 6 (revision), covered by B1.1.
+
+| build-prompt AC | result | evidence |
+|---|---|---|
+| Mode recommendation on three fixture milestones: three small related issues give bulk; five issues with a large one give sequential; a dependency chain gives sequential in the stacked order | pass | `tests/scripts/gh-milestone.bats` (all three fixtures); M1.1 M-1 to M-8 (bulk, `select` order 21, 22, 23); M3.2 M-1 to M-8 (sequential, order 42, 43, 41, stacking 41 on 43). M1.1 M-9 passes with a wording note: the "same area" and "low risk" judgement is named, but in different words from the plan's |
+| Simulated bulk run completes, one PR with closing keywords for all three issues, an introduction that passes `check-pr-intro.sh` | pass | B1.2 checks 1, 8, 9: one `pr create`, `Closes #301`, `#302`, `#303`, `check-pr-intro.sh --issues 3` exit 0 |
+| Simulated bulk run records a revision on each issue that needed one | pass | B1.1 check 6: #302 v2, with the `Spec revision v2` comment, body marker, `spec-revised` flag and history note, and none on #301 or #303. B1.2 check 6 is open (nothing needed revising), so the AC holds across the two runs |
+| Simulated sequential run respects the dependency order and creates stacked branches with the correct PR bases | pass | Q1.1 Q1-2 to Q1-4 (311 first, base `main`, index order 311, 312, 313); Q2.1 checks 3 and 4; Q3.2 check 3 (#312 base `feat/311-stock-labels`, `merge-base --is-ancestor` true) |
+| Simulated sequential run stops cleanly when one child is forced to `blocked` | pass | Q3.2 checks 5 to 7: #313 `blocked` at `git-branch.sh create`, index `311:done 312:done 313:blocked`, parent `blocked`, report comment on all three issues, no agent dispatch for #313 |
+| Resume works for a milestone run interrupted in its second child | pass | Q2.1 checks 2 to 4 (resume of a milestone stopped between children: entered the sequence, started child 2 with the parent's `auto`, index `312:running`); Q3.1 check 1 (`## Resume` on a child marked `running` with no state, which the harness reset, so #312 restarted from `spec_analysis` by design); Q3.2 check 1 (resumed a milestone blocked in child 2 and continued #312 at `qa`, no earlier stage redone). The interruption was a stop (between children, then a QA block), not a kill: a child left `running` mid-stage by a kill was never resumed, and Q2.1's pending spec gate was reset, not answered |
+| Results recorded in `tests/agent-smoke/README.md` | pass | this section and 10.1 to 10.5 |
+
+| spec AC | result | evidence |
+|---|---|---|
+| AC-32 mode probes M1 to M3: recommendation, no AskUserQuestion, no run dir, no `gh` write | pass | M1.1 and M3.2 checks M-1 to M-8; M3.1 is an operator error and is not counted |
+| AC-33 one PR closing all three issues, intro passes `--issues 3` | pass | B1.2 checks 8 and 9 |
+| AC-33 revision comment, marker and flag on each revised issue, on no other | pass | B1.1 check 6 (B1.2 check 6 open) |
+| AC-33 `ready-for-review` on all three | pass | B1.2 check 10 |
+| AC-33 milestone report comment on each issue | pass | B1.2 check 11 (B1.1 check 11 also passes) |
+| AC-33 valid `state.json` (`done`) | pass | B1.2 checks 1 and 2; B1.1 check 1 fails on the developer clean-tree bug (fixed in a34996f and 12021ad) |
+| AC-34 Q1 ships child 1 with PR base `main` | pass | Q1.1 Q1-2 and Q1-3 |
+| AC-34 Q1 is killed in child 2 on its own `state.json` | fail | Q1.1 Q1-1 and Q2.1 check 1: no run was killed. The model stopped itself on the budget before child 2 (Q1.1); #312 reached its spec gate under `--auto` (Q2.1) |
+| AC-34 Q2 resumes child 2 from its recorded stage, no child-1 work redone | pass | Q2.1 checks 2 to 4, Q3.2 check 1 |
+| AC-34 child 2's PR base is child 1's branch, with the stacked introduction | pass | Q3.2 checks 3 and 4 (PR #8; the introduction names #311 and "must be merged after it") |
+| AC-34 child 3 forced to `blocked`, clean stop, index `done, done, blocked`, report on all three | pass | Q3.2 checks 5 to 7 |
+| AC-35 results in 10 in 9's form, no transcripts | pass | this section |
+| Rail: no denials in any run (`smoke_denials` `[]`) | fail | B1.1 and B1.2 check 16 (the `jq --arg` form, fixed in 035f956 but not re-run live, and one improvised command); Q3.2 check 9 (a `curl` probe and a `for ... test -f` loop). M1, M3, Q1.1, Q2.1 and Q3.1 are clean |
+
+### 10.7 Notes (prompt 06)
+
+- R-E3: Q1 and Q2 run on the static-shop issues 311 to 313 (milestone 3, "Product stock"), not on the chain fixture
+  (`chain.json`), because the runs need real, buildable work in the fixture app; `select` is proven on both listings
+  in the free checks (10.2).
+- Q cap too small and the plan split. R-E1 sized Q1 at 8 assuming about 3 per child; child 1 cost 4.59, so the orchestrator
+  stopped before child 2 (Q1.1). James then approved splitting the plan's Q2 into Q2 (resume, kill in child 2) and Q3
+  (finish, child 3 forced to `blocked`), still inside $45. Q2.1 stopped at #312's spec gate (see 10.5).
+- The B1 `jq` `$k` denial (10.4) was fixed in 035f956 (`--arg` moved after the filter). No bulk run followed the fix, so it
+  is unverified live (Q2.1 to Q3.2 are sequential and never run that filter). The filter had escaped `skills.bats` test 18
+  because its fence had no `sh` tag; the three `bulk.md` filters are now `sh` fences, and the test fails on the old form.
+- Q fixture tuning (the 9.5 precedent, where #103's AC was made material in the mock): #312's body gained a fourth AC
+  stating the disabled look of the Notebook button, because Q2.1's spec-analyser flagged its absence as a material change
+  that gates even under `--auto`. The fix is in `smoke_ms_bodies` so the run is reproducible. #313 was left as it was
+  (never analysed in these runs).
+- Q3.1's QA failure (qa-engineer listed a directory in ARTEFACTS, so ship's return check blocked #312 twice) was fixed
+  in 49debc8 (`agents/qa-engineer.md`: ARTEFACTS lists files only); Q3.2 shows QA returning a valid block.
+- Launcher copy: the plan's `KRUN` line uses `${KSTAGE:-}`, because `--env-check` runs under `set -u` without a
+  `KSTAGE` and the bare form would abort it. The copy's header comment also names `ledger-06` and "$45", beside the
+  usage word, so the `diff` has those two comment hunks as well.
+- Known limitation for prompt 07: a sequential child blocked because `git-branch.sh create` failed never records a
+  branch. `/aew:resume m-<n>` then stops on "no branch", and the suggested `ship <k> --from spec_analysis` would branch
+  from `main`, losing the stack (`sequential.md` `## Resume`).
+- For prompt 07: the B1 retro items all show "created #1" because the mock replies to every retro `issue create` with
+  one canned issue number. This is a mock artefact, not a ship defect.
+- B1.1 failed at `develop` on a pre-existing developer bug: untracked `.claude/agent-memory/` files failed the clean-tree
+  precondition. It was fixed in a34996f, and again in 12021ad to list untracked files individually, since
+  `git status --porcelain` collapses an untracked directory to one line. B1.2 then completed. B1.2 check 6 is open
+  because nothing needed revising; the revision path is B1.1's.
+- Budget: the model budgets against its own `--max-budget-usd` cap and may decline the next child (Q1.1, cap 8, child 1
+  cost 4.59), so a cap must cover every child it is meant to run.
+- Material spec gates under `--auto` stop and are unanswerable headless (Q2.1, #312). The fixture was tuned afterwards
+  (see above), as 9.5 did for #103.
+- Not exercised live: a per-issue bulk gate answer, a `failed` child, `/aew:ship <k> --from` on a stopped child, and the
+  SessionStart hint naming `spec_analysis` for a sequential parent (Risk 5). Risk 3 (stacked PRs after the base merges)
+  needs a real merge and is left to prompt 07.
+- M3.1 is an operator error (the mode was passed as an argument), not a ship defect, and is not counted as a probe.

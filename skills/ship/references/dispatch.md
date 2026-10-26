@@ -7,8 +7,9 @@ Read by `ship` at every stage. Read every literal `${CLAUDE_PLUGIN_ROOT}` in thi
 - Use the Agent tool. `subagent_type` is the row's `aew:<agent>` value, and `description` is `<stage> <id>`.
 - The prompt is `key: value` lines only: one line per field, in the row's order, with nothing else (no prose, no artefact content). `answers:` is followed by its `Q<k>:` lines, one per answer.
 - `run_dir` is always `.aew/runs/<id>`.
-- Send one agent per Agent call. The single exception is D6 and D7: two Agent calls in one assistant message, with no other tool call in it. Concurrency is not guaranteed, and sequential execution is still correct.
+- Send one agent per Agent call. The exceptions are D6 and D7 (two Agent calls in one assistant message, with no other tool call in it) and, in a bulk run, the per-issue D1 or D2 calls of `bulk.md` `## Spec analysis` and `bulk.md` `## Re-analysis`. Concurrency is not guaranteed, and sequential execution is still correct.
 - Do the row's state write first, and check its required files with `test -f <rd>/<file> && echo yes || echo no`. A file that prints `no` goes to `SKILL.md` `## Blocked path`, naming it.
+- In a bulk run, `bulk.md` `## Overrides` changes rows D1, D2, D3 and D13 and the `spec_analysis`, `brief` and `docs` rows of `## Required inputs per stage`.
 
 Example prompt (verbatim form):
 

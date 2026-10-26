@@ -1,0 +1,62 @@
+[
+  {
+    "number": 21,
+    "title": "Tidy the basket icon",
+    "labels": [
+      {
+        "name": "shop",
+        "color": "ededed"
+      }
+    ],
+    "state": "OPEN",
+    "body": "Make the icon crisper.\n\n## Acceptance criteria\n- criterion 0\n- criterion 1\n- criterion 2\n",
+    "blockedBy": [],
+    "url": "https://github.com/acme/shop/issues/21",
+    "milestone": {
+      "number": 2,
+      "title": "Shop polish",
+      "description": "Small storefront fixes",
+      "dueOn": null
+    }
+  },
+  {
+    "number": 22,
+    "title": "Align product card prices",
+    "labels": [
+      {
+        "name": "shop",
+        "color": "ededed"
+      }
+    ],
+    "state": "OPEN",
+    "body": "Prices drift left.\n\n## Acceptance criteria\n- criterion 0\n- criterion 1\n",
+    "blockedBy": [],
+    "url": "https://github.com/acme/shop/issues/22",
+    "milestone": {
+      "number": 2,
+      "title": "Shop polish",
+      "description": "Small storefront fixes",
+      "dueOn": null
+    }
+  },
+  {
+    "number": 23,
+    "title": "Fix wishlist empty state",
+    "labels": [
+      {
+        "name": "shop",
+        "color": "ededed"
+      }
+    ],
+    "state": "OPEN",
+    "body": "Empty text overlaps.\n\n## Acceptance criteria\n- criterion 0\n- criterion 1\n- criterion 2\n- criterion 3\n",
+    "blockedBy": [],
+    "url": "https://github.com/acme/shop/issues/23",
+    "milestone": {
+      "number": 2,
+      "title": "Shop polish",
+      "description": "Small storefront fixes",
+      "dueOn": null
+    }
+  }
+]

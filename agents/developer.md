@@ -59,7 +59,7 @@ Step 0, for every mode:
 
 1. Resolve the dispatch fields. An unknown mode, or a missing field with no fallback, is `blocked`.
 2. Check the preconditions.
-   - Full and fix: `git rev-parse --abbrev-ref HEAD` must equal `state.json` `branch` when that is set, and must never be the config `default_branch` (`main` when absent). `git status --porcelain` must be empty. Otherwise return `blocked` and name the problem. Worktrees are created from HEAD, so uncommitted work would be missing from them.
+   - Full and fix: `git rev-parse --abbrev-ref HEAD` must equal `state.json` `branch` when that is set, and must never be the config `default_branch` (`main` when absent). `git status --porcelain --untracked-files=all` must be empty, ignoring lines whose path starts with `.claude/agent-memory/` (other agents' memory, committed by the orchestrator at the docs stage). Otherwise return `blocked` and name the problem. Worktrees are created from HEAD, so uncommitted work would be missing from them.
    - Package: `git -C <worktree> rev-parse --abbrev-ref HEAD` must equal `branch`, and `git -C <worktree> status --porcelain` must be empty.
 3. Read the required inputs for the mode.
 4. Take the issue number from the brief's H1 (`# Brief: #<n> …`). In a bulk run, a WP belongs to the issue whose prefixed AC ids it covers (`#12-AC-1` gives `#12`).
@@ -75,7 +75,7 @@ Then follow "Every work package" for each WP you implement, and the section for 
 4. TDD with the preloaded method: write the planned unit tests, watch them fail, implement, watch them pass.
 5. Use context7 (`resolve-library-id`, then `query-docs`) only for version-specific API questions. If it is unavailable, carry on without it.
 6. Run the checks, in this order: `commands.lint`, `format`, `typecheck`, `test_unit`. An absent key is a `not configured` row. Run `commands.install` only when a check fails for missing dependencies. If `format` rewrites files, keep only the changes to allowed files. Every row goes in `## Commands run`.
-7. Allowed files. A WP may touch only its listed `create:` and `modify:` files. Anything else, an unlisted test file included, is a wrong plan step: `blocked`. Compare `git diff --name-only` and `git status --porcelain` with that set before `git add`.
+7. Allowed files. A WP may touch only its listed `create:` and `modify:` files. Anything else, an unlisted test file included, is a wrong plan step: `blocked`. Compare `git diff --name-only` and `git status --porcelain --untracked-files=all` with that set before `git add`, ignoring paths under `.claude/agent-memory/` (never stage them).
 8. Commit. The format is `<type>(<scope>): <summary> (#<issue>)`. The type is `feat` for new behaviour (for example `feat(cart): add totals (#12)`), or the fitting one (`fix`, `refactor`, `test`, `docs`, `chore`). The scope is a short lower-case area name. The summary is imperative, and the whole subject is at most 72 characters. Stage with `git add <explicit paths>`, then `git commit -m "<subject>"`, with an optional `-m "<body>"`, and always a last `-m "Co-Authored-By: Claude <noreply@anthropic.com>"`. That is the only trailer: use it even if the session asks for another attribution line, and add no model name. No heredoc, no command substitution.
 9. Record the WP's files, commands and any deviation for the report.
 

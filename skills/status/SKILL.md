@@ -76,7 +76,29 @@ The argument is: `$ARGUMENTS`.
    jq -r 'if ([.history[] | select(.note == "prompt")] | length) > 0 and .branch == null then "prompt" else "ship" end' .aew/runs/<id>/state.json
    ```
 
-6. Go to `## Next action`.
+6. Milestone runs, by the `mode` line of step 2:
+   - `sequential`: the children. First the index, in order:
+
+     ```sh
+     jq -r '.children[] | [.issue, .status] | map(tostring) | @tsv' .aew/runs/<id>/index.json
+     ```
+
+     Then one read of every child's `state.json`, each written as its literal path in index order. A child that has not started has no `state.json` and gives no line:
+
+     ```sh
+     jq -r 'input_filename as $f | ($f | split("/") | .[-2]) as $k | [$k, .status, .stage, (.pr // "-" | tostring)] | @tsv' .aew/runs/<k1>/state.json .aew/runs/<k2>/state.json 2>/dev/null
+     ```
+
+     Print `| Child | Index | Status | Stage | PR |`, one row per index child, with `-` where its `state.json` gave no line. A missing or unreadable `index.json`: say so, naming `.aew/runs/<id>/index.json`.
+   - `sequential-child`: the milestone it belongs to:
+
+     ```sh
+     jq -r '[.history[] | select((.note // "") | startswith("milestone m-"))] | first | .note // "" | ltrimstr("milestone ")' .aew/runs/<id>/state.json
+     ```
+
+     Print `Part of milestone run m-<n>.`, with `m-<n>` from that output (nothing when it is empty).
+   - `bulk`: nothing more. One run covers every issue in `issues`, and a pending gate's note names the issue's file (`issues/<k>/01-spec-analysis.md`).
+7. Go to `## Next action`.
 
 ## Next action
 
@@ -91,4 +113,11 @@ Pick the row for the run's status and fill in `<id>`, `<gate>`, `<pr>`, `<n>` (t
 | `done` | Nothing to do: PR #<pr>. A prompt-mode run has `.aew/runs/<id>/prompt.md` instead. |
 | `failed` | Finished. Restart it with `/aew:ship <n> --from <stage>`. A prompt-mode run has no PR: remove `.aew/runs/<n>`, then run `/aew:prompt <n>` again. |
 
-A run whose `mode` is not `single` is handled by `/aew:ship-milestone` (coming in a later release).
+Milestone runs use the rows above with their own id (`/aew:resume m-<n>`), and these as well:
+
+| Run | Next action |
+|---|---|
+| Sequential, `running` or `blocked` | Look at the first child in the table that is not `done`. A `failed` child: `/aew:ship <k> --from <stage>`, then `/aew:resume m-<n>`. A `blocked` child: fix the reason (`/aew:status <k>`), then `/aew:resume m-<n>`. Otherwise: `/aew:resume m-<n>`. |
+| Sequential, `done` | Nothing to do: each child has its own PR (the table above). Merge stacked PRs in order. |
+| Sequential child | Part of milestone run m-<n>: `/aew:resume m-<n>` (or `/aew:resume <k>`) continues the milestone. A `failed` child is restarted with `/aew:ship <k> --from <stage>` first. |
+| Bulk, `failed` | Finished: remove .aew/runs/m-<mn>, then rerun /aew:ship-milestone <mn> --bulk (`<mn>` is the id without `m-`). |
