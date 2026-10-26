@@ -1,13 +1,13 @@
 #!/usr/bin/env bats
-# Static contract checks over the five entry skills (init, ship, resume, status,
-# prompt) and the agents' frontmatter: paths, names, frontmatter, stage coverage,
+# Static contract checks over the six entry skills (init, ship, ship-milestone,
+# resume, status, prompt) and the agents' frontmatter: paths, names, frontmatter, stage coverage,
 # bad-argument messages and the citations between skill files. It reads files in
 # the repo only (no gh, no git, no fixtures). Each test collects every offender
 # and fails once, naming them.
 
 load helpers/common
 
-ENTRY="init ship resume status prompt"
+ENTRY="init ship ship-milestone resume status prompt"
 
 setup() {
   common_setup
@@ -219,9 +219,9 @@ preapprovable_offenders() {
   report_offenders "entry skill frontmatter" "$bad"
 }
 
-@test "entry skills: disable-model-invocation on init, ship, resume and prompt, not status" {
+@test "entry skills: disable-model-invocation on init, ship, ship-milestone, resume and prompt, not status" {
   local s fm bad=""
-  for s in init ship resume prompt; do
+  for s in init ship ship-milestone resume prompt; do
     fm=$(frontmatter "$REPO_ROOT/skills/$s/SKILL.md")
     [ "$(printf '%s\n' "$fm" | grep -cxF 'disable-model-invocation: true' || true)" -eq 1 ] || bad="$bad$s: needs disable-model-invocation: true"$'\n'
   done
@@ -238,10 +238,11 @@ preapprovable_offenders() {
     grep -nE '\$[0-9]|\$ARGUMENTS\[' "$f" | sed "s|^|$s: positional: |" >> "$BATS_TEST_TMPDIR/o" || true
     bad="$bad$(cat "$BATS_TEST_TMPDIR/o")"
   done
-  for s in ship resume status prompt; do
+  for s in ship ship-milestone resume status prompt; do
     f="$REPO_ROOT/skills/$s/SKILL.md"
     case $s in
       ship) want='argument-hint: "<issue> [--auto] [--from <stage>]"' ;;
+      ship-milestone) want='argument-hint: "<milestone> [--bulk|--sequential] [--auto]"' ;;
       resume | status) want='argument-hint: "[<run-id>]"' ;;
       prompt) want='argument-hint: "<issue>"' ;;
     esac
@@ -273,13 +274,13 @@ preapprovable_offenders() {
   report_offenders "paths and script names" "$(printf '%s' "$bad" | grep -v '^$' || true)"
 }
 
-@test "entry skills: every aew:<name> is an agent or a skill (ship-milestone allowed)" {
+@test "entry skills: every aew:<name> is an agent or a skill" {
   local f n bad=""
   while IFS= read -r f; do
     while IFS= read -r n; do
       [ -n "$n" ] || continue
       n=${n#aew:}
-      [ -f "$REPO_ROOT/agents/$n.md" ] || [ -f "$REPO_ROOT/skills/$n/SKILL.md" ] || [ "$n" = ship-milestone ] ||
+      [ -f "$REPO_ROOT/agents/$n.md" ] || [ -f "$REPO_ROOT/skills/$n/SKILL.md" ] ||
         bad="$bad${f#"$REPO_ROOT"/}: aew:$n is neither an agent nor a skill"$'\n'
     done < <(grep -ohE 'aew:[a-z][a-z0-9-]*' "$f" | sort -u || true)
   done < <(entry_files)
@@ -315,7 +316,7 @@ preapprovable_offenders() {
   # repeated option; extra positional; --from without a value; unknown stage; usage.
   report_offenders "ship bad-argument messages" "$(present "$f" "aew ship: missing issue number.
 must be a positive integer
-/aew:ship-milestone (coming in a later release)
+use /aew:ship-milestone <n>.
 unknown option
 given more than once
 unexpected argument
@@ -323,6 +324,62 @@ aew ship: --from needs a stage.
 unknown stage
 Stages: $list.
 Usage: /aew:ship <issue> [--auto] [--from <stage>]")"
+}
+
+@test "ship-milestone: headings, argument errors, mode question and report lines" {
+  local f="$REPO_ROOT/skills/ship-milestone/SKILL.md" m="$REPO_ROOT/skills/ship-milestone/references/mode-selection.md" bad
+  bad=$(headings_equal "$f" '# aew ship-milestone
+## Plugin root
+## Rules
+## Run variables
+## References
+## Step 1. Parse the arguments
+## Step 2. Preflight
+## Step 3. Select the issues
+## Step 4. Choose the mode
+## Step 5. Start the run
+## Milestone report
+## Final report') || true
+  bad="$bad$(headings_equal "$m" "# Mode selection
+## The script's recommendation
+## Judgement
+## Rationale
+## Ask
+## No answer
+## Mode given
+## Cycles and stack conflicts")" || true
+  bad="$bad$(present "$f" 'aew ship-milestone: missing milestone.
+aew ship-milestone: --bulk and --sequential cannot both be given.
+aew ship-milestone: option "<token>" given more than once.
+aew ship-milestone: unknown option "<token>".
+Usage: /aew:ship-milestone <milestone> [--bulk|--sequential] [--auto]
+aew ship-milestone: milestone "<m>" has no open issues.
+Run m-<mn> already exists: continue it with /aew:resume m-<mn>.
+aew ship-milestone: could not list milestone "<m>": <first stderr line>
+## aew milestone m-<mn> <title>: <done | stopped>
+- #<k>: shipped, PR <url>
+- #<k>: blocked at <stage>: <reason>
+- #<k>: failed at <stage>: <reason>
+- #<k>: not started
+Manual tests outstanding: none
+aew ship-milestone m-<mn> <title>: <done | stopped>
+Mode: <bulk | sequential>
+Not started: <#a, #b | none>
+Retro items filed: <count>')"
+  bad="$bad$(present "$m" 'recommended mode
+Order: 
+Stacked: 
+Closed and left out: 
+(recommended)
+Rerun with /aew:ship-milestone
+aew ship-milestone m-<mn>: stopped at the mode question; nothing was written.
+Mode: <mode> (given)
+; --bulk was given, so the run goes ahead in bulk.
+dependency cycle between
+which are not one chain
+Warning: dependency cycle between #a, #b is ignored: bulk runs every issue on one branch.
+stack conflict is ignored: bulk runs every issue on one branch.')"
+  report_offenders "ship-milestone contract" "$(printf '%s' "$bad" | grep -v '^$' || true)"
 }
 
 @test "resume: re-asks a pending gate through ship's gates.md" {
@@ -447,8 +504,8 @@ git-branch.sh')"
   [ "$got" = "1 2 3 4 5 6 7 8 9 10 11 12 13 " ] || { printf 'init sections: %s\n' "$got" >&2; return 1; }
 }
 
-@test "ship, resume and prompt: every file-and-heading citation resolves" {
-  local f c cf h p n bad="" total=0 ship_n=0
+@test "ship, ship-milestone, resume and prompt: every file-and-heading citation resolves" {
+  local f c cf h p n bad="" total=0 ship_n=0 ms_n=0
   while IFS= read -r f; do
     n=0
     while IFS= read -r c; do
@@ -459,23 +516,29 @@ git-branch.sh')"
       h=${c#*'` `'}
       h=${h%'`'}
       case $cf in
-        SKILL.md) p=skills/ship/SKILL.md ;;
+        ship-milestone/SKILL.md) p=skills/ship-milestone/SKILL.md ;;
+        ship/SKILL.md | SKILL.md) p=skills/ship/SKILL.md ;;
+        mode-selection.md | bulk.md | sequential.md) p=skills/ship-milestone/references/$cf ;;
         prompt/SKILL.md) p=skills/prompt/SKILL.md ;;
         *) p=skills/ship/references/$cf ;;
       esac
+      # TODO(milestone-mode): Phase D adds sequential.md "## Resume"; remove this skip then.
+      if [ "$cf" = sequential.md ] && [ "$h" = '## Resume' ]; then continue; fi
       [ "$(grep -cxF -- "$h" "$REPO_ROOT/$p" 2> /dev/null || true)" -eq 1 ] || bad="$bad${f#"$REPO_ROOT"/}: unresolved: $c"$'\n'
-    done < <(grep -oE '`(prompt/SKILL|SKILL|preflight|dispatch|gates|routing|pr|final-report)\.md` `## [^`]+`' "$f" | sort -u || true)
+    done < <(grep -oE '`(prompt/SKILL|ship-milestone/SKILL|ship/SKILL|SKILL|mode-selection|bulk|sequential|preflight|dispatch|gates|routing|pr|final-report)\.md` `## [^`]+`' "$f" | sort -u || true)
     total=$((total + n))
     [ "$f" != "$REPO_ROOT/skills/ship/SKILL.md" ] || ship_n=$n
-  done < <(find "$REPO_ROOT/skills/ship" "$REPO_ROOT/skills/resume" "$REPO_ROOT/skills/prompt" -type f -name '*.md')
+    [ "$f" != "$REPO_ROOT/skills/ship-milestone/SKILL.md" ] || ms_n=$n
+  done < <(find "$REPO_ROOT/skills/ship" "$REPO_ROOT/skills/ship-milestone" "$REPO_ROOT/skills/resume" "$REPO_ROOT/skills/prompt" -type f -name '*.md')
   [ "$ship_n" -ge 1 ] || bad="${bad}no citation found in skills/ship/SKILL.md"$'\n'
+  [ "$ms_n" -ge 1 ] || bad="${bad}no citation found in skills/ship-milestone/SKILL.md"$'\n'
   [ "$total" -ge 1 ] || bad="${bad}no citation found anywhere"$'\n'
   report_offenders "citations" "$bad"
 }
 
 @test "frontmatter: description is valid YAML (no unquoted ': ') in every entry skill and agent" {
   local f v bad="" n=0
-  for f in "$REPO_ROOT"/skills/{init,ship,resume,status,prompt}/SKILL.md "$REPO_ROOT"/agents/*.md; do
+  for f in "$REPO_ROOT"/skills/{init,ship,ship-milestone,resume,status,prompt}/SKILL.md "$REPO_ROOT"/agents/*.md; do
     n=$((n + 1))
     v=$(frontmatter "$f" | sed -n 's/^description: *//p')
     [ -n "$v" ] || { bad="$bad${f#"$REPO_ROOT"/}: no description"$'\n'; continue; }
@@ -491,7 +554,7 @@ git-branch.sh')"
         ;;
     esac
   done
-  [ "$n" -ge 12 ] || bad="${bad}only $n files checked"$'\n'
+  [ "$n" -ge 13 ] || bad="${bad}only $n files checked"$'\n'
   report_offenders "frontmatter YAML" "$bad"
 }
 
@@ -518,17 +581,17 @@ git-branch.sh')"
 
 @test "every skill command is pre-approvable headless" {
   local f files=() bad
-  for f in "$REPO_ROOT"/skills/{init,ship,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md; do
+  for f in "$REPO_ROOT"/skills/{init,ship,ship-milestone,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md "$REPO_ROOT"/skills/ship-milestone/references/*.md; do
     [ -f "$f" ] && files+=("$f")
   done
-  [ "${#files[@]}" -ge 11 ] || { printf 'only %s skill files found\n' "${#files[@]}" >&2; return 1; }
+  [ "${#files[@]}" -ge 15 ] || { printf 'only %s skill files found\n' "${#files[@]}" >&2; return 1; }
   bad=$(preapprovable_offenders "$REPO_ROOT" "${files[@]}" | grep -v ': S1 ' || true)
   report_offenders "pre-approvable commands (Rewrite guide H1-H8, M1; C1 pipe in a condition)" "$bad"
 }
 
 @test "every existence or condition check prints its outcome" {
   local f files=() bad n=0
-  for f in "$REPO_ROOT"/skills/{init,ship,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md; do
+  for f in "$REPO_ROOT"/skills/{init,ship,ship-milestone,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md "$REPO_ROOT"/skills/ship-milestone/references/*.md; do
     [ -f "$f" ] && files+=("$f") && n=$((n + $(grep -cE '(test|\[) [^`]*&& echo [a-z]+ \\?\|\\?\| echo [a-z]+' "$f" || true)))
   done
   [ "$n" -ge 10 ] || { printf 'only %s printed checks found\n' "$n" >&2; return 1; }

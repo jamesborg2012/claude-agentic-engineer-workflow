@@ -104,7 +104,7 @@ Error lines (fill in the `<…>`):
 
 - E1 `aew ship: missing issue number.`
 - E2 `aew ship: the issue must be a positive integer, got "<token>".`
-- E3 `aew ship: "<token>" is a milestone; milestone runs use /aew:ship-milestone (coming in a later release).`
+- E3 `aew ship: "<token>" is a milestone; use /aew:ship-milestone <n>.`
 - E4 `aew ship: unknown option "<token>".`
 - E5 `aew ship: option "<token>" given more than once.`
 - E6 `aew ship: unexpected argument "<token>".`
