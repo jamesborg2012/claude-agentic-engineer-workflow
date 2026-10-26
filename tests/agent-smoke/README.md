@@ -2726,10 +2726,45 @@ PR introduction (verbatim, the start of the captured PR body):
 
 ### 10.5 Q1 and Q2: sequential, killed in child 2, resumed, child 3 blocked
 
+Task E10 (AC-34, AC-28 live). Recorded 2026-10-26 after the CTO-2 pre-launch checks (suite green at 371, CTO-1 guard
+clean, port 4173 free, ledger readable). Q uses the static-shop issues 311 to 313 (R-E3, 10.7). **Q1 did not reach its
+planned kill, and Q2 was not started.** One attempt, `Q1.1`, cap 8, fresh project `$SMOKE/ship-q`
+(`smoke_ship_project q shop`, listing on `issue-list.1` and `.2`, kill form `312:brief`), prompt
+`/aew:ship-milestone 3 --sequential --auto`. Launcher exit 0, `audit clean (129 Bash commands)`, cost 4.591567 (112
+turns, result `success`, no `killed-at`). Child 1 (#311) ran all ten stages to its PR and cost about 4.6, so the session
+had about $3.4 of the $8 cap left. The model, which sees its budget, stopped itself before starting #312: "#311 used
+about $3.9 of the $8 budget and only about $3.45 is left. That isn't enough to take #312 through all ten stages". The
+poller's condition (#312's own `state.json` at `brief`) was never met because #312 had no run directory. Per R-E1 no
+re-run was started; Q1 needs a larger cap (a child costs about $4.6 here, so a cap of 8 cannot cover child 1 in full
+plus part of child 2) and that needs James to raise the stop.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q1.1 | Q1-1 killed in child 2 | fail | No `killed-at`; the session ended by itself (exit 0, `success`). `m-3` is `sequential`, `spec_analysis`, `running`; `current` is `m-3`. |
+| Q1.1 | Q1-2 child 1 done | pass | `311`: `done`, pr `7`, base `main`, mode `sequential-child`; `smoke_state_valid` valid. |
+| Q1.1 | Q1-3 one PR create for 311 | pass | `pr create --head feat/311-stock-labels --base main`: 1. |
+| Q1.1 | Q1-4 index | fail | `311:done:-`, `312:pending:311`, `313:pending:312`; expected `312:running:311`. The stacking and the order (311, 312, 313) are right. |
+| Q1.1 | Q1-5 stacked branch | open | #312 was never started: no run dir, no branch (only `feat/311-stock-labels`), so base branch, branch and the `milestone m-3` note on #312 are unchecked. |
+| Q1.1 | Q1-6 child 3 untouched | pass | `.aew/runs/313` absent; no `feat/313*` branch; labels on #313 empty (also #312). |
+| Q1.1 | Q1-7 parent | fail | `m-3` mode `sequential`, status `running`; the branch field was not checked against the expectation `null` (not read). `current` is `m-3` (expected 312, the child). |
+| Q1.1 | Q1-8 hygiene | pass | `smoke_denials` `[]` (the stream has a result event); `$W/ghcfg` empty; project tree and plugin repo clean; launcher exit 0, audit clean. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+The main thread Read `ship/SKILL.md`, `preflight.md`, `mode-selection.md`, `sequential.md`, then `dispatch.md`,
+`routing.md`, `gates.md`, `pr.md`, `final-report.md`. The sequence design held for child 1; no skill defect shows. The
+fault is the plan's cap: R-E1 sized Q1 at 8 on the assumption that child 1 costs about 3, but B1.2's single run of three
+issues cost 5.6, and one sequential child here costs about 4.6.
+
+Spend: Q1.1 4.591567 of cap 8. Ledger running total 16.470267 of the $45 stop (M1.1 0.415012, M3.1 0.487072, M3.2
+0.409620, B1.1 4.963957, B1.2 5.603024, Q1.1 4.591567). Q2 (cap 12) would still fit under $45, but cannot run until Q1 is
+re-run or James decides to start Q2 from this state.
+
 ### 10.6 Acceptance criteria (build prompt 06)
 
 ### 10.7 Notes (prompt 06)
 
+- R-E3: Q1 and Q2 run on the static-shop issues 311 to 313 (milestone 3, "Product stock"), not on the chain fixture
+  (`chain.json`), because the runs need real, buildable work in the fixture app; `select` is proven on both listings
+  in the free checks (10.2).
 - Launcher copy: the plan's `KRUN` line uses `${KSTAGE:-}`, because `--env-check` runs under `set -u` without a
   `KSTAGE` and the bare form would abort it. The copy's header comment also names `ledger-06` and "$45", beside the
   usage word, so the `diff` has those two comment hunks as well.
