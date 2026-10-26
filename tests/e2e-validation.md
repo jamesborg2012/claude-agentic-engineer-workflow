@@ -774,6 +774,7 @@ decision).
 | `88f26c7` | `gh-retro.sh` warned on every run after the first that the `retro` label already exists | S3.2 | S3.3 | bats red, then green; no warning in S3.3 |
 | `d141b4d` | the orchestrator checked ARTEFACTS with a `for` loop, denied headless (recurred) | S3.2, S3.3 | next headless run | test red, then green |
 | `637e591` | the spec analyser added ACs about how a criterion is tested, turning one manual check into five | S4.2 | not re-run (about $12) | test red, then green |
+| `43ee2fe` | AC-20: the "no rewrite of a real issue body" limitation lifted after the evidence (v1 byte-identical on #1, #3 and #4; S4's manual-tests block lost no line) | S1, S3, S4 | none | the limitation line is gone from `skills/github-ops/SKILL.md` and `CHANGELOG.md`; suite green |
 
 ## Retro triage
 
