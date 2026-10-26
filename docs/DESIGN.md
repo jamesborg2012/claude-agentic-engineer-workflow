@@ -389,7 +389,7 @@ No code beyond short illustrative signatures.
 
 - Implements the plan's work packages in dependency order.
 - Follows the standards docs strictly. Uses TDD (per superpowers) for unit tests.
-- Before finishing each work package, runs lint, format, typecheck and unit tests from config.
+- Before finishing each work package, runs lint, format, typecheck and unit tests from config. After the last work package, and in fix mode, it also runs the build from config once on the feature branch: no other stage builds the project (recorded deviation, prompt 07: S3's summary flagged that the build had never run).
 - Commits per work package using conventional commits, with `(#issue)`. Every commit aew makes (agents and orchestrator) ends with the one trailer `Co-Authored-By: Claude <noreply@anthropic.com>`, with no model name, whatever attribution line the session asks for (James's decision, 2026-10-26).
 - Code is readable, simple and documented: doc comments on public functions, and comments that explain why rather than what.
 - **Fan-out.** If at least two work packages are marked parallelisable and own disjoint files, it spawns sub-developers:

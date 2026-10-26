@@ -540,6 +540,12 @@ git-branch.sh')"
   grep -q 'left open' <<< "$pe" || { echo "doc-writer intro rules do not ask for what the issue left open" >&2; return 1; }
 }
 
+@test "developer: the feature-branch checks include commands.build" {
+  local f="$REPO_ROOT/agents/developer.md"
+  grep -qE '^9\. .*`commands\.build`' "$f" || { echo "developer step 9 (final checks) does not run commands.build" >&2; return 1; }
+  grep -qE '^4\. Run the full unit suite.*build' "$f" || { echo "developer fix mode does not run the build" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')
