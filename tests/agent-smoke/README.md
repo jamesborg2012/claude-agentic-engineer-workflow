@@ -2621,6 +2621,48 @@ M3 re-run used the one probe re-run the margin allows; the caps still to come (B
 
 ### 10.4 B1: `/aew:ship-milestone 2 --bulk --auto` to one mocked PR
 
+Task E9 (AC-33). Recorded 2026-10-26 after the CTO-2 pre-launch checks (CTO-1 guard printed nothing, suite green at
+371, port 4173 free). One attempt, `B1.1`, cap 15, project `$SMOKE/ship-b1` (`smoke_ship_project b1 shop`, issues
+301 to 303 from `smoke_ms_bodies`, the listing on `issue-list.1` and `.2`), launcher exit 0, `audit clean (112 Bash
+commands)`, cost 4.963957 (118 turns, 759 s, `claude-opus-5-5`). **The run did not complete.** It stopped `blocked` at
+`develop`, so no PR was opened. Per R-E1 no re-run was started: a B1 re-run does not fit the $45 stop and needs James.
+
+| run | check | result | notes |
+|---|---|---|---|
+| B1.1 | 1 completed | fail | Result `success`, but `state.json` is `bulk`, `develop`, `blocked`, issues `301,302,303` (expected `pr`, `done`). Cause: the developer's precondition (`agents/developer.md` line 62, `git status --porcelain` must be empty) saw `?? .claude/` (the agents' memory files under `.claude/agent-memory/`, which ship commits only at `docs`). It blocked, ship re-planned once (`senior-engineer` `mode: plan` with the blocked note), the developer blocked again with the same reason, and the run went to the blocked path. |
+| B1.1 | 2 state valid, current | pass | `smoke_state_valid`: valid. `current` is set, not cleared (a blocked run stays current for resume). |
+| B1.1 | 3 branch | fail | `feat/m2-shop-footer` exists locally at `abfb8a0` (the fixture commit); the bare origin has no such branch (never pushed), so the equality check fails. |
+| B1.1 | 4 per-issue artefacts | pass | Each of 301, 302 and 303 holds `00-issue-original.md`, `01-spec-analysis.md`, `issue.json`, `spec-changes.json`, `spec-final.md`; 302 also holds `spec-revision-v2.md`. |
+| B1.1 | 5 spec-analyser fan-out (AC-15) | pass | `smoke_fanout`: `3`. Three `aew:spec-analyser` calls (`spec_version: 2`) in one main-thread message. |
+| B1.1 | 6 revisions (AC-33, R-E2) | pass | 301 `changes=0 comment=0 marker=0 flag=0`; 302 `changes=1 comment=1 marker=1 flag=1`; 303 all 0. History note `spec revision: #302 v2`. The analyser added the missing WCAG 2.2 AA accessibility criterion to 302 as a non-material change, with no gate under `--auto`, as R-E2 predicted. Exactly one issue revised. |
+| B1.1 | 7 brief | pass | Heading `# Brief: m-2 Shop footer` (line 6, after the template's comment block); 19 lines carry `#30[123]-AC-n` ids; one brief-compiler prompt with `issues: 301,302,303`. |
+| B1.1 | 8 one PR | fail | `pr create` calls: 0. |
+| B1.1 | 9 closing keywords and intro | fail | No PR body exists, so `Closes #301/302/303` and `check-pr-intro.sh <pr-body.md> --issues 3` could not run (the check on a missing file prints `missing <pr-body.md>`, exit 1). Not exercised, not a skill result. |
+| B1.1 | 10 stage labels | fail | Added in order on each issue: `aew:analysing`, `aew:planning`, `aew:building`, `aew:planning`, `aew:building`, `aew:blocked` (the repeat is the re-plan). Final labels: `aew:blocked` (+ `aew:spec-revised` on 302); no `aew:ready-for-review`. The labels are right for a blocked run. |
+| B1.1 | 11 milestone report | pass | `issue comment` with `milestone-report.md` on 301, 302 and 303: 3; `$RUN/milestone-report.md` exists. |
+| B1.1 | 12 retro and select calls | fail | Retro `issue list --repo acme/aew-retro`: 0 (the pr stage was never reached). `--milestone` listing calls: 1 (the `.2` canned reply went unused; Risk 4 record: one `select` call). |
+| B1.1 | 13 files on the branch | fail | `docs/specs`, `docs/qa/m-2`, `tests/e2e` on `feat/m2-shop-footer`: empty. Develop, QA and docs never ran. |
+| B1.1 | 14 commit subjects | fail | `main..feat/m2-shop-footer` is empty (no commit). |
+| B1.1 | 15 final report | fail | Two blocks: `aew ship m-2 Shop footer: blocked` (Reason, `Next: Resume with /aew:resume m-2`) then `aew ship-milestone m-2 Shop footer: stopped`, `Mode: bulk`, `Shipped: none`, `Blocked:` one line per issue at develop with the reason, `Not started: none`, `Manual tests outstanding: none`, `Retro items filed: 0 ()`, `Next:`, `Warning: Mode: bulk (given)`. The blocked-path report is well-formed; the success report was not reached. |
+| B1.1 | 16 denials, ghcfg, trees, MCP | fail | `smoke_denials` lists 2 denials, both Bash commands with a shell or jq `$` variable: the per-issue spec-revision lookup `jq -r --arg k 301 '[.history[] … select(startswith("spec revision: #" + $k + " v")) … | max // 1'` and a `for f in …; do test -f "$f" …` loop. The model replaced the first with `$`-free queries and ran the second one command per file. `$W/ghcfg` empty; plugin repo clean; the project tree has `?? .claude/` (the cause of the block). Launcher exit 0, audit clean. R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Findings:
+
+- **Developer clean-tree precondition vs. agent memory (blocking).** In a bulk run, spec-analyser, standards-setter,
+  qa-engineer and senior-engineer have written `.claude/agent-memory/` before `develop`, and ship commits it only at
+  `docs`, so `git status --porcelain` is never empty at the developer's first step. S1 (9.4) passed with the same
+  untracked directory (check 11 there records the memory commit at the end), so the developer's reading of its rule
+  differs between runs; the fix is to make the precondition ignore `.claude/agent-memory/` (as preflight's restart
+  form does) or commit memory before `develop`. Not changed here: a fix and a B1 re-run do not fit the $45 stop.
+- **jq `$` commands denied.** Bulk's per-issue spec-version lookup in `bulk.md`/`ship` carries a `$k` jq variable; the
+  headless allowlist `Bash(jq *)` did not approve it. Worth a `$`-free form or an allowlist note.
+- Under `--auto` the spec stage behaved as R-E2 expected: 302 was revised without a gate, the other two were not.
+
+Spend: B1.1 4.963957 of cap 15. Ledger running total 6.275661 of the $45 stop (M1.1 0.415012, M3.1 0.487072, M3.2
+0.409620, B1.1 4.963957).
+
+PR introduction: none, because no PR was created. The bulk-variant introduction check is therefore still open.
+
 ### 10.5 Q1 and Q2: sequential, killed in child 2, resumed, child 3 blocked
 
 ### 10.6 Acceptance criteria (build prompt 06)
