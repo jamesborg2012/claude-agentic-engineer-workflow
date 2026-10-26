@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `README.md` command reference and a Mermaid diagram of the pipeline.
 - Orchestrator smoke harness (`ship-run.sh` launcher with real-GitHub rails, allowlists and a spend ledger) and the recorded prompt-05 runs P0, P1, S1, G2, run F1 and R2, I1 and I2, and G1 in `tests/agent-smoke/README.md` §9 ($26.82 of a $60 stop).
 - `scripts/check-pr-intro.sh`: checks that a PR body opens with a plain-English introduction (first `##` section, 100-250 words or 80 per issue plus 80 for a bulk PR, no backticks, paths, AC/TC/WP ids, tables or headings), with bats tests and fixtures (build prompt 05b).
+- `/aew:ship-milestone <n> [--bulk|--sequential] [--auto]` (build prompt 06): ships a milestone as one bulk run (one branch, one PR closing every issue) or a sequential run (one child per issue, stacked on its dependency), with a mode recommendation, a cycle and stack-conflict stop and a milestone report comment on every issue. It follows `ship`'s procedure through `references/{mode-selection,bulk,sequential}.md`, with no copy of its stages.
+- `gh-milestone.sh select`: milestone order, cycle, AC counts, `stack_on`, stack conflicts and the deterministic mode recommendation, tested on the three prompt fixtures.
+- `state.sh index init|set` for a sequential run's `index.json`, and `state.sh init --mode bulk` creating the per-issue `issues/<k>/` subdirs.
+- `tests/scripts/skills.bats` checks that `ship-milestone` holds no `## Stage:` copy of `ship`.
+- Milestone smoke runs M1, M3, B1, Q1 to Q3 and their ledger (stop $45) in `tests/agent-smoke/README.md` section 10.
 
 ### Changed
 
@@ -57,9 +62,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Every PR aew opens starts with `## In plain English`, a short introduction for the reviewer (build prompt 05b): the PR body template, the doc-writer (written last; one retry input, `intro_check_output`; the stacked variant from a `stacked_on` dispatch field) and `init`'s PR body. `ship` runs `check-pr-intro.sh` before it creates or updates the PR, re-dispatches the doc-writer once on a failure, and never blocks the PR: a persistent failure becomes a final-report warning and a retro item.
 - `docs/DESIGN.md` §8.7 specifies the introduction; §9 states that every completed run ends in a PR (single, bulk, each sequential child and `init`), that blocked runs open none, and that a resume or re-run rewrites the introduction; §10 names the bulk and stacked variants.
+- `resume` continues bulk and sequential milestone runs (a sequential parent resumes into its recorded child); `status` shows a sequential run's children and a child's milestone.
+- `ship` gains one-line hooks into the bulk and sequential references, hands a finished or blocked sequential child back to the sequence, and `preflight.md` Check 5 allows a milestone parent and its child to be active together.
+- Agent inputs: `brief-compiler` takes `issues` for one bulk brief, `qa-engineer` takes `m-<n>` as `<issue>` in a bulk run (evidence in `docs/qa/m-<n>/`), and `doc-writer` writes one spec snapshot per issue.
+- `docs/DESIGN.md` section 10 records the prompt-06 deviations; run-protocol, github-ops and the README document milestone runs.
 
 ### Fixed
 
 - `scripts/git-branch.sh --help` no longer says preflight updates the base branch; preflight only checks it.
 - `claude-md-curation` keeps a dated rule until its end date has passed (today is the run's `updated_at`), keeps dated changelog lines, and reports an end date it cannot judge for a human to check, instead of dropping every entry with a date (James's decision on CTO condition C4).
 - `ship` reads a return block with `grep -v '^$' <file> | tail -n 4` instead of `awk 'NF'`, so an interactive run under init's permissions no longer prompts on each check (CTO condition C2).
+- `developer` ignores `.claude/agent-memory/` in its clean-tree and allowed-files checks, listing untracked files individually because `git status --porcelain` collapses an untracked directory to one line (found by B1.1).
+- `qa-engineer` lists files only in ARTEFACTS, never a directory, so ship's return check no longer blocks a QA run (found by Q3.1).
+- The bulk spec-revision lookup in `bulk.md` puts `jq --arg` after the filter, so it is pre-approvable headless (found by B1.2).
