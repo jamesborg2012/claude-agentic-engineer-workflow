@@ -210,6 +210,29 @@ refusal, the widened audit, rows 9 and 9b asserting this result). Every canary r
 `api-exit=4 token-exit=0` (gh's own API calls see no login in the empty config dir, but `gh auth token` reads the
 keychain) and row 9b as `exit=0`; a change shows up there.
 
+**Headless ship allow file** (`$E2E/allow-ship.txt`, 76 lines, built after the init merge). The session also gets
+the sandbox's own `.claude/settings.json` (26 rules from init) and `settings.local.json` (the nine plugin scripts).
+The allow file adds, mirroring `smoke_ship_allow ship` (§9.2, with §10.2's `Bash(grep -v '^$' *)`) and narrowed per
+the C3 decision:
+
+- the nine plugin scripts by the checkout path, bare and quoted; `gh auth status`; `git status/switch/add/commit *`;
+  `jq`, `printf`, `echo`, `date`; `claude plugin list --json`; `git fetch origin main`; `test`, `tail -n`, `grep -c`,
+  `grep -v '^$'`; the read-only `git rev-parse/branch/diff/log/show *`, `git worktree *`, `git cherry-pick *`; `cd *`;
+  the context7 tools; fourteen Playwright MCP tool names;
+- npm narrowed from `npm *` to `npm ci`, `npm run *`, `npm test *`, `npm ls *` and `npm install --save-dev
+  --save-exact *` (so no `npm exec`); `npx` only as `npx vitest|eslint|next|playwright *` and `npx tsc --noEmit *`;
+  `AEW_EVIDENCE_DIR=* npx playwright test [*]`;
+- `curl` only as ui-qa §3's two exact checks against `http://localhost:3000`; `lsof -ti tcp:3000 -sTCP:LISTEN`;
+  `rm -rf <sandbox>/docs/qa/*/screenshots`; `cp <sandbox>/.aew/runs/* <sandbox>/docs/qa/*`; `mkdir -p *`; `file -b *`.
+
+Left out on purpose: `node *`, `sh -c *`, `nohup sh -c *`, `npx *`, `curl *`, `kill *` and the `git -C * …` forms
+(CTO-3a: a wildcard before the subcommand also matches `-c core.fsmonitor=<cmd>`; only the developer's fan-out mode
+uses `git -C`). **Harness decision:** because no `sh` rule is allowed, QA cannot start the app headless (ui-qa §3
+starts it with `nohup sh -c '<start_command>' …`). Before every headless run with a UI stage the executor starts the
+sandbox's dev server itself, and QA takes ui-qa §3 step 1 ("an instance is already running: use it and leave it
+running"). A free launch with a $1000 cap (exit 3 at the budget stop, nothing reserved) proved the launcher's C-1 check
+accepts this allow file together with the sandbox's merged settings.
+
 **Credential incident playbook (CTO C-4).** An audit hit on a credential pattern (exit 4) is a P0 stop for James:
 (1) no further sessions; (2) James revokes the PAT; (3) if the hit could have reached the keychain token, James
 revokes the GitHub CLI OAuth grant (github.com → Settings → Applications) and logs in again; (4) James checks the
@@ -253,6 +276,7 @@ a killed or crashed session, charged at its cap.
 | Run | Attempt | Cap | Cost | Running total | Cap raised? | Attended | Cost source |
 |---|---|---|---|---|---|---|---|
 | probe | probe.1 | 0.50 | 0.0034 | 0.0034 | no | no | result |
+| init | init.1 | 5 | 1.31 | 1.31 | no | yes | usage |
 
 ## Sandbox fixtures
 
@@ -533,9 +557,41 @@ When something goes wrong with a submission it's hard to match a user's report t
 - any change to the contact page.
 ````
 
+## init
+
+### init.1 (attended, 2026-10-26)
+
+James ran `e2e-session.sh <sandbox> init.1 5` and `/aew:init`, answered the one question round with the recommended
+answers (so Playwright was skipped, not set up as Assumption 5 expected) and chose **Write** for the permissions.
+Cost $1.31 (`/usage`), cap $5. Init opened PR #13 (`chore: set up aew`, `08e47d4`).
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| Config written and valid (AC-11) | pass | `ajv validate … config.schema.json` `valid`; stacks `nextjs 16.4.3` and `tailwind 4.3.3` at `.`; commands install `npm ci`, dev, build, lint, test_unit from `package.json`, typecheck `npx tsc --noEmit` (inferred); app `npm run dev` on `http://localhost:3000`, `env_type` `native` |
+| `retro.repo` is the sandbox retro repo | **fail, fixed** | init did not ask (its report: "it has only one sensible value") and wrote `jamesborg2012/claude-agentic-engineer-workflow`, which the sandbox-only PAT cannot reach. Plugin fix `658615f`; the sandbox config was corrected on the PR branch in `7caf360` (a re-run keeps existing values by design), with a PR comment saying so |
+| All 11 aew labels exist | pass | `comm` of `gh-labels.sh`'s list against `gh label list` prints nothing; 11 `aew:` labels |
+| Gitignore, `CLAUDE.md`, standards | pass | `.aew/runs/` and `.playwright-mcp/` added (`.claude/settings.local.json` already ignored); `## Agentic workflow` section; `docs/standards/nextjs.md`, `tailwind.md` and `README.md`, each doc headed by its fingerprint comment (`nextjs next@16 react@19 typescript@5 cfg:47154b75becb`, `tailwind tailwindcss@4 cfg:d13f5abf1acf`); context7 unavailable (needs auth), so seeds plus the repo were used |
+| Permissions | pass | `.claude/settings.json` (26 anchored rules, in the PR) and `.claude/settings.local.json` (the nine scripts by the checkout's path, gitignored); AC-8's three `false` entries survived the merge |
+| Playwright | skipped (James's answer) | "Playwright: skipped (QA sets it up on first use)". S2 therefore exercises ui-qa's first-use setup instead of init's |
+| One PR on `main`; plain trailer (CR-5) | pass | PR #13 base `main`; `08e47d4` and `7caf360` carry exactly `Claude <noreply@anthropic.com>` |
+| Guard hits (CR-6) | none | no `aew guard:` text in the two transcripts |
+| Permission prompts (CR-7) | 1, **fixed** | `rm -f .aew/runs/init-config.json … init-pr-body.md` (§13 clean-up, split over two lines, no rule). Plugin fix `7ab432b`: one line, and the exact command in template 2. Settings diff against the pre-session snapshot: only init's own writes |
+| Launcher post-checks | pass | exit 0; `audit clean (58 tool uses)` over 2 transcripts; git guard, plugin HEAD, working tree and `ghcfg` unchanged |
+| Introduction (AC-14) | **accurate** | `check-pr-intro.sh` exit 0. It says what init set up, flags the two guessed values (typecheck, app start) and the permission rules for review, and says browser testing was deferred to first use, all true. Its "What init did" list names the old `retro.repo`, which predates the correction (noted in the PR comment) |
+| Merge (CP-3, AC-12) | pass | James merged with a normal merge commit (`424e947`, 2026-10-26T19:38:56Z) and kept the branch; `main` fast-forwarded and equal to `origin/main` |
+
+Cycles: none (init has no review loop). Duration: about 25 minutes of session time. Problems: the two init defects
+above, both fixed before the merge; `skills/init/SKILL.md` was first brought under 500 lines (`f33feb1`).
+
 ## Guard false positives
 
 ## Fix log
+
+| Commit | Problem | Scenario | Re-run | Result |
+|---|---|---|---|---|
+| `f33feb1` | `skills/init/SKILL.md` was 507 lines, over the 500-line guidance (refactor before any init fix) | init | none needed | 486 lines; suite green |
+| `658615f` | init skipped the inferred `retro.repo` question and wrote the plugin repo | init.1 | not re-run: a re-run keeps existing config values; sandbox config corrected by hand (`7caf360`). Re-checked by the next fresh init (S9, if it runs) | `skills.bats` test red, then green |
+| `7ab432b` | init's §13 clean-up prompted in an attended session (two lines, no rule) | init.1 | as above | `skills.bats` test red, then green |
 
 ## Retro triage
 
