@@ -274,6 +274,104 @@ rdir() { printf '%s\n' "$PROJECT/.aew/runs/$1"; }
   assert_equal "$output" spec_analysis
 }
 
+@test "index init writes the order, stack_on and pending children" {
+  st init m-4 --issues 42,43,41 --mode sequential
+  st init 7 --issues 7 --mode single
+  st index init m-4 --stack-on 43:42,41:43
+  assert_success
+  assert_equal "$output" ""
+  local f
+  f=$(rdir m-4)/index.json
+  run jq -S -c . "$f"
+  assert_equal "$output" "$(printf '%s' '{"run_id":"m-4","order":[42,43,41],"children":[{"issue":42,"stack_on":null,"status":"pending"},{"issue":43,"stack_on":42,"status":"pending"},{"issue":41,"stack_on":43,"status":"pending"}]}' | jq -S -c .)"
+  assert_json "$f" '(keys | sort) == ["children","order","run_id"]'
+  assert_equal "$(head -n 1 "$PROJECT/.aew/runs/current")" 7
+  st init m-5 --issues 5,6 --mode sequential
+  st index init m-5
+  assert_success
+  assert_json "$(rdir m-5)/index.json" '[.children[].stack_on] == [null,null] and ([.children[].status] | unique) == ["pending"]'
+}
+
+@test "index set changes one child's status" {
+  st init m-4 --issues 42,43,41 --mode sequential
+  st index init m-4
+  local s f
+  f=$(rdir m-4)/index.json
+  for s in running done blocked failed pending; do
+    st index set m-4 43 "$s"
+    assert_success
+    assert_json "$f" "(.children[] | select(.issue == 43) | .status) == \"$s\" and ([.children[] | select(.issue != 43) | .status] == [\"pending\",\"pending\"])"
+  done
+  st index set m-4 43 pending
+  assert_success
+  st index set m-4 43 failed
+  st index set m-4 43 running
+  assert_success
+  [ -z "$(find "$(rdir m-4)" -name '.index.json.*')" ]
+}
+
+@test "index init refusals write nothing" {
+  st init m-4 --issues 42,43,41 --mode sequential
+  st init m-6 --issues 4,5 --mode bulk
+  st init 9 --issues 9 --mode single
+  st init m-8 --issues 8 --mode sequential-child
+  local d args
+  d=$(rdir m-4)
+  for args in "" "m-x" "m-77" "m-6" "9" "m-8" \
+    "m-4 --stack-on" "m-4 --stack-on 43-42" "m-4 --stack-on 43:42,43:42" \
+    "m-4 --stack-on 99:42" "m-4 --stack-on 43:99" "m-4 --stack-on 42:43" \
+    "m-4 --stack-on 42:42" "m-4 --bogus"; do
+    # shellcheck disable=SC2086
+    st index init $args
+    assert_failure 1
+    assert_contains "$stderr" "error:"
+    [ ! -e "$d/index.json" ]
+  done
+  st index init m-4 --stack-on ""
+  assert_failure 1
+  [ ! -e "$d/index.json" ]
+  st index init m-4
+  assert_success
+  cp "$d/index.json" "$BATS_TEST_TMPDIR/before.json"
+  st index init m-4
+  assert_failure 1
+  assert_contains "$stderr" "error:"
+  cmp "$d/index.json" "$BATS_TEST_TMPDIR/before.json"
+}
+
+@test "index set refusals leave index.json byte-identical" {
+  st init m-4 --issues 42,43,41 --mode sequential
+  local f args
+  f=$(rdir m-4)/index.json
+  st index set m-4 43 running
+  assert_failure 1
+  assert_contains "$stderr" "error:"
+  [ ! -e "$f" ]
+  st index init m-4
+  cp "$f" "$BATS_TEST_TMPDIR/before.json"
+  for args in "m-4 43 skipped" "m-4 99 done" "m-4 x done" "m-4 43" "m-4" "" "m-x 43 done"; do
+    # shellcheck disable=SC2086
+    st index set $args
+    assert_failure 1
+    assert_contains "$stderr" "error:"
+    cmp "$f" "$BATS_TEST_TMPDIR/before.json"
+  done
+  printf 'not json' > "$f"
+  cp "$f" "$BATS_TEST_TMPDIR/before.json"
+  st index set m-4 43 done
+  assert_failure 1
+  assert_contains "$stderr" "error:"
+  cmp "$f" "$BATS_TEST_TMPDIR/before.json"
+}
+
+@test "--help documents index" {
+  run "$SCRIPTS/state.sh" --help
+  assert_success
+  assert_contains "$output" "index init <run-id>"
+  assert_contains "$output" "index set <run-id>"
+  assert_contains "$output" "not on .aew/runs/current"
+}
+
 @test "seed_run creates a readable current run" {
   seed_run 12
   run --separate-stderr "$SCRIPTS/state.sh" get run_id
