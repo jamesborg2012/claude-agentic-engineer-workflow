@@ -410,10 +410,19 @@ aew resume: no current run. Name one: /aew:resume <run-id> (/aew:status lists th
 aew resume: "<token>" is not a run id (an issue number, or m-<number> for a milestone run).
 aew resume: unexpected argument "<token>".
 aew resume: no run <id> (.aew/runs/<id>/state.json is missing).
-aew resume: run <id> is a <mode> run; milestone runs are resumed by /aew:ship-milestone (coming in a later release).
+${CLAUDE_PLUGIN_ROOT}/skills/ship-milestone/SKILL.md
+${CLAUDE_PLUGIN_ROOT}/skills/ship-milestone/references/sequential.md
+`sequential.md` `## Resume`
+sequential-child
+startswith("milestone m-")
+Run <id> is part of milestone run <parent>: continuing the milestone.
+issues/<k>/
+remove .aew/runs/m-<mn>, then rerun /aew:ship-milestone <mn> --bulk
 Usage: /aew:resume [<run-id>]')"
   [ "$(grep -cxF '## Re-asking a pending gate' "$REPO_ROOT/skills/ship/references/gates.md" || true)" -eq 1 ] || bad="${bad}gates.md lacks '## Re-asking a pending gate'"$'\n'
   bad="$bad$(present "$REPO_ROOT/skills/ship/SKILL.md" 'Answer with /aew:resume <id>')"
+  bad="$bad$(absent_fixed "$f" 'coming in a later release')"
+  [ "$(grep -cxF '## Resume' "$REPO_ROOT/skills/ship-milestone/references/sequential.md" || true)" -eq 1 ] || bad="${bad}sequential.md lacks '## Resume'"$'\n'
   report_offenders "resume contract" "$bad"
 }
 
