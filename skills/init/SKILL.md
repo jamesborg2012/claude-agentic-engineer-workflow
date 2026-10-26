@@ -482,7 +482,7 @@ printf 'ahead '; git rev-list --count <default_branch>..HEAD
   what was set up for the project and why; what to check (the detected commands and the permissions); what
   happens next. Plain words and short sentences, and no file paths, names, code, backticks, AC/TC/WP ids,
   tables or headings, and at most one short list. Then run
-  `"${CLAUDE_PLUGIN_ROOT}/scripts/check-pr-intro.sh" .aew/runs/init-pr-body.md` once. On exit 1, rewrite the
+  `"${CLAUDE_PLUGIN_ROOT}/scripts/check-pr-intro.sh" .aew/runs/init-pr-body.md` once. On a non-zero exit, rewrite the
   introduction once so that each `FAIL:` line is cleared and run the check again. If it still fails, carry on
   and add a warning to §13 (`PR introduction failed the check: <first FAIL line>`). The check never blocks the PR.
   Then run
