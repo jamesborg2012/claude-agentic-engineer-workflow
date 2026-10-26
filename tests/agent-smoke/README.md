@@ -2488,7 +2488,8 @@ The Notebook is out of stock.
 
 1. The Notebook's stock text reads "Out of stock"; "Tea towel" and "Mug" still read "In stock".
 2. The Notebook's "Add to basket" button has the `disabled` attribute, so it cannot be activated by mouse or keyboard; the other two buttons still work.
-3. The page has no serious or critical accessibility violations against WCAG 2.2 AA.
+3. The Notebook's disabled button looks disabled: a muted grey background and `cursor: not-allowed`, with its text still readable.
+4. The page has no serious or critical accessibility violations against WCAG 2.2 AA.
 EOF
   cat > "$W/bodies/313.md" <<'EOF'
 Depends on #312.
@@ -2787,6 +2788,38 @@ reached; that is a decision for James.
 Spend: Q2.1 1.447647 of cap 10. Ledger running total 17.917914 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647 on top of
 10.4's 11.878700). Q3 (cap 12) not started.
 
+#### Q3.1 (tuned fixture, child 2 reset, child 3 branch pre-created)
+
+Harness actions before the run (fixture operations, in a script file; nothing in the plugin repo): #312's body rewritten
+with a fourth criterion (the disabled Notebook button looks disabled: muted grey background and `cursor: not-allowed`,
+text still readable; `smoke_ms_bodies` updated, the mock re-seeded by `smoke_ms_issue 312`, the listing regenerated);
+child 2 reset so it looks interrupted before its own init (checkout `feat/311-stock-labels`, `git branch -D
+feat/312-notebook-out-of-stock` (not on origin), `rm -rf .aew/runs/312`, `state.sh current set m-3`, index left with 312
+`running`; the spec-analyser's tracked agent-memory edits restored with `git checkout -- .claude/agent-memory`);
+`git branch feat/313-stock-filter-toggle main` to force child 3's block. Prompt `/aew:resume m-3`, cap 12, no kill.
+Launcher exit 0, `audit clean (159 Bash commands)`, cost 5.074982, result `success` (122 turns). **Q3.1 did not finish
+child 2**: #312 went to `blocked` at `qa`, so no PR for #312 and child 3 was never started. One attempt; no re-run.
+
+| run | check | result | notes |
+|---|---|---|---|
+| Q3.1 | 1 resume started #312 afresh (`## Resume`, running but no state) | pass | Reads: `ship/SKILL.md`, `preflight.md`, `ship-milestone/SKILL.md`, `sequential.md`, then `dispatch.md`, `gates.md`, `routing.md`, `pr.md`, `final-report.md`; no Skill call. `312/log.md`: `spec_analysis` (milestone m-3), `brief`, `standards`, then onward. The tuned AC left no material gate (labels `analysing` once, then `planning`, `building`, `testing`; one `awaiting-input` label appears in the history from Q2.1). |
+| Q3.1 | 2 #312 stacked | pass | Branch `feat/312-notebook-out-of-stock`, base `feat/311-stock-labels`, `merge-base --is-ancestor` true; `312/state.json` valid. Commits: `feat(shop): mark the notebook out of stock (#312)`, `test(e2e): add notebook out-of-stock tests (#312)`. |
+| Q3.1 | 3 #312 finishes as a stacked PR | fail | `blocked` at `qa`: `qa: invalid return twice (ARTEFACTS names directory docs/qa/312/screenshots); 13/13 TCs pass`. QA itself passed 13 of 13, plus #311's updated tests and axe. `pr create` for 312: 0 (only #311's `--base main`). |
+| Q3.1 | 4 introduction names PR #7 and "merge after" | open | No stacked PR body exists; `check-pr-intro.sh` was not run (a missing body prints `missing <pr-body.md>`, exit 1, not a skill result). |
+| Q3.1 | 5 #313 forced block | open | Never reached: `.aew/runs/313` absent, labels empty, 0 agent dispatches for 313. Index `311:done 312:blocked 313:pending`. |
+| Q3.1 | 6 parent and milestone report | pass | `m-3` `blocked`, `child #312 blocked: qa: …`; `current` `m-3`; `issue comment … milestone-report.md` on 311, 312, 313: 3. Report: #311 shipped with PR link, #312 blocked at qa with the reason, #313 not started, `Resume with /aew:resume m-3`. The stop is clean, but for the wrong child. |
+| Q3.1 | 7 state valid | pass | `m-3`, `311`, `312` valid (313 has no run dir). Stage labels: 311 `analysing … ready-for-review`; 312 `analysing, awaiting-input, analysing, planning, building, testing, blocked`. |
+| Q3.1 | 8 hygiene | pass | `smoke_denials` `[]`; `ghcfg` empty; plugin repo only this README; project tree only agent-memory files (`aew-senior-engineer`, `aew-spec-analyser`, uncommitted because `docs` never ran); port 4173 free after the run (the QA engineer's `curl localhost:4173` probe was a denied hook entry, nothing left listening). R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). |
+
+Finding (a defect in the plugin, not the harness): both of the qa-engineer's returns listed the directory
+`docs/qa/312/screenshots` in `ARTEFACTS`, so ship's return check (`test -f` per artefact) failed twice and the retry rule
+sent the child to the blocked path, with QA's results all passing. Either the qa-engineer contract must list files, not
+folders, or the return check must accept a directory. Needs James's decision before any further Q run: a resume
+would very likely block again the same way.
+
+Spend: Q3.1 5.074982 of cap 12. Ledger running total 22.992896 of the $45 stop (Q1.1 4.591567, Q2.1 1.447647, Q3.1
+5.074982, on top of 10.4's 11.878700). No Q result yet shows a stacked PR introduction.
+
 ### 10.6 Acceptance criteria (build prompt 06)
 
 ### 10.7 Notes (prompt 06)
@@ -2798,6 +2831,10 @@ Spend: Q2.1 1.447647 of cap 10. Ledger running total 17.917914 of the $45 stop (
   stopped before child 2 (Q1.1). James then approved splitting the plan's Q2 into Q2 (resume, kill in child 2) and Q3
   (finish, child 3 forced to `blocked`), still inside $45. Q2.1 stopped at #312's spec gate (see 10.5).
 - The B1 `jq` `$k` denial (10.4) was fixed in 035f956 (`--arg` moved after the filter); Q2.1 shows no denials.
+- Q fixture tuning (the 9.5 precedent, where #103's AC was made material in the mock): #312's body gained a fourth AC
+  stating the disabled look of the Notebook button, because Q2.1's spec-analyser flagged its absence as a material change
+  that gates even under `--auto`. The fix is in `smoke_ms_bodies` so the run is reproducible. #313 was left as it was
+  (never analysed in these runs).
 - Launcher copy: the plan's `KRUN` line uses `${KSTAGE:-}`, because `--env-check` runs under `set -u` without a
   `KSTAGE` and the bare form would abort it. The copy's header comment also names `ledger-06` and "$45", beside the
   usage word, so the `diff` has those two comment hunks as well.
