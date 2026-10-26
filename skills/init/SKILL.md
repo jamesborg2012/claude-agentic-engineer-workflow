@@ -352,7 +352,8 @@ Template 2 is `.claude/settings.json`. Replace `<default_branch>` with the defau
   "Bash(git ls-remote --symref origin HEAD)",
   "Bash(git restore -- .claude/agent-memory/aew-standards-setter/)",
   "Bash(command -v *)", "Bash(jq *)", "Bash(echo *)", "Bash(printf *)",
-  "Bash(date +%Y-%m-%d)"
+  "Bash(date +%Y-%m-%d)",
+  "Bash(rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/init-permissions.json .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md)"
 ] } }
 ```
 
@@ -475,8 +476,7 @@ printf 'ahead '; git rev-list --count <default_branch>..HEAD
 ## 13. Report
 
 ```sh
-rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/init-permissions.json \
-  .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md
+rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/init-permissions.json .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md
 ```
 
 Print, in order: prerequisite and stack-tool warnings (and the PR introduction check warning, if any); stacks; config written or unchanged and the detected

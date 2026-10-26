@@ -527,6 +527,14 @@ git-branch.sh')"
   grep -q 'only sensible' <<< "$s5" || { echo "§5 does not forbid skipping an obvious inferred value" >&2; return 1; }
 }
 
+@test "init: the §13 clean-up is one line and an exact rule in template 2" {
+  local f="$REPO_ROOT/skills/init/SKILL.md" cmd
+  cmd=$(awk '/^## 13\. /{f=1} f && /^rm -f \.aew\/runs\/init-/{print; exit}' "$f")
+  [ -n "$cmd" ] || { echo "no rm -f line in §13" >&2; return 1; }
+  case $cmd in *'\') echo "§13 clean-up continues onto another line" >&2; return 1 ;; esac
+  grep -qF "\"Bash($cmd)\"" "$f" || { echo "template 2 lacks the exact rule Bash($cmd)" >&2; return 1; }
+}
+
 @test "ship, ship-milestone, resume and prompt: every file-and-heading citation resolves" {
   local f c cf h p n bad="" total=0 ship_n=0 ms_n=0
   while IFS= read -r f; do
