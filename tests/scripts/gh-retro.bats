@@ -74,12 +74,12 @@ match_title() {
   assert_contains "$(gh_calls | sed -n 2p)" "--label retro --state open"
 }
 
-@test "4a. a failing label create only warns" {
+@test "4a. a label that already exists is not a warning" {
   gh_mock_respond label-create - 1 <<<'label with name "retro" already exists'
   file_retro
   assert_success
   assert_equal "$output" "$(printf 'commented #41\ncreated #50\ncommented #50')"
-  assert_contains "$stderr" "warning:"
+  refute_contains "$stderr" "warning:"
   assert_gh_called "issue create"
 }
 

@@ -109,7 +109,10 @@ cmd_file() {
 
   local out
   if ! out=$(gh label create "$label" --repo "$repo" --color 0E8A16 --description "Retro item filed by aew" 2>&1); then
-    warn "could not create label '$label' in $repo (continuing): $out"
+    case $out in
+      *"already exists"*) ;; # the usual case after the first run: nothing to report
+      *) warn "could not create label '$label' in $repo (continuing): $out" ;;
+    esac
   fi
 
   gh issue list --repo "$repo" --label "$label" --state open --limit 500 --json number,title > "$tmp/open.json" || die "gh issue list failed"
