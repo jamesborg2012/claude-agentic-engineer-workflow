@@ -45,7 +45,7 @@ jq -r '.issues | map(tostring) | join(",")' .aew/runs/<id>/state.json
 F2, the revision `<v_k>` of issue k (row 7):
 
 ```
-jq -r --arg k <k> '[.history[] | (.note // "") | select(startswith("spec revision: #" + $k + " v")) | ltrimstr("spec revision: #" + $k + " v") | tonumber] | max // 1' .aew/runs/<id>/state.json
+jq -r '[.history[] | (.note // "") | select(startswith("spec revision: #" + $k + " v")) | ltrimstr("spec revision: #" + $k + " v") | tonumber] | max // 1' --arg k <k> .aew/runs/<id>/state.json
 ```
 
 F3, the commit suffix (row 12):
