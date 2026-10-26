@@ -546,6 +546,11 @@ git-branch.sh')"
   grep -qE '^4\. Run the full unit suite.*build' "$f" || { echo "developer fix mode does not run the build" >&2; return 1; }
 }
 
+@test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
+  grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
+    { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')

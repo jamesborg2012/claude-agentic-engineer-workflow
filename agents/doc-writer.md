@@ -106,7 +106,7 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
 1. Resolve `run_dir`, then find the passing QA report. If no `08-qa-report-<n>.md` exists, or the highest one does not pass, return `STATUS: blocked` and name what is missing. Do the same for any other missing required input.
 2. Write the spec snapshot.
 3. Curate `CLAUDE.md` by following the `aew:claude-md-curation` skill. Work on the whole file, stay within `claude_md.max_lines`, and keep a list of every entry you remove, merge or rewrite, with its original text (the skill's section 7).
-4. Write `10-summary.md` and `pr-body.md` from their templates:
+4. Write `10-summary.md` and `pr-body.md` from their templates, fresh on every dispatch: a re-run (`--from docs`) exists so that the current rules and run files apply, so never keep an earlier version because it looks accurate. The rules:
    - The Summary lists every `CLAUDE.md` entry you removed, merged or rewritten: its original text quoted in full, what happened to it and why. A line you kept but reworded, even only by adding a link, is a rewrite and is listed. So is a dated rule kept for a human to check (`claude-md-curation` §6 step 2). State the line count you read back from the file after writing it.
    - The AC checklist covers every AC in the brief.
    - In a bulk run the `10-summary.md` H1 is `# Summary: <run_id> <title>`, and the AC checklist keeps the brief's prefixed ids (`- [x] #12-AC-1: …`), because the orchestrator counts them in that form.
