@@ -521,6 +521,12 @@ git-branch.sh')"
   grep -q '05-plan.md' <<< "$g" || { echo "plan-approval: no plan path" >&2; return 1; }
 }
 
+@test "init: template 1 pre-approves reading the plugin's own files" {
+  local t1
+  t1=$(awk '/^Template 1 is/{f=1} /^Template 2 is/{f=0} f' "$REPO_ROOT/skills/init/SKILL.md")
+  grep -qF '"Read(/${CLAUDE_PLUGIN_ROOT}/**)"' <<< "$t1" || { echo "template 1 lacks Read(/\${CLAUDE_PLUGIN_ROOT}/**)" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')

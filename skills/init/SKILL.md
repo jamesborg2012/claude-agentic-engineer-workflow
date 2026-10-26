@@ -321,11 +321,15 @@ never reaches other cloners); `.claude/settings.json` holds the portable rules (
 
 Every rule is an exact command, or a subcommand plus a single trailing ` *`; none has a wildcard before the
 subcommand. `${CLAUDE_PLUGIN_ROOT}` is substituted when this skill loads, so the proposal carries the real path.
+The one `Read` rule lets the skills and agents read the plugin's references and templates, which sit outside the
+project: a headless run denies any read outside its working directories that no rule allows (`//` marks an
+absolute path, so `/${CLAUDE_PLUGIN_ROOT}` becomes `//<plugin root>`).
 
 Template 1 is `.claude/settings.local.json`:
 
 ```json
 { "permissions": { "allow": [
+  "Read(/${CLAUDE_PLUGIN_ROOT}/**)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/state.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-labels.sh *)",
