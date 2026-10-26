@@ -28,7 +28,7 @@ The plugin root is `${CLAUDE_PLUGIN_ROOT}`.
 - Never edit an artefact, `state.json` or `log.md`: scripts own state. The only files ship writes are `spec-revision-v<N>.md` (the `jq` render), `.aew/runs/blocked-<id>.md` (the blocked comment, written with the Write tool) and the commits in `pr.md`.
 - Read only what `## What the orchestrator reads` lists.
 - Every developer dispatch comes straight after a `state.sh` write in the same step (the developer gate's freshness check).
-- One agent per Agent call, except the planning pair in `## Stage: plan`.
+- One agent per Agent call, except the planning pair in `## Stage: plan` and, in a bulk run, the per-issue spec analyses of `bulk.md` `## Spec analysis` and `bulk.md` `## Re-analysis`.
 - An invalid return counts as `failed`. A failed dispatch is retried once in this session, then the blocked path.
 - Script failures follow `routing.md` `## Script failures`.
 - Write labels bare: `gh-labels.sh stage <n> blocked`, "the `blocked` label".
@@ -45,6 +45,7 @@ Read each value fresh before each use.
 - Limits: `jq -r '.limits.max_review_cycles // 2' .aew/config.json` and `jq -r '.limits.max_fix_cycles // 3' .aew/config.json`.
 - Plan gate: `jq -r 'if .gates.plan_approval == false then "off" else "on" end' .aew/config.json`. Do not use `// true`, which turns an explicit `false` into `true`.
 - `<default>`: `jq -r '.default_branch // "main"' .aew/config.json`.
+- `mode`: `state.sh get mode`. In a bulk run (`bulk`), Read `${CLAUDE_PLUGIN_ROOT}/skills/ship-milestone/references/bulk.md` and apply `bulk.md` `## Overrides` throughout this file and the references: `<id>` is the run id `m-<number>`, and `<n>` means each issue in `issues` in turn.
 
 `resume` takes all of these from `state.json`. After `state.sh current clear` (run-start failures, the plan-gate stop, `pr.md` `## Finish`), `state.sh get` fails, so any later read uses `jq -r .<field> .aew/runs/<id>/state.json`.
 
@@ -153,6 +154,8 @@ Earlier stages are not redone, counters are kept, and a `done` run's PR is updat
 5. Exit: `ok` runs `gates.md` `## Recording a spec revision`, then `## Stage: brief`. `needs_input` runs `gates.md` `## Gate: spec`.
 6. Failure: `routing.md` `## Agent status routing` and `dispatch.md` `## Retries`.
 
+In a bulk run, step 1's label goes on every issue, and `bulk.md` `## Spec analysis` replaces steps 2 to 6.
+
 ## Stage: brief
 
 1. Entry: `state.sh stage brief` (with the reason as a note when sent by a gate), then `gh-labels.sh stage <n> planning`.
@@ -250,6 +253,10 @@ In this order:
 
 A failed `gh` script call in step 2 or 3 never skips step 4. The final report names the call that failed.
 
+In a bulk run, steps 2 and 3 run once per issue in `issues`, and a failure for one issue never skips the others (`bulk.md` `## Overrides`).
+
 ## Final report
 
 Follow `final-report.md` `## Format`, `final-report.md` `## Counting` and `final-report.md` `## Blocked and failed runs` for every outcome: `done`, `blocked` and `failed`.
+
+In a bulk run, print this report with the `bulk.md` `## Overrides` changes, then go to `bulk.md` `## Report`.

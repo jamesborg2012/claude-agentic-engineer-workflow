@@ -28,6 +28,8 @@ In prompt mode (`/aew:prompt`), skip every `gh-labels.sh stage` call in this fil
 
 The four `awaiting_input` gates never skip, even with `--auto`. Only `plan-approval` is skippable (`auto` is true, or the plan gate is `off`).
 
+In a bulk run (`bulk.md` `## Overrides`), the `spec` gate is per issue: `<rd>` is `.aew/runs/<id>/issues/<k>`, `<n>` is `k`, the note is `gate:spec issues/<k>/01-spec-analysis.md`, its label goes on that issue only, and its step 4 returns to `bulk.md` `## Spec analysis`. Every other gate's label goes on every issue, and step 4 of `plan-challenge`, `triage` and `spec-ambiguity` is `bulk.md` `## Re-analysis`.
+
 ## Asking
 
 - AskUserQuestion exists on the main thread only. Subagents never have it, which is why agents return `needs_input`. If it is not among your tools, go straight to `SKILL.md` `## Gate pending` and do not call it.
@@ -116,6 +118,8 @@ Run it after spec-analyser (first run or D2) returns `ok`. It runs only when `jq
 
 A refusal (malformed markers, or a body over 65,536 characters) goes to `SKILL.md` `## Blocked path`. Never trim the history.
 
+In a bulk run, `bulk.md` `## Overrides` sets `<rd>` and `<n>` per issue, takes the version from that issue's `spec revision: #<k> v<N>` note instead of `spec_revision`, and replaces step 5 with that note.
+
 ## Re-asking a pending gate
 
 Used by `resume`. Run the pending-gate lookup from `## Gate ids and pending state`, map the gate id in the note to its `## Gate: <id>` section, and enter it at step 2, because the status and label are already set.
@@ -123,6 +127,7 @@ Used by `resume`. Run the pending-gate lookup from `## Gate ids and pending stat
 - A status of `awaiting_plan_approval` with no `gate:` note means `plan-approval`.
 - A status of `awaiting_input` with no `gate:` note is treated as `spec`.
 - Before re-asking, run the prompt-mode check from `## Gate ids and pending state`. On a prompt-mode run only `gate:spec` can be pending: re-ask it under the prompt-mode rule, and its step 4 hands back to the `prompt` skill.
+- In a bulk run, a note `gate:spec issues/<k>/01-spec-analysis.md` gives `<rd>` `.aew/runs/<id>/issues/<k>` and `<n>` `k` (`bulk.md` `## Overrides`).
 
 ## Destructive operations
 

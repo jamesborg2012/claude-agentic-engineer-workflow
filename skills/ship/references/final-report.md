@@ -23,6 +23,8 @@ The `Next:` line by outcome:
 - `blocked`: `Resume with /aew:resume <id>`.
 - `failed`: `restart with /aew:ship <n> --from <stage>`.
 
+In a bulk run, the first line names the run id (`aew ship <id> <title>: …`), and `failed` reads `Next: remove .aew/runs/m-<mn>, then rerun /aew:ship-milestone <mn> --bulk` (`bulk.md` `## Overrides`).
+
 Warnings follow as `Warning: <text>` lines, one each: preflight check 6, the ahead-only warning of check 4, leftover dirty paths, a failed retro, `PR introduction failed the check: <first FAIL line>` (after the one retry, from `pr.md`), and a failed `gh` call on the blocked path (name the call).
 
 ## Counting
@@ -30,6 +32,7 @@ Warnings follow as `Warning: <text>` lines, one each: preflight check 6, the ahe
 Count, never read. `<id>` is the run id.
 
 - ACs passed: `grep -c '^- \[x\] AC-' .aew/runs/<id>/10-summary.md`. Total: `grep -cE '^- \[[ x]\] AC-' .aew/runs/<id>/10-summary.md`.
+- In a bulk run the AC ids carry the issue prefix: `grep -c '^- \[x\] #[0-9][0-9]*-AC-' .aew/runs/<id>/10-summary.md`, and for the total `grep -cE '^- \[[ x]\] #[0-9]+-AC-' .aew/runs/<id>/10-summary.md`.
 - Manual tests outstanding: `grep -c '^- \[ \]' .aew/runs/<id>/manual-tests.md`.
 - Retro items: the number of `created #` and `commented #` lines that `gh-retro.sh` printed this session.
 - Title, PR, stage and cycles: `jq -r '.title, .pr, .stage, .review_cycle, .fix_cycle' .aew/runs/<id>/state.json`. The PR URL is built as in `pr.md` `## Push and pull request` step 3. Do not use `state.sh get`: it reads only the run named in `.aew/runs/current`, which `pr.md` `## Finish` and the plan-gate stop have already cleared, and it exits 1 with "no current run".
