@@ -2588,6 +2588,37 @@ Recorded 2026-10-26 (Task E7; no Claude session, nothing in the ledger):
 
 ### 10.3 M1 and M3: mode probes
 
+Task E8 (AC-32, cut 1). Recorded 2026-10-26 after the CTO-4 pre-launch checks: James confirmed the $45 stop and C1 at plan
+approval (2026-10-26T09:47:30Z), `$SMOKE/ledger-06/` was empty, the CTO-1 guard printed nothing, the suite was green (371).
+One project (`$SMOKE/ship-ms`, `smoke_ship_project ms shop`) for both probes; the mock's `calls.log` and counters were moved
+aside between runs. M1: `small-related.json` (milestone 2), prompt `/aew:ship-milestone 2`. M3: `chain.json` (milestone 4),
+prompt `/aew:ship-milestone 4` with no mode flag. The plan's "`--sequential` in M-1" is the mode in the printed rerun line;
+M3.1 misread it as an argument (see below). Each launcher run: cap 1, exit 0, `audit clean (11 Bash commands)`, `ghcfg` empty.
+
+| run | check | result | notes |
+|---|---|---|---|
+| M1.1 | M-1 rationale then rerun line | pass | One rationale paragraph (3 issues, each small with 2 to 4 ACs, shared `shop` label, no dependency, no cycle), then `Rerun with /aew:ship-milestone 2 --bulk (or --sequential).` No `Mode: … (given)` line. |
+| M1.1 | M-2 no AskUserQuestion | pass | `system/init` `.tools \| index("AskUserQuestion")`: `null`. The result says the tool is unavailable. |
+| M1.1 | M-3 recommendation matches `select` | pass | Expected `recommend` `bulk`, `reasons` `[]`, order `[21,22,23]`, no stacking; printed mode `bulk`, the issues #21, #22, #23. |
+| M1.1 | M-4 no run dir | pass | `.aew/runs` absent. |
+| M1.1 | M-5 `gh` routes | pass | `smoke_norm`: `auth-status`, `issue-list` (one `select` call). |
+| M1.1 | M-6 tree and branches | pass | `git status --porcelain` empty; branches: `main` only. |
+| M1.1 | M-7 no Agent, Write or Edit | pass | None on the main thread (Reads of ship's `SKILL.md`, `preflight.md`, `mode-selection.md`; Bash preflight reads, `gh-milestone.sh select 2`, `test -e .aew/runs/m-2`, `cat .aew/runs/current`). |
+| M1.1 | M-8 denials, ghcfg, MCP | pass | `smoke_denials` `[]`; `ghcfg` empty; launcher exit 0, `audit clean`; R-E4 `system/init` row: `[]` (no `mcp__notion` or `mcp__claude_ai_*` tool). Cost 0.415012. |
+| M1.1 | M-9 "same area" and "low risk" named | pass, wording differs | The judgement left bulk standing (no flip to sequential). Quote: "Bulk fits this milestone. It has only three issues (#21 …, #22 …, #23 …). Each one is small, with two to four acceptance criteria. They all carry the same `shop` label, and none of them depends on another …". "Same area" is named by the shared label; "low risk" is not said in words, only "small" and "no dependency". `mode-selection.md`'s Rationale item 2 asks for "few issues, each small, no blocking dependencies", which the text meets exactly; the check's wording is stricter than the skill. Not a defect. |
+| M3.1 | mis-launch | not a probe | Launched with `--sequential` as an argument, so the mode was given and the run began: preflight and `select` ran, `sequential.md` was read, then the session stopped itself on the $1 cap ("about $0.58 left"). Nothing was written (no run dir, one `auth-status` and one `issue-list` call, tree clean, `main` only, audit clean), so no state needed cleaning. Cost 0.487072. My misreading of the plan, not a skill defect. Its checks are not counted. |
+| M3.2 | M-1 rationale then rerun line | pass | `aew ship-milestone m-4 Checkout flow: 3 open issue(s), recommended mode sequential.`, a paragraph naming both dependencies, `Order: #42 → #43 → #41`, `Stacked: #41 on #43, #43 on #42`, `Rerun with /aew:ship-milestone 4 --sequential (or --bulk).` |
+| M3.2 | M-2 no AskUserQuestion | pass | `null`. |
+| M3.2 | M-3 order and stacking match | pass | Expected `recommend` `sequential`, reasons `#41 depends on #43`, `#43 depends on #42`, order `[42,43,41]`, `stack_on` 41→43, 43→42, 42→none; the printed order and stacked lines equal them. |
+| M3.2 | M-4 no run dir | pass | `.aew/runs` absent. |
+| M3.2 | M-5 `gh` routes | pass | `auth-status`, `issue-list`. |
+| M3.2 | M-6 tree and branches | pass | Empty; `main` only. |
+| M3.2 | M-7 no Agent, Write or Edit | pass | None. |
+| M3.2 | M-8 denials, ghcfg, MCP | pass | `[]`; empty; launcher exit 0, `audit clean (11 Bash commands)`; R-E4 `system/init` row `[]`. Cost 0.409620. |
+
+Spend (E11 fills 10.1's table): M1.1 0.415012, M3.1 0.487072, M3.2 0.409620, total 1.311704 of the $45 stop. The
+M3 re-run used the one probe re-run the margin allows; the caps still to come (B1 15, Q1 8, Q2 12) fit under $45.
+
 ### 10.4 B1: `/aew:ship-milestone 2 --bulk --auto` to one mocked PR
 
 ### 10.5 Q1 and Q2: sequential, killed in child 2, resumed, child 3 blocked
