@@ -278,7 +278,260 @@ repo with no ancestor `CLAUDE.md`, pushed to private `jamesborg2012/aew-sandbox`
 - AC-8: the gitignored `.claude/settings.local.json` holds `{"enabledPlugins": {"dev-workflow@jamesborg": false,
   "figma@claude-plugins-official": false, "warp@claude-code-warp": false}}`; the probe proves it works.
 
-The issue and milestone fixtures follow in Phase B.
+The issue and milestone fixtures are below.
+
+### Issue and milestone fixtures (AC-13)
+
+Created on 2026-10-26 under the executor's own gh, before the first scenario. Milestones (V-11, proved by running):
+`gh milestone --help` exits 1 (no built-in milestone command in gh 2.103.2; `gh help milestone` exits 0 but only
+prints the general help), so `gh api repos/jamesborg2012/aew-sandbox/milestones -f title=<title> --jq '"\(.number) \(.title)"'`
+was used: it returned `1 Contact page polish` and `2 Submissions log`. Issues were created with
+`gh issue create --repo jamesborg2012/aew-sandbox --title <title> --body-file <draft> [--milestone <title>]`, in the
+order below, S6b's and S6c's `Depends on` line filled with the real number of the previous child. Every body read
+back with `gh issue view <n> --json body | jq -j .body` is byte-identical to its draft (GitHub stores the body as
+sent; `gh … -q .body` only adds a trailing newline on output). These read-backs are the baseline for S3's v1 check.
+
+| Scenario | Issue | Title | Milestone |
+|---|---|---|---|
+| S1 | #1 | Validate contact submissions on the server | — |
+| S2 | #2 | Show inline errors on the contact form, announced to screen readers | — |
+| S3 | #3 | Rate-limit contact submissions | — |
+| S4 | #4 | Email the admin on each submission | — |
+| S5a | #5 | Set the contact page title and description | Contact page polish (1) |
+| S5b | #6 | Show a live character counter for the message | Contact page polish (1) |
+| S5c | #7 | Add a privacy note under the Send button | Contact page polish (1) |
+| S6a | #8 | Add a submissions store module | Submissions log (2) |
+| S6b | #9 | Add GET /api/submissions | Submissions log (2) |
+| S6c | #10 | Add a /submissions page | Submissions log (2) |
+| S7 | #11 | Normalise contact fields on the server | — |
+| S8 | #12 | Return a request id from the contact API | — |
+
+S3 deliberately leaves out the limit, the key and the response (a material gap, so the spec gate must fire). S4's
+AC 4 is the one non-automatable check. S5's three issues share the page and have no dependencies; S6's form a chain.
+
+#### S1 (#1)
+
+````markdown
+### Summary
+
+`POST /api/contact` (`app/api/contact/route.ts`) accepts any body and always replies `{ "ok": true }`. It should reject invalid submissions on the server, so bad data never reaches whatever handles messages later.
+
+### Acceptance criteria
+
+1. A request with a missing or blank `name` (after trimming) gets status 422 and a JSON body `{ "ok": false, "errors": { "name": "Enter your name" } }`.
+2. A request whose `email` is missing or not a valid email address gets status 422 with `errors.email` set to "Enter a valid email address".
+3. A request whose `message` is shorter than 10 or longer than 1000 characters gets status 422 with `errors.message` set to "Your message must be between 10 and 1000 characters". When several fields are invalid, every invalid field appears in `errors`.
+4. A request with a valid name, email and message still gets status 200 and `{ "ok": true }`.
+
+### Out of scope
+
+- any change to the contact page (`app/page.tsx`);
+- storing or sending the message.
+````
+
+#### S2 (#2)
+
+````markdown
+### Summary
+
+The contact form (`app/page.tsx`) ignores the server's validation errors: when `POST /api/contact` replies 422 with `{ "ok": false, "errors": { … } }`, nothing is shown. People need to see what to fix, including people using a screen reader.
+
+### Acceptance criteria
+
+1. When the API replies 422, each field named in `errors` shows its message directly under that field, the field has `aria-invalid="true"`, and the message is linked to it with `aria-describedby`.
+2. A summary such as "There are 2 problems with your message" is announced to screen readers through a live region when the errors appear.
+3. Focus moves to the first invalid field (in the order name, email, message) when the errors appear.
+4. When the form is submitted again with valid values, the errors and the summary disappear and the existing success line is shown.
+5. At desktop (1440×900) and mobile (390×844) the form, its errors and the summary are visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+
+### Out of scope
+
+- client-side validation before submitting;
+- changing the API's rules or messages.
+````
+
+#### S3 (#3)
+
+````markdown
+### Summary
+
+The contact endpoint can be called as often as anyone likes. Please rate-limit contact submissions so the form can't be used to flood us.
+
+### Acceptance criteria
+
+1. Contact submissions are rate-limited.
+2. Requests within the limit behave exactly as they do today.
+3. The limit is covered by unit tests.
+
+### Out of scope
+
+- the contact page's appearance.
+````
+
+#### S4 (#4)
+
+````markdown
+### Summary
+
+When someone submits the contact form, the site admin should get an email with the message, so nobody has to poll for new messages.
+
+### Acceptance criteria
+
+1. On a valid submission, `POST /api/contact` sends an email to the address in the `ADMIN_EMAIL` environment variable, with the sender's name and email in the subject and the message as the body, through a mail transport module that tests can replace.
+2. If sending the email fails, the request still returns status 200 and `{ "ok": true }`, and the failure is logged on the server.
+3. If `ADMIN_EMAIL` is not set, no email is attempted and the request still returns 200.
+4. The admin actually receives the email in their inbox when the site runs with a real mail provider configured.
+
+### Out of scope
+
+- choosing or configuring a production mail provider;
+- confirmation emails to the sender.
+````
+
+#### S5a (#5)
+
+````markdown
+### Summary
+
+The contact page still has the generic title and description.
+
+### Acceptance criteria
+
+1. The page's `<title>` is "Contact us | aew sandbox".
+2. The page has a meta description "Send us a message and we'll get back to you.".
+
+### Out of scope
+
+- other pages.
+````
+
+#### S5b (#6)
+
+````markdown
+### Summary
+
+People don't know how long their message may be until they submit it.
+
+### Acceptance criteria
+
+1. Under the message field, a counter shows "<n> / 1000 characters", where n is the current message length, and updates as the person types.
+2. The counter is linked to the message field with `aria-describedby`.
+3. At desktop (1440×900) and mobile (390×844) the counter is visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+````
+
+#### S5c (#7)
+
+````markdown
+### Summary
+
+The form doesn't say what we do with what people send.
+
+### Acceptance criteria
+
+1. Directly under the Send button, the page shows the text "We only use your details to reply to your message."
+2. At desktop (1440×900) and mobile (390×844) the note is visible without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+````
+
+#### S6a (#8)
+
+````markdown
+### Summary
+
+We want to keep contact submissions so they can be listed later. Start with a small store module the rest can build on.
+
+### Acceptance criteria
+
+1. A module `lib/submissions.ts` exports `addSubmission({ name, email, message })`, which stores the submission in memory with an `id` and a `receivedAt` ISO timestamp and returns the stored record.
+2. It exports `listSubmissions()`, which returns every stored submission, newest first.
+3. Both functions are covered by unit tests.
+
+### Out of scope
+
+- persistence across server restarts;
+- wiring the store into `POST /api/contact`.
+````
+
+#### S6b (#9)
+
+````markdown
+### Summary
+
+Expose the stored submissions through the API so a page can show them.
+
+### Acceptance criteria
+
+1. `GET /api/submissions` returns status 200 and `{ "submissions": [ … ] }`, the result of `listSubmissions()` from `lib/submissions.ts`, newest first.
+2. With no submissions it returns `{ "submissions": [] }`.
+3. The route is covered by unit tests.
+
+### Out of scope
+
+- authentication;
+- pagination.
+
+Depends on #8
+````
+
+#### S6c (#10)
+
+````markdown
+### Summary
+
+Add a page that lists the submissions from `GET /api/submissions`.
+
+### Acceptance criteria
+
+1. A page at `/submissions` shows a heading "Submissions" and, for each submission, the name, email, received date and message, newest first.
+2. With no submissions it shows "No submissions yet."
+3. At desktop (1440×900) and mobile (390×844) the list is readable without horizontal scrolling, and the page has no serious or critical accessibility violations against WCAG 2.2 AA.
+
+### Out of scope
+
+- deleting or editing submissions;
+- authentication.
+
+Depends on #9
+````
+
+#### S7 (#11)
+
+````markdown
+### Summary
+
+`POST /api/contact` should tidy what people type before validating it, so stray spaces or capital letters in an email address don't cause errors or duplicates.
+
+### Acceptance criteria
+
+1. Leading and trailing whitespace is removed from `name`, `email` and `message` before validation.
+2. `email` is converted to lower case before validation.
+3. Validation runs on the tidied values: a name of only spaces is still rejected as missing.
+4. The behaviour is covered by unit tests of the route.
+
+### Out of scope
+
+- collapsing spaces inside the message;
+- any change to the contact page.
+````
+
+#### S8 (#12)
+
+````markdown
+### Summary
+
+When something goes wrong with a submission it's hard to match a user's report to the server log. Give every contact API response a request id.
+
+### Acceptance criteria
+
+1. Every response from `POST /api/contact` includes a `requestId` field, a newly generated UUID.
+2. The same id is sent in an `X-Request-Id` response header.
+3. Two requests get different ids.
+4. The behaviour is covered by unit tests.
+
+### Out of scope
+
+- logging or tracing infrastructure;
+- any change to the contact page.
+````
 
 ## Guard false positives
 
