@@ -277,6 +277,7 @@ a killed or crashed session, charged at its cap.
 |---|---|---|---|---|---|---|---|
 | probe | probe.1 | 0.50 | 0.0034 | 0.0034 | no | no | result |
 | init | init.1 | 5 | 1.31 | 1.31 | no | yes | usage |
+| S1 | S1.1 | 15 | 6.09 | 7.40 | no | yes | usage |
 
 ## Sandbox fixtures
 
@@ -583,6 +584,35 @@ Cost $1.31 (`/usage`), cap $5. Init opened PR #13 (`chore: set up aew`, `08e47d4
 Cycles: none (init has no review loop). Duration: about 25 minutes of session time. Problems: the two init defects
 above, both fixed before the merge; `skills/init/SKILL.md` was first brought under 500 lines (`f33feb1`).
 
+## S1
+
+### S1.1 (attended, gates on, 2026-10-26)
+
+James ran `e2e-session.sh <sandbox> S1.1 15` and `/aew:ship 1` (no `--auto`). Run `1`, 19:46:45Z to 20:05:01Z
+(18 minutes); cost $6.09 (`/usage`), cap $15. PR #14 on `feat/1-validate-contact-submissions-on-the-serv`.
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| [P] `ship` with gates on | pass | `state.json` `auto` `false`; `log.md`: `plan awaiting_plan_approval — gate:plan-approval 05-plan.md`, then `develop running — plan approved` |
+| [P] Plan gate shown | **partial, fixed** | One AskUserQuestion, header `Plan gate`, question `Approve the plan for #1?`, options `Approve` / `Request changes` / `Stop` (transcript). But no summary and no `05-plan.md` path was shown: the orchestrator read the plan and asked at once (`gates.md` step 3 and DESIGN §9 require both). Fix `c3476b8` puts the summary and path in the question text; James chose to verify it live in S5 (attended, no `--auto`) rather than re-run S1 |
+| [P] ACs traced to tests | pass | spec v2 has 11 criteria; the brief splits them into AC-1 to AC-22 with an explicit mapping (`02-brief.md` judgement note); `08-qa-report-1.md` maps TC-1 to TC-22 one-to-one, all pass; `10-summary.md` lists 22/22 checked; unit 40/40 |
+| [P] PR opened (CR-3) | pass | PR #14, base `main`, body `Closes #1`, title `Validate contact submissions on the server` |
+| Spec revision (non-material, auto) | pass | v2 added ACs 5 to 11 (exact 422 body, trim every field, WHATWG email rule, code points, non-strings, non-object body, 400 on bad JSON), all `non-material`, `source: auto`. Issue #1 now shows v2 on top; v1 extracted with `gh-issue-body.bats`'s `prev_of` is byte-identical to B2's read-back and to the `## Body` section of `00-issue-original.md` (the file adds a separator line); `Spec v1 (original)` summary present; one `Spec revision v2` comment |
+| CR-1 state | pass | `state.json` valid against the schema; `status` `done`, `stage` `pr`; `.aew/runs/current` empty |
+| CR-2 labels | pass | `aew:ready-for-review aew:spec-revised` (the flag is right: the spec was revised) |
+| CR-4 lint, tests, typecheck, build on the PR branch | pass | `npm run lint` 0, `npm test` 40 passed, `npx tsc --noEmit` 0, `npm run build` 0 |
+| CR-5 trailers | pass | 4 commits (`feat(contact)…`, `test(e2e)…`, `docs…`, `chore(aew): update agent memory`), each exactly `Co-Authored-By: Claude <noreply@anthropic.com>` |
+| CR-6 guard hits | none | no `aew guard:` text in the 11 transcripts (main and subagents) |
+| CR-7 prompts and denials | none | James saw no prompt; no denial in any tool result; both settings files unchanged against the snapshot. **C2 confirmed interactively:** ship's `grep -v '^$' … \| tail -n 4` return checks ran with no prompt |
+| CR-8 report, cycles, duration | pass | review cycle 0 (approved first time), QA fix cycle 0; 18 minutes; stages each under 4 minutes |
+| Retro filing (cross-repo) | pass | two items filed in `jamesborg2012/aew-sandbox-retro` (#1 standards override path, #2 TC ids in test names); listed again in Phase F |
+| Launcher post-checks | pass | exit 0; `audit clean (287 tool uses)` over 11 transcripts; git guard, plugin HEAD, working tree, `ghcfg` unchanged |
+| Introduction (AC-14) | **accurate** | `check-pr-intro.sh --issues 1` exit 0. It says what changed and what visitors see (nothing), why plain checks in the route (no new file or dependency), that the spec grew from 4 to 11 minor rules, the 422 choice over the standards' 400, the changed old test, that nothing needs a manual check, the follow-ups, and 22/22 with a clean review: all match the artefacts |
+
+Cycles: review 0, fix 0. Duration: 18 minutes. Problems: the plan gate's missing summary (fixed, `c3476b8`).
+Fixture note: S1's auto revision (AC 6) already trims every field, which S7 asked for; S7 is left as filed and
+judged on its remaining change (lowercasing the email) and its tests.
+
 ## Guard false positives
 
 ## Fix log
@@ -592,6 +622,7 @@ above, both fixed before the merge; `skills/init/SKILL.md` was first brought und
 | `f33feb1` | `skills/init/SKILL.md` was 507 lines, over the 500-line guidance (refactor before any init fix) | init | none needed | 486 lines; suite green |
 | `658615f` | init skipped the inferred `retro.repo` question and wrote the plugin repo | init.1 | not re-run: a re-run keeps existing config values; sandbox config corrected by hand (`7caf360`). Re-checked by the next fresh init (S9, if it runs) | `skills.bats` test red, then green |
 | `7ab432b` | init's §13 clean-up prompted in an attended session (two lines, no rule) | init.1 | as above | `skills.bats` test red, then green |
+| `c3476b8` | the plan gate asked "Approve the plan for #1?" with no summary or plan path | S1.1 | verified live in S5 (attended, no `--auto`), James's choice | `skills.bats` test red, then green |
 
 ## Retro triage
 
