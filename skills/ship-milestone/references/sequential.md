@@ -51,7 +51,7 @@ Used by `## Start a child` and by ship's docs and Gate pending hooks.
 3. The three uses:
    - the `--base` and `base_branch` of `## Start a child`;
    - `stacked_on: <dep>` on dispatch row D13 (ship's docs hook), from which the doc-writer writes the stacked introduction (this PR builds on the PR for issue #`<dep>` and must be merged after it), with `check-pr-intro.sh` run as ship runs it;
-   - the parent id in `ship/SKILL.md` `## Gate pending` line.
+   - the parent id in the `ship/SKILL.md` `## Gate pending` line.
 4. Stacking is decided without a `gh` call. A dependency that was closed at selection is not in `stack_on`.
 
 ## After a child
