@@ -38,19 +38,19 @@ Run each with the Bash tool exactly as written, with `<id>` and `<k>` filled in.
 
 F1, the issue list (row 4):
 
-```
+```sh
 jq -r '.issues | map(tostring) | join(",")' .aew/runs/<id>/state.json
 ```
 
 F2, the revision `<v_k>` of issue k (row 7):
 
-```
+```sh
 jq -r '[.history[] | (.note // "") | select(startswith("spec revision: #" + $k + " v")) | ltrimstr("spec revision: #" + $k + " v") | tonumber] | max // 1' --arg k <k> .aew/runs/<id>/state.json
 ```
 
 F3, the commit suffix (row 12):
 
-```
+```sh
 jq -r '.issues | map("#" + tostring) | join(", ")' .aew/runs/<id>/state.json
 ```
 
