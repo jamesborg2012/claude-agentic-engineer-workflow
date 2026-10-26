@@ -566,9 +566,10 @@ Otherwise it recommends **sequential**.
 
 **Recorded deviations (prompt 06).**
 
-- **C1.** The AC count is the script's quick count of the issue body's acceptance-criteria list, not a spec analysis; the wording above replaces "once analysed". James confirms at plan approval.
+- **C1.** The AC count is the script's quick count of the issue body's acceptance-criteria list, not a spec analysis; the wording above replaces "once analysed". James confirmed this at plan approval on 2026-10-26.
 - **C2.** A dependency cycle or stack conflict stops before any write and asks in its stop message, not through AskUserQuestion.
-- **C3.** Bulk QA evidence goes to `docs/qa/m-<n>/` (not §6's `docs/qa/<issue>/`). The prompt's `gh-milestone.sh issues` fetch is the new `select` subcommand of the same script, which reuses its `gh` call.
+- **C3.** Bulk QA evidence goes to `docs/qa/m-<n>/` (not §6's `docs/qa/<issue>/`).
+- **`select` wording.** The prompt's `gh-milestone.sh issues` fetch is the new `select` subcommand of the same script, which reuses its `gh` call.
 - **C4.** The run dir gains `issues/<k>/` and `index.json` (§7.1), with no renamed artefact. The stacked PR carries the stacked introduction only, with no extra summary line.
 - **AC-24 over AC-25.** AC-25 lets `preflight.md` gain only the bulk path overrides, but `preflight.md` `## Check 5. No other active run` also gains the two-way milestone exception that AC-24 requires, as one continuation line.
 
