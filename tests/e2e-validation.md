@@ -702,6 +702,9 @@ Q5. Where should the request counts be kept? → Server memory, no new dep (reco
 | Introduction (AC-14), S3.1 | **gap, fixed** | check exit 0 and true, but it stated the limit and response as plain facts: it did not say the issue left them open and James decided them (the plan requires the clarification to be mentioned). Fixes `22b901f` and `468ed5f` |
 | Introduction (AC-14), S3.3 | **accurate** | "The issue gave no numbers, so James answered the open questions: the limit is 5 per 10 minutes, every attempt counts even if it fails, visitors are told apart by network address, and the form shows the message above." Its "production build check was not run" was true of this run (before `97291e4`); the executor's build passed |
 
+Merge (CP-3): James merged PR #16 with a normal merge commit (`f72586b`, two parents) and deleted the branch; issue #3
+closed; `main` fast-forwarded.
+
 Cycles: review 0, fix 0. Duration: 30 minutes plus two re-runs of about 3 minutes. Problems: five plugin fixes
 (`22b901f`, `468ed5f`, `97291e4`, `88f26c7`, `d141b4d`).
 
