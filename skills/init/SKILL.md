@@ -217,6 +217,8 @@ jq -r -s '.[0] as $e | .[1] as $q
 Then ask **one** AskUserQuestion round: only the inferred values not already in the existing config, plus the
 Playwright offer when §4 found a UI project and no `@playwright/test`. Each question puts the recommended
 answer first, its label ending "(recommended)", with one or two alternatives ("Other" is always available).
+Ask every inferred value, `retro.repo` included, even one that looks like the only sensible answer: the user
+may file retro items in another repo (a fork, or a sandbox repo when the plugin repo is out of reach).
 
 The Playwright question is: "Set up Playwright and axe for UI QA now? This installs `@playwright/test` and
 `@axe-core/playwright` as dev dependencies and downloads Chromium." It recommends **skip** (QA sets Playwright

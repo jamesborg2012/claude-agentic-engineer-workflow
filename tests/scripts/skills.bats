@@ -520,6 +520,13 @@ git-branch.sh')"
   [ "$got" = "1 2 3 4 5 6 7 8 9 10 11 12 13 " ] || { printf 'init sections: %s\n' "$got" >&2; return 1; }
 }
 
+@test "init: §5 asks every inferred value, retro.repo by name" {
+  local s5
+  s5=$(awk '/^## 5\. /{f=1; next} /^## 6\. /{f=0} f' "$REPO_ROOT/skills/init/SKILL.md")
+  grep -q 'retro.repo' <<< "$s5" || { echo "§5 does not name retro.repo" >&2; return 1; }
+  grep -q 'only sensible' <<< "$s5" || { echo "§5 does not forbid skipping an obvious inferred value" >&2; return 1; }
+}
+
 @test "ship, ship-milestone, resume and prompt: every file-and-heading citation resolves" {
   local f c cf h p n bad="" total=0 ship_n=0 ms_n=0
   while IFS= read -r f; do
