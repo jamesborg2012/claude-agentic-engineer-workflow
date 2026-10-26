@@ -71,12 +71,10 @@ namespaced `/aew:<skill>`.
 |---|---|
 | [`/aew:init`](#aewinit) | Set a project up for aew |
 | [`/aew:ship <issue>`](#aewship) | Deliver one issue as a pull request |
+| [`/aew:ship-milestone <milestone>`](#aewship-milestone) | Deliver a whole milestone, in one PR or one PR per issue |
 | [`/aew:resume [<run-id>]`](#aewresume) | Continue an interrupted run |
 | [`/aew:status [<run-id>]`](#aewstatus) | Show the runs in the project |
 | [`/aew:prompt <issue>`](#aewprompt) | Turn an issue into one self-contained prompt |
-
-`/aew:ship-milestone` (one run per milestone) is coming in a later release. Until then `ship` and `resume`
-refuse a milestone id (`m-<n>`) with a message saying so.
 
 ### Pipeline
 
@@ -180,6 +178,30 @@ headless run, the run stays pending and prints how to answer it with `/aew:resum
 revised, the issue body shows the new version on top, earlier versions are kept below it and a
 comment lists the changes.
 
+### /aew:ship-milestone
+
+Syntax: `/aew:ship-milestone <milestone> [--bulk|--sequential] [--auto]`
+
+```text
+/aew:ship-milestone 3
+/aew:ship-milestone "Sprint 3" --sequential --auto
+```
+
+Takes a whole GitHub milestone through aew, as one run with the id `m-<n>`. `<milestone>` is its
+number or its title. `--auto` skips the plan-approval gate, as in `ship`.
+
+**Mode.** Without a flag it recommends bulk or sequential for this milestone and asks you to confirm
+once. `--bulk` or `--sequential` skips that question.
+
+**Bulk.** One combined pipeline on one branch, and one pull request that closes every issue in the
+milestone.
+
+**Sequential.** One `ship` run per issue, in dependency order. Each pull request is stacked on the
+branch of the issue it depends on, so merge them in order. A blocked or failed child stops the
+sequence.
+
+Either way, aew posts a milestone report comment on every issue in the milestone.
+
 ### /aew:resume
 
 Syntax: `/aew:resume [<run-id>]`
@@ -193,7 +215,8 @@ Continues an interrupted or blocked run. With no argument it uses the current ru
 pending gate, or re-enters `ship` at the recorded stage after checking the config, `gh`, the working
 tree and the branch. It never re-runs an earlier stage. A finished run is reported, not restarted:
 a `failed` run points you to `/aew:ship <issue> --from <stage>`. It asks only what the pending gate
-asks.
+asks. A milestone run (`/aew:resume m-3`) continues too: bulk like one issue, sequential at its
+first unfinished child; a child's id continues its milestone.
 
 ### /aew:status
 
@@ -207,7 +230,8 @@ Syntax: `/aew:status [<run-id>]`
 Read-only. With no argument it lists every run with its status, stage, last update, whether it is
 current and its title. With a run id it shows that run's state, the last 10 log lines, the review
 and fix cycles used against their limits, the pending gate if any, and the next action to take. It
-asks nothing and writes nothing.
+asks nothing and writes nothing. For a sequential milestone run it lists each child with its status,
+stage and PR.
 
 ### /aew:prompt
 
