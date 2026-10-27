@@ -43,8 +43,9 @@ only when an entry needs one and no existing heading fits.
 ## 4. Size cap
 
 The cap is `claude_md.max_lines` from `.aew/config.json`, or 300 when it is unset (the schema default).
-Count lines by reading the file; the doc-writer has no Bash. The count is the last line number the Read tool shows, so every run counts the same way. The cap applies to the whole file after
-curation, not to the new entries.
+Count lines by reading the file; the doc-writer has no Bash. The count is the last line number the Read
+tool shows, so every run counts the same way. The cap applies to the whole file after curation, not to the new
+entries.
 
 ## 5. Examples
 

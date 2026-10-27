@@ -580,7 +580,7 @@ git-branch.sh')"
 
 @test "retro fixes from prompt 07 stay in their prompts" {
   local bad=""
-  grep -qF 'the last line number the Read tool shows' "$REPO_ROOT/skills/claude-md-curation/SKILL.md" || bad="$badskills/claude-md-curation/SKILL.md"$'\n'
+  grep -qF 'The count is the last line number the Read' "$REPO_ROOT/skills/claude-md-curation/SKILL.md" || bad="$badskills/claude-md-curation/SKILL.md"$'\n'
   grep -qF 'Copy test counts from the runner'\''s output' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
   grep -qF 'reuse the exact strings the brief gives' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
   grep -qF 'give the repeat count and the result in the report' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
