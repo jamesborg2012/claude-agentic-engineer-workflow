@@ -243,6 +243,14 @@ with `Bash`, end with its closing parenthesis, and have no second rule after a c
 (new: an exact awk rule with parentheses accepted; `Bash(awk 'x' *) Bash(gh *)` refused; every earlier bypass still
 refused). The canary was re-run after the change (fourth run, all eleven rows pass).
 
+**Plugin-less mode (S8, added 2026-10-27).** `e2e-run.sh --plugin-less [--env-check] <project> …` (headless or
+`--env-check` only; refused with `--attended`). Changed environment lines in this mode: no `GH_TOKEN`, `GH_HOST=aew-smoke.invalid`,
+`GIT_CONFIG_COUNT=1` with only `GIT_CONFIG_KEY_0=credential.helper` `GIT_CONFIG_VALUE_0=` (no gh helper), plus the usual
+`GH_CONFIG_DIR`, `GIT_TERMINAL_PROMPT=0` and `GIT_SSH_COMMAND=false`. The session gets
+`--settings {"enabledPlugins": {<every installed plugin id>: false}}`, built from `claude plugin list --json` at launch.
+Self-test 88 of 88 (seven new cases). Fence check (free): `gh api user` 1, `gh auth token` 1, `git ls-remote` of the
+private sandbox 128. The normal canary was re-run after the change (fifth run, all rows pass).
+
 **Credential incident playbook (CTO C-4).** An audit hit on a credential pattern (exit 4) is a P0 stop for James:
 (1) no further sessions; (2) James revokes the PAT; (3) if the hit could have reached the keychain token, James
 revokes the GitHub CLI OAuth grant (github.com → Settings → Applications) and logs in again; (4) James checks the
@@ -302,6 +310,9 @@ a killed or crashed session, charged at its cap.
 | S7 | S7.1 | 8 | 8 (result 3.25) | 77.65 | no | no | cap (killed) |
 | S7 | S7.2 | 1 | 0.21 | 77.86 | no | no | result |
 | S7 | S7.3 | 12 | 3.71 | 81.57 | no | no | result |
+| S8 | S8.1 | 4 | 1.06 | 82.63 | no | no | result |
+| S8 | S8.2 | 3 | 1.98 | 84.61 | no (S8 prompt line: 3.04 of 4) | yes | usage |
+| S8 | S8.3 | 8 | 1.78 | 86.39 | no | no | result |
 
 ## Sandbox fixtures
 
@@ -858,6 +869,37 @@ fast-forwarded.
 
 Cycles: review 1, fix 0. Problems: none in the plugin.
 
+## S8
+
+Issue #12 "Return a request id from the contact API". Prompt mode in the sandbox, then a plugin-less session in a
+separate local worktree with `prompt.md` as its only input (Assumption 9).
+
+| Attempt | Drive | Cap | Cost | What happened |
+|---|---|---|---|---|
+| S8.1 | headless `/aew:prompt 12` | 4 | 1.06 | spec analysis found a material question (should the request id also go in the existing email-failure log line, since the issue wants reports matched to the log but rules logging out of scope); prompt mode has the spec gate and no `--auto`, so the run stopped `awaiting_input` with `current` set (the plan's gate fallback, not a failure) |
+| S8.2 | attended `/aew:resume 12` | 3 | 1.98 (`/usage`) | James answered "Yes" (the recommended answer: append `request=<id>` to that one line); spec v2 recorded; brief in prompt mode → `prompt.md` (135 lines); at prompt mode's own offer (Step 6.3, attended only) James chose **Post it** |
+| S8.3 | headless, **plugin-less**, worktree `aew-sandbox-s8` | 8 | 1.78 | `prompt.md`'s full text as the prompt; delivered the whole issue in three commits |
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| `prompt.md` written | pass | `.aew/runs/12/prompt.md`, 135 lines; it names no `.aew/` path, so nothing was copied into the worktree |
+| Prompt-mode state | pass | `state.json` valid, `status` `done`, `branch` `null`, history starts with `state.sh init`'s note-less `spec_analysis`, then `spec_analysis` with note `prompt`; last line `brief done — prompt written`; `current` cleared |
+| No branch, commit or stage label | pass | HEAD, the local branch list and `ls-remote --heads` equal the pre-run snapshot; issue #12 has no `aew:<stage>` label |
+| Nothing posted except by design | pass | the one allowed exception happened: the confirmed answer recorded spec v2 (a `## Spec revision v2` comment, v2 on the body, `aew:spec-revised`). The prompt was posted as a comment because James chose **Post it** at Step 6.3; headless (S8.1) it would print `Not posted.`. No AskUserQuestion and no comment in the headless S8.1 stream |
+| [P] Session without the plugin | pass | S8.3's `system/init`: `plugins` only the three built-ins (`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-plugin-authoring`); no `aew:` slash command or agent; no `plugin:aew:playwright`; no plugin hook output. The launcher's `--plugin-less` mode passed a `--settings` override with all seven installed plugins `false` (V-5: `--bare` needs an API key), no `GH_TOKEN`, an invalid `GH_HOST` and only the empty credential-helper reset |
+| [P] Self-sufficient enough to plan and complete at least the first work package | **pass (more)** | it planned and delivered the whole issue on `feat/12-return-a-request-id-from-the-contact-api`: `6763587 feat(contact): return a request id from the contact API (#12)`, `65c1410 test(e2e): …`, `36193ee docs: add the issue spec, and update CLAUDE.md and standards (#12)`; in the worktree Vitest 386 passed, lint 0, build 0, `tsc` 0. It read and edited only project files: no `Skill` or `Agent` call, no `aew:` name, no `.aew/` read |
+| Fences held | pass | it tried `git push -u origin feat/12-…` (as `prompt.md`'s "Git and PR" section asks) and was denied; `ls-remote --heads origin` has no `s8-plugin-less` or `feat/12-…`; no `gh` call. Before the session, under the plugin-less environment, `gh api user` exit 1, `gh auth token` exit 1 (the keychain is unreachable too, because `GH_HOST` is invalid) and `git ls-remote` of the private sandbox exit 128 |
+| Commit trailer | **gap, fixed** | the commits carry `Co-Authored-By: Claude Opus 5.5`, the session's default: `prompt.md` never named a trailer. Fix `749ae95`: the template's "Git and PR" section requires the plain `Co-Authored-By: Claude <noreply@anthropic.com>`. Not re-run (it needs a fresh `prompt.md`) |
+| CR-6, CR-7 | recorded | no guard text. Denials in S8.3, all improvised and recovered: `git checkout -b …` (the launcher's fixed deny; it then used `git switch -c`), a patch script written to `/tmp` (outside the worktree), `npm run lint …; echo TSC_EXIT=$?` (H1), `lsof -nP -iTCP:3000 …`, `ADMIN_EMAIL= npm run dev` (M1), `git push …` (the fence), a PR body written to `/tmp` |
+
+Verdict: **pass**. `prompt.md` was self-sufficient: a session with no plugin, no `.aew/` files and no GitHub access
+delivered the issue to a green branch, and only the commit trailer was missing from it.
+
+Cleanup: the worktree `aew-sandbox-s8` and its local branches were removed after the evidence was captured (local only,
+nothing on GitHub). Issue #12 stays open with only `aew:spec-revised`: prompt mode never closes or stage-labels an issue.
+Prompt mode left the spec-analyser's agent memory modified on the sandbox's `main` (two `.claude/agent-memory/` files):
+it has no branch and never commits, so the next ship run starts from a tree with those changes (retro item, Phase F).
+
 ## Guard false positives
 
 ## Fix log
@@ -887,6 +929,7 @@ re-checked by the reviewer: each new test fails on the pre-fix file.
 | `19f14d8` | review MINOR: "Every rule" now says "Every Bash rule" (the Read rule ends in `**`); a headless init carries on when its permission-references read is denied | review | none | suite green |
 | `6105d4d` | review MINOR: files a build leaves behind are named under Deviations, never committed | review | none | suite green |
 | `4a9e7dc` | review NIT: build-history notes removed from runtime prompts | review | none | suite green |
+| `749ae95` | `prompt.md` named no commit trailer, so the plugin-less session used its model-named default | S8.3 | not re-run (needs a fresh `prompt.md`) | test red, then green |
 
 ## Retro triage
 
