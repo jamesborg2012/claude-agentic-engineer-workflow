@@ -94,7 +94,7 @@ Entered from `SKILL.md` `## Stage: plan` step 5 when `auto` is false and the pla
 
 ## Recording a spec revision
 
-Run it after spec-analyser (first run or D2) returns `ok`. It runs only when `jq '.changes | length' <rd>/spec-changes.json` is greater than 0 and `jq '.version' <rd>/spec-changes.json` is greater than `state.sh get spec_revision`. Otherwise skip it, so a resumed or repeated `ok` never posts twice. `<N>` is that version.
+Run it after spec-analyser (first run or D2) returns `ok`. From here on `spec-final.md` is the spec; `issue.json` and `00-issue-original.md` keep the issue as it was fetched, and nothing re-fetches them. It runs only when `jq '.changes | length' <rd>/spec-changes.json` is greater than 0 and `jq '.version' <rd>/spec-changes.json` is greater than `state.sh get spec_revision`. Otherwise skip it, so a resumed or repeated `ok` never posts twice. `<N>` is that version.
 
 1. Render the comment to a file, so the JSON never enters context:
 
