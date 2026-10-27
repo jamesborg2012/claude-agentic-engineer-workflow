@@ -298,6 +298,7 @@ a killed or crashed session, charged at its cap.
 | S4 | S4.1 | 12 | 1.94 | 30.66 | no | no | result |
 | S4 | S4.2 | 10 | 9.74 | 40.40 | no (S4's line: 11.68 of 12) | yes | usage |
 | S5 | S5.1 | 25 | 11.82 | 52.22 | no | yes | usage |
+| S6 | S6.1 | 30 | 17.43 | 69.65 | no | no | result |
 
 ## Sandbox fixtures
 
@@ -788,6 +789,39 @@ and #7 closed; milestone 1 shows 0 open, 3 closed; `main` fast-forwarded.
 
 Cycles: review 0, fix 1. Duration: 43 minutes. Problems: none in the plugin.
 
+## S6
+
+### S6.1 (headless, `--sequential --auto`, 2026-10-27)
+
+Milestone 2 "Submissions log": #8 (store module) → #9 (`GET /api/submissions`, `Depends on #8`) → #10 (`/submissions`
+page, `Depends on #9`). `e2e-run.sh <sandbox> S6.1 30 allow-ship.txt "/aew:ship-milestone 2 --sequential --auto"`,
+with the dev server pre-started (harness decision). 07:49 to 08:37 (48 minutes), $17.43, cap $30. No gate, no budget
+stop between children.
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| [P] `ship-milestone --sequential` | pass | `m-2/index.json` `order` `[8,9,10]`, children `["done","done","done"]`; child runs `8`, `9`, `10` each `done` |
+| [P] Correct order | pass | child logs: #8 07:49 to 08:00, #9 08:01 to 08:15, #10 08:16 to 08:37; each child started after its dependency finished |
+| [P] Stacked PRs | pass | PR #19 `feat/8-…` → `main`; PR #20 `feat/9-…` → `feat/8-…`; PR #21 `feat/10-…` → `feat/9-…`; `git merge-base --is-ancestor` true for 8→9 and 9→10 |
+| Each child: review and QA | pass | review 0 and fix 0 for every child; 15/15, 9/9 (11 checks) and 17/17 ACs |
+| CR-1, CR-2 | pass | each child `state.json` valid and `done`; each issue `aew:ready-for-review aew:spec-revised`; a milestone summary comment on #8, #9 and #10 |
+| CR-4 per child branch | pass | lint 0 on all three; Vitest 258, 279 and 305 passed; build 0 on all three; `tsc` 0 once the route types exist (see the note below) |
+| CR-5 | pass | 4 commits per child, plain trailer |
+| CR-6, CR-7 | none | no guard text and no permission denial in the stream (966 tool uses, audit clean) |
+| Retro items | filed | nine items in `aew-sandbox-retro` (#16 to #24); the session's final report named the sandbox repo instead (a wording slip, triaged in Phase F) |
+| Introductions (AC-14) | 2 accurate, 1 **fail, fixed** | #19 (single variant) and #20 (stacked: "This builds on the PR for issue #8 … and must be merged after it") pass the check and are accurate. #21 is accurate and stacked, but `check-pr-intro.sh` fails: 260 words, maximum 250, after the one retry (first drafts: #9 292, #10 294 words). Fix `4b2eca1`: aim at about 200 words, and a length retry cuts to that. Not re-runnable on #21 (a standalone `--from docs` would drop `stacked_on`), so verified in S7 |
+| Stacked merge protocol (CP-3) | pass | #19: merge commit `003d569`, branch deleted → **GitHub retargeted** #20 to `main`; #20's files only child 2's own. #20: merge commit `30810fc`, branch deleted → **GitHub retargeted** #21; its files only child 3's own. #21: merge commit `50cd381`, branch deleted. #20's `closingIssuesReferences` was still empty after the retarget, yet #9 closed on the merge (`COMPLETED`) |
+| After all three | pass | #8, #9, #10 `CLOSED`; milestone 2 `open=0 closed=3`; `main` holds `lib/submissions.ts`, `app/api/submissions/route.ts` and `app/submissions/page.tsx` |
+
+**Typecheck on a fresh checkout (platform behaviour).** On a clean checkout of any child branch, `npx tsc --noEmit`
+(init's inferred typecheck) fails with `Cannot find name 'LayoutProps'`: Next.js 16 generates that global type into
+`.next/` during a build or dev run. After `npm run build`, `tsc` exits 0. A first CR-4 pass also failed on stale
+generated types left in `.next/` by the executor's own branch switching (`Cannot find module '../../app/submissions/page.js'`);
+removing `.next` cleared it. Both go to README troubleshooting; whether init should infer `next typegen` first is a
+retro item.
+
+Cycles: review 0, fix 0 for each child. Duration: 48 minutes. Problems: the introduction length (`4b2eca1`).
+
 ## Guard false positives
 
 ## Fix log
@@ -807,6 +841,7 @@ Cycles: review 0, fix 1. Duration: 43 minutes. Problems: none in the plugin.
 | `d141b4d` | the orchestrator checked ARTEFACTS with a `for` loop, denied headless (recurred) | S3.2, S3.3 | next headless run | test red, then green |
 | `637e591` | the spec analyser added ACs about how a criterion is tested, turning one manual check into five | S4.2 | not re-run (about $12) | test red, then green |
 | `43ee2fe` | AC-20: the "no rewrite of a real issue body" limitation lifted after the evidence (v1 byte-identical on #1, #3 and #4; S4's manual-tests block lost no line) | S1, S3, S4 | none | the limitation line is gone from `skills/github-ops/SKILL.md` and `CHANGELOG.md`; suite green |
+| `4b2eca1` | first introduction drafts ran 292 and 294 words; #21's retry still came back at 260 against the 250 limit | S6.1 | S7 (next single-issue run) | test red, then green |
 
 ## Retro triage
 
