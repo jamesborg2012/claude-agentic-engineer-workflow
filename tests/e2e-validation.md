@@ -938,7 +938,116 @@ re-checked by the reviewer: each new test fails on the pre-fix file.
 | `6105d4d` | review MINOR: files a build leaves behind are named under Deviations, never committed | review | none | suite green |
 | `4a9e7dc` | review NIT: build-history notes removed from runtime prompts | review | none | suite green |
 | `749ae95` | `prompt.md` named no commit trailer, so the plugin-less session used its model-named default | S8.3 | not re-run (needs a fresh `prompt.md`) | test red, then green |
+| `df754c8`, `7d92792`, `7a5a4db`, `95422c5`, `2976aeb`, `1e5d984`, `8eff87e`, `aefccf8`, `75c9a3f` | nine small retro items (#26, #9, #10, #20, #11, #24, #25, #21, #28), one commit each | retro triage | none: tests only | `skills.bats`, `conventions.bats` and the full suite green after each |
 
 ## Retro triage
+
+### Items filed by the runs (CR-9)
+
+All 27 items the runs filed in `jamesborg2012/aew-sandbox-retro` (27 open, none closed), listed from `gh issue list --state all` on 2026-10-27. "Seen again" comments came from the S2 and S3 re-runs of the same run ids, so the de-duplication worked.
+
+| Sandbox # | Title | Filed by run | Seen again in runs |
+|---|---|---|---|
+| 1 | Standards conflict with the spec's status code has no formal override path | 1 | — |
+| 2 | Test-case ids do not appear in the test names | 1 | — |
+| 3 | Dev report miscounts its own unit tests | 2 | 2 |
+| 4 | Test fixtures invent API messages instead of using the real contract | 2 | 2 |
+| 5 | QA should check that a reused dev server is serving current assets | 2 | 2 |
+| 6 | Review nits and minors are not routed anywhere when the verdict is approve | 2 | 2 |
+| 7 | QA phase B cannot run the build, so the route-exports check is never done | 3 | 3, 3 |
+| 8 | Review minors about weak test preconditions were not routed back | 3 | 3, 3 |
+| 9 | Plan-time test isolation for stateful endpoints | 3 | 3, 3 |
+| 10 | Developer edits a file outside its work package only to satisfy an older QA test | 4 | — |
+| 11 | Plan should warn doc-writer and QA about literal strings that a repository-search test forbids | 4 | — |
+| 12 | Reviewer follow-ups for CLAUDE.md are passed only in free text | 4 | — |
+| 13 | Review cannot catch browser-timing bugs the plan flagged as QA-only | m-1 | — |
+| 14 | Developer fix had no automated reproducer outside QA's spec | m-1 | — |
+| 15 | Bulk run PR needs a documented screenshot table limit | m-1 | — |
+| 16 | Brief-compiler splits one AC into several without a mapping back to the issue | 8 | — |
+| 17 | Doc-writer curation guard for repository-search tests is only in agent memory | 8 | — |
+| 18 | Issue body is not refreshed after an automatic spec revision | 9 | — |
+| 19 | Brief cites a criterion range that does not match its AC ids | 9 | — |
+| 20 | Doc-writer cannot confirm the CLAUDE.md line count without Bash | 9 | — |
+| 21 | QA engineer wrote a flaky populate step before checking it against hydration | 10 | — |
+| 22 | QA engineer asserted an HTML attribute in the wrong case | 10 | — |
+| 23 | PR introduction failed the check | 10 | — |
+| 24 | Doc-writer has no source for the exact test file behind each TC | 10 | — |
+| 25 | Developer report claimed fixtures were escapes when they were raw characters | 11 | — |
+| 26 | Standards-setter has no rule for look-alike Unicode test fixtures | 11 | — |
+| 27 | QA has no command for the build step the brief lists in its Definition of Done | 11 | — |
+
+### Transfer
+
+Executor session under the keychain token (`keychain-env`, `gh auth status` keyring), plugin repo `PRIVATE`. `gh label create retro` (colour `0E8A16`) in the plugin repo, then `gh issue transfer <n> jamesborg2012/claude-agentic-engineer-workflow` one at a time. **V-10 (transfer behaviour, 2026-10-27):** the `retro` label survives when the target has a label of that name (on the first transfer it read as missing for a moment, then appeared); comments move with the issue (sandbox #3 kept its "Seen again" comment); no milestones were involved. Retro repo afterwards: 0 open. Plugin number = sandbox number + 6 for all 27.
+
+| Sandbox # | Plugin # | Label kept on transfer | Label re-added |
+|---|---|---|---|
+| 1 | 7 | yes | no |
+| 2 | 8 | yes | no |
+| 3 | 9 | yes | no |
+| 4 | 10 | yes | no |
+| 5 | 11 | yes | no |
+| 6 | 12 | yes | no |
+| 7 | 13 | yes | no |
+| 8 | 14 | yes | no |
+| 9 | 15 | yes | no |
+| 10 | 16 | yes | no |
+| 11 | 17 | yes | no |
+| 12 | 18 | yes | no |
+| 13 | 19 | yes | no |
+| 14 | 20 | yes | no |
+| 15 | 21 | yes | no |
+| 16 | 22 | yes | no |
+| 17 | 23 | yes | no |
+| 18 | 24 | yes | no |
+| 19 | 25 | yes | no |
+| 20 | 26 | yes | no |
+| 21 | 27 | yes | no |
+| 22 | 28 | yes | no |
+| 23 | 29 | yes | no |
+| 24 | 30 | yes | no |
+| 25 | 31 | yes | no |
+| 26 | 32 | yes | no |
+| 27 | 33 | yes | no |
+
+### Triage
+
+Small means a one-commit fix with no design decision. Fixed items close through the release PR (`Closes #n`), so an issue stays open until its fix is on `main`: a departure from AC-29's "closed with a comment naming the commit" in wording only; the end state is the same by F8. Not-small items got a "left open: why, what it would take" comment.
+
+| Plugin # | Title | Seen in runs | Class | Decision |
+|---|---|---|---|---|
+| 7 | Standards conflict with the spec's status code has no formal override path | 1 | not small | open: new brief field for standards overrides |
+| 8 | Test-case ids do not appear in the test names | 1 | not small | open: cross-agent TC naming convention |
+| 9 | Dev report miscounts its own unit tests | 2 | small | fixed: `7d92792` |
+| 10 | Test fixtures invent API messages instead of using the real contract | 2 | small | fixed: `7a5a4db` |
+| 11 | QA should check that a reused dev server is serving current assets | 2 | small | fixed: `2976aeb` |
+| 12 | Review nits and minors are not routed anywhere when the verdict is approve | 2 | not small | open: new routing for findings under an approve verdict |
+| 13 | QA phase B cannot run the build, so the route-exports check is never done | 3 | small | fixed: `97291e4` (during S3) |
+| 14 | Review minors about weak test preconditions were not routed back | 3 | not small | open: same as #12 |
+| 15 | Plan-time test isolation for stateful endpoints | 3 | not small | open: planning convention for stateful endpoints |
+| 16 | Developer edits a file outside its work package only to satisfy an older QA test | 4 | not small | open: which agent owns source-grepping tests |
+| 17 | Plan should warn doc-writer and QA about literal strings that a repository-search test forbids | 4 | not small | open: new "forbidden literals" brief field |
+| 18 | Reviewer follow-ups for CLAUDE.md are passed only in free text | 4 | not small | open: new docs follow-ups section |
+| 19 | Review cannot catch browser-timing bugs the plan flagged as QA-only | m-1 | not small | open: when a pre-agreed fallback is built |
+| 20 | Developer fix had no automated reproducer outside QA's spec | m-1 | small | fixed: `95422c5` |
+| 21 | Bulk run PR needs a documented screenshot table limit | m-1 | small | fixed: `aefccf8` |
+| 22 | Brief-compiler splits one AC into several without a mapping back to the issue | 8 | not small | open: new AC mapping section in the brief |
+| 23 | Doc-writer curation guard for repository-search tests is only in agent memory | 8 | not small | open: needs more runs to generalise |
+| 24 | Issue body is not refreshed after an automatic spec revision | 9 | small | fixed: `1e5d984` |
+| 25 | Brief cites a criterion range that does not match its AC ids | 9 | small | fixed: `8eff87e` |
+| 26 | Doc-writer cannot confirm the CLAUDE.md line count without Bash | 9 | small | fixed: `df754c8` |
+| 27 | QA engineer wrote a flaky populate step before checking it against hydration | 10 | not small | open: QA technique guidance with examples |
+| 28 | QA engineer asserted an HTML attribute in the wrong case | 10 | small | fixed: `75c9a3f` |
+| 29 | PR introduction failed the check | 10 | small | fixed: `4b2eca1`, `d2dd7bc` (during S6) |
+| 30 | Doc-writer has no source for the exact test file behind each TC | 10 | not small | open: changes the parsed QA results table |
+| 31 | Developer report claimed fixtures were escapes when they were raw characters | 11 | not small | open: narrow; general evidence rule exists |
+| 32 | Standards-setter has no rule for look-alike Unicode test fixtures | 11 | not small | open: seed change across stacks |
+| 33 | QA has no command for the build step the brief lists in its Definition of Done | 11 | small | fixed: `97291e4` (during S3) |
+| 34 | Prompt mode leaves agent memory uncommitted on the default branch | S8 (executor) | not small | open: design choice |
+| 35 | Init's inferred typecheck fails on a fresh Next.js 16 checkout | S6 (executor) | not small | open: design choice |
+| 36 | Milestone final report names the project repo for retro items | S6 (executor) | not small | open: model prose, needs a report rule |
+
+Totals: 30 items (27 from the runs, 3 filed by the executor); 12 fixed (10 in Phase F, 2 earlier by validation fixes covering 3 items); 18 left open with a triage comment.
+
 
 ## Roll-up
