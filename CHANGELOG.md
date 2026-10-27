@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- README: install from GitHub pinned to a release tag (`#aew--v<version>`), with the upgrade steps, the init
+  re-run after an upgrade and the rule that every release bumps `version`; the local-folder install is now the
+  route for working on aew itself.
+
 ## [0.1.0] - 2026-10-27
 
 ### Added
