@@ -72,7 +72,6 @@ Stdout contract:
 
 ## Known limitations
 
-- No rewrite of a real issue body (`revise`, `manual-tests`) until prompt 07's sandbox end-to-end run passes. Sandbox issues only until then.
 - Rollback for a bad rewrite: GitHub's issue edit history ("edited" menu), or `00-issue-original.md` / `issue.json` in the run dir, which `fetch` writes verbatim.
 - `revise` and `manual-tests` read the body, then edit it; a human edit between the two is lost (lost-update race).
 - `gh-retro.sh` may drop the retro label when the token lacks triage rights; the issue is still filed.

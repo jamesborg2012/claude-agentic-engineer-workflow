@@ -86,7 +86,7 @@ Entered from `SKILL.md` `## Stage: plan` step 5 when `auto` is false and the pla
 
 1. Set pending: `state.sh status awaiting_plan_approval --note "gate:plan-approval 05-plan.md"`, then `gh-labels.sh stage <n> awaiting-approval`.
 2. Read `05-plan.md` in full (the only full read).
-3. Write a summary of 25 lines or fewer: the headline approach, the work packages (and which run in parallel), the challenges resolved, the risks, and whether every AC is mapped. Then, on its own line after the summary (not in its heading), print the path `.aew/runs/<id>/05-plan.md`. Ask one question, `Approve the plan for #<n>?`, with the options `Approve`, `Request changes` and `Stop`. Free text counts as Request changes, with the text as the notes. `Request changes` without text gets one follow-up question for the notes (answered through "Other"). If nothing comes back, the gate stays pending (`SKILL.md` `## Gate pending`).
+3. Write a summary of 25 lines or fewer: the headline approach, the work packages (and which run in parallel), the challenges resolved, the risks, and whether every AC is mapped. Ask one question whose question text is that summary, then a blank line, then the path `.aew/runs/<id>/05-plan.md` on its own line, then a blank line, then `Approve the plan for #<n>?`, with the options `Approve`, `Request changes` and `Stop`. The summary goes inside the question text, not only in a message before it, because the question is what the user sees at the gate: a gate asked without the summary and the path is a defect. Free text counts as Request changes, with the text as the notes. `Request changes` without text gets one follow-up question for the notes (answered through "Other"). If nothing comes back, the gate stays pending (`SKILL.md` `## Gate pending`).
 4. Apply:
    - Approve: go to `SKILL.md` `## Stage: develop`.
    - Request changes: go to `SKILL.md` `## Stage: plan` with the note `plan revision: request changes` and `notes:` set to the answer (dispatch row D7 only; QA phase A is not re-run). Then return to this gate.
@@ -94,7 +94,7 @@ Entered from `SKILL.md` `## Stage: plan` step 5 when `auto` is false and the pla
 
 ## Recording a spec revision
 
-Run it after spec-analyser (first run or D2) returns `ok`. It runs only when `jq '.changes | length' <rd>/spec-changes.json` is greater than 0 and `jq '.version' <rd>/spec-changes.json` is greater than `state.sh get spec_revision`. Otherwise skip it, so a resumed or repeated `ok` never posts twice. `<N>` is that version.
+Run it after spec-analyser (first run or D2) returns `ok`. From here on `spec-final.md` is the spec; `issue.json` and `00-issue-original.md` keep the issue as it was fetched; only a restart with `--from spec_analysis` re-fetches them. It runs only when `jq '.changes | length' <rd>/spec-changes.json` is greater than 0 and `jq '.version' <rd>/spec-changes.json` is greater than `state.sh get spec_revision`. Otherwise skip it, so a resumed or repeated `ok` never posts twice. `<N>` is that version.
 
 1. Render the comment to a file, so the JSON never enters context:
 

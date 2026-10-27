@@ -514,10 +514,103 @@ git-branch.sh')"
   report_offenders "prompt contract" "$bad"
 }
 
+@test "ship: the plan-approval question itself carries the summary and the plan path" {
+  local g
+  g=$(awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md")
+  grep -q 'question text' <<< "$g" || { echo "plan-approval: the summary is not part of the question text" >&2; return 1; }
+  grep -q '05-plan.md' <<< "$g" || { echo "plan-approval: no plan path" >&2; return 1; }
+}
+
+@test "init: template 1 pre-approves reading the plugin's own files" {
+  local t1
+  t1=$(awk '/^Template 1 is/{f=1} /^Template 2 is/{f=0} f' "$REPO_ROOT/skills/init/SKILL.md")
+  grep -qF '"Read(/${CLAUDE_PLUGIN_ROOT}/**)"' <<< "$t1" || { echo "template 1 lacks Read(/\${CLAUDE_PLUGIN_ROOT}/**)" >&2; return 1; }
+}
+
+@test "doc-writer: the introduction names new dependencies and plan decisions taken under --auto" {
+  local pe
+  pe=$(awk '/^## In plain English$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/agents/doc-writer.md")
+  grep -q 'new dependenc' <<< "$pe" || { echo "doc-writer intro rules do not mention new dependencies" >&2; return 1; }
+  grep -q -- '--auto' <<< "$pe" || { echo "doc-writer intro rules do not mention decisions under --auto" >&2; return 1; }
+}
+
+@test "doc-writer: the introduction says what the issue left open and what James decided at a gate" {
+  local pe
+  pe=$(awk '/^## In plain English$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/agents/doc-writer.md")
+  grep -q 'left open' <<< "$pe" || { echo "doc-writer intro rules do not ask for what the issue left open" >&2; return 1; }
+}
+
+@test "developer: the feature-branch checks include commands.build" {
+  local f="$REPO_ROOT/agents/developer.md"
+  grep -qE '^9\. .*`commands\.build`' "$f" || { echo "developer step 9 (final checks) does not run commands.build" >&2; return 1; }
+  grep -qE '^4\. Run the full unit suite.*build' "$f" || { echo "developer fix mode does not run the build" >&2; return 1; }
+}
+
+@test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
+  grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
+    { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
+}
+
+@test "ship: the ARTEFACTS check is one test -f call per path, never a loop" {
+  grep -E '^2\. Every comma-separated ARTEFACTS path' "$REPO_ROOT/skills/ship/references/dispatch.md" | grep -q 'one call per path' ||
+    { echo "dispatch.md return check does not say one call per path" >&2; return 1; }
+}
+
+@test "spec-analyser: ACs state behaviour, never how a criterion is tested" {
+  awk '/^Rules for applying it:$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/agents/spec-analyser.md" | grep -q 'Behaviour, not test method' ||
+    { echo "spec-analyser has no behaviour-not-test-method rule" >&2; return 1; }
+}
+
+@test "doc-writer: the introduction aims well under the length limit, and a retry cuts below it" {
+  local f="$REPO_ROOT/agents/doc-writer.md"
+  grep -E '^Length:' "$f" | grep -q 'aim for about 200' || { echo "doc-writer length rule has no headroom target" >&2; return 1; }
+  awk '/^## Retry$/{f=1; next} /^## /{f=0} f' "$f" | grep -q 'about 200' || { echo "doc-writer retry does not cut to the target" >&2; return 1; }
+}
+
+@test "doc-writer: a retry is exempt from the fresh rewrite and cuts relative to the check's maximum" {
+  local f="$REPO_ROOT/agents/doc-writer.md"
+  grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*except a retry' "$f" || { echo "step 4 does not exempt the retry" >&2; return 1; }
+  awk '/^## Retry$/{f=1; next} /^## /{f=0} f' "$f" | grep -q 'under the maximum' || { echo "retry length target is not relative to the maximum" >&2; return 1; }
+}
+
+@test "prompt template: commits carry the plain Claude trailer" {
+  awk '/^## Git and PR$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/templates/artefacts/prompt.md" |
+    grep -qF 'Co-Authored-By: Claude <noreply@anthropic.com>' || { echo "prompt template has no plain trailer rule" >&2; return 1; }
+}
+
+@test "retro fixes from prompt 07 stay in their prompts" {
+  local bad=""
+  grep -qF 'The count is the last line number the Read' "$REPO_ROOT/skills/claude-md-curation/SKILL.md" || bad="$badskills/claude-md-curation/SKILL.md"$'\n'
+  grep -qF 'Copy test counts from the runner'\''s output' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
+  grep -qF 'reuse the exact strings the brief gives' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
+  grep -qF 'give the repeat count and the result in the report' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
+  grep -qF 'check it serves the current change' "$REPO_ROOT/skills/ui-qa/SKILL.md" || bad="$badskills/ui-qa/SKILL.md"$'\n'
+  grep -qF 'From here on `spec-final.md` is the spec' "$REPO_ROOT/skills/ship/references/gates.md" || bad="$badskills/ship/references/gates.md"$'\n'
+  grep -qF 'so the two numbering schemes never mix' "$REPO_ROOT/agents/brief-compiler.md" || bad="$badagents/brief-compiler.md"$'\n'
+  grep -qF 'put the table inside a `<details>` block' "$REPO_ROOT/agents/doc-writer.md" || bad="$badagents/doc-writer.md"$'\n'
+  grep -qF 'compare HTML attribute names case-insensitively' "$REPO_ROOT/agents/qa-engineer.md" || bad="$badagents/qa-engineer.md"$'\n'
+  report_offenders "retro rule missing from" "$bad"
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')
   [ "$got" = "1 2 3 4 5 6 7 8 9 10 11 12 13 " ] || { printf 'init sections: %s\n' "$got" >&2; return 1; }
+}
+
+@test "init: §5 asks every inferred value, retro.repo by name" {
+  local s5
+  s5=$(awk '/^## 5\. /{f=1; next} /^## 6\. /{f=0} f' "$REPO_ROOT/skills/init/SKILL.md")
+  grep -q 'retro.repo' <<< "$s5" || { echo "§5 does not name retro.repo" >&2; return 1; }
+  grep -q 'only sensible' <<< "$s5" || { echo "§5 does not forbid skipping an obvious inferred value" >&2; return 1; }
+}
+
+@test "init: the §13 clean-up is one line and an exact rule in template 2" {
+  local f="$REPO_ROOT/skills/init/SKILL.md" cmd
+  cmd=$(awk '/^## 13\. /{f=1} f && /^rm -f \.aew\/runs\/init-/{print; exit}' "$f")
+  [ -n "$cmd" ] || { echo "no rm -f line in §13" >&2; return 1; }
+  case $cmd in *'\') echo "§13 clean-up continues onto another line" >&2; return 1 ;; esac
+  grep -qF "\"Bash($cmd)\"" "$f" || { echo "template 2 lacks the exact rule Bash($cmd)" >&2; return 1; }
 }
 
 @test "ship, ship-milestone, resume and prompt: every file-and-heading citation resolves" {
@@ -596,7 +689,7 @@ git-branch.sh')"
 
 @test "every skill command is pre-approvable headless" {
   local f files=() bad
-  for f in "$REPO_ROOT"/skills/{init,ship,ship-milestone,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md "$REPO_ROOT"/skills/ship-milestone/references/*.md; do
+  for f in "$REPO_ROOT"/skills/{init,ship,ship-milestone,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md "$REPO_ROOT"/skills/ship-milestone/references/*.md "$REPO_ROOT"/skills/init/references/*.md; do
     [ -f "$f" ] && files+=("$f")
   done
   [ "${#files[@]}" -ge 15 ] || { printf 'only %s skill files found\n' "${#files[@]}" >&2; return 1; }
@@ -606,7 +699,7 @@ git-branch.sh')"
 
 @test "every existence or condition check prints its outcome" {
   local f files=() bad n=0
-  for f in "$REPO_ROOT"/skills/{init,ship,ship-milestone,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md "$REPO_ROOT"/skills/ship-milestone/references/*.md; do
+  for f in "$REPO_ROOT"/skills/{init,ship,ship-milestone,resume,status,prompt}/SKILL.md "$REPO_ROOT"/skills/ship/references/*.md "$REPO_ROOT"/skills/ship-milestone/references/*.md "$REPO_ROOT"/skills/init/references/*.md; do
     [ -f "$f" ] && files+=("$f") && n=$((n + $(grep -cE '(test|\[) [^`]*&& echo [a-z]+ \\?\|\\?\| echo [a-z]+' "$f" || true)))
   done
   [ "$n" -ge 10 ] || { printf 'only %s printed checks found\n' "$n" >&2; return 1; }

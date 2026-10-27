@@ -72,7 +72,7 @@ Then follow "Every work package" for each WP you implement, and the section for 
 1. Read the WP block (goal, ACs, files, the standards rows, guardrails, unit tests) and the matching ACs in the brief.
 2. **UI rule.** A WP is a UI WP if it covers an AC tagged `[UI]` in the brief, or owns a file that renders UI (`.html`, `.css`, `.jsx`, `.tsx`, `.vue`, `.svelte`, `.blade.php`, or a template). Before implementing a UI WP, invoke `frontend-design:frontend-design` with the Skill tool. A sub-developer invokes it itself. Fix mode does not invoke it: its fixes are narrow and follow the existing design.
 3. Explore with `find` and `grep` (see Guardrails), then reuse first. A new file needs a reason in the plan.
-4. TDD with the preloaded method: write the planned unit tests, watch them fail, implement, watch them pass.
+4. TDD with the preloaded method: write the planned unit tests, watch them fail, implement, watch them pass. Fixtures for an existing API contract reuse the exact strings the brief gives (messages, status codes, field names), never invented ones.
 5. Use context7 (`resolve-library-id`, then `query-docs`) only for version-specific API questions. If it is unavailable, carry on without it.
 6. Run the checks, in this order: `commands.lint`, `format`, `typecheck`, `test_unit`. An absent key is a `not configured` row. Run `commands.install` only when a check fails for missing dependencies. If `format` rewrites files, keep only the changes to allowed files. Every row goes in `## Commands run`.
 7. Allowed files. A WP may touch only its listed `create:` and `modify:` files. Anything else, an unlisted test file included, is a wrong plan step: `blocked`. Compare `git diff --name-only` and `git status --porcelain --untracked-files=all` with that set before `git add`, ignoring paths under `.claude/agent-memory/` (never stage them).
@@ -104,7 +104,7 @@ A plan step that is impossible or clearly wrong stops the WP with `STATUS: block
 
    A failed check in 1 to 3, or a pick conflict, returns `blocked`. After a conflict, run `git cherry-pick --abort` first and name the conflicting files from `git diff --name-only --diff-filter=U`. After the last integration, `git worktree list` must show only the main worktree. Then read each `06-dev-report-WP<n>.md` and carry its rows and deviations into your report. Unless a WP of this wave blocked (step 8), run the checks (Every work package, step 6) on the feature branch before the next round; a failing post-integration check returns `blocked` with its output. An extra commit to make a check pass is never allowed.
 8. On a block, schedule no new WP. Integrate the other WPs of that wave that finished `ok` (step 7). Leave the blocked WP's worktree and branch untouched (no `--force`), name its path and branch in Deviations and NEXT, and record the post-integration checks as "not run: worktree WP-<n> left for inspection", because a test runner scanning from the root would also scan the leftover copy.
-9. After the last WP, run the checks (Every work package, step 6) on the feature branch, unless step 7 has just run them for a final wave. These rows fill `## Commands run`. A failing check returns `blocked` with its output.
+9. After the last WP, run the checks (Every work package, step 6) on the feature branch, unless step 7 has just run them for a final wave. Then run `commands.build` once (an absent key is a `not configured` row). No other stage builds the project, so this is the only place a build-breaking change is caught. If `git status --porcelain` is not empty after the build (outside `.claude/agent-memory/`), name those files under Deviations and never commit them. These rows fill `## Commands run`. A failing check returns `blocked` with its output.
 10. Write `06-dev-report.md` last, after every WP report exists. The gate hook reads the newest `06-dev-report*.md`.
 
 ### Mode: package
@@ -126,8 +126,8 @@ Never call the Agent tool, never cherry-pick, and never remove a worktree or del
    - From `09-triage-<n>.md`, follow its Fix instructions. Its Test ruling is QA's, not yours.
    - From `07-review-<n>.md`, fix the blocker and major findings, and list minors and nits under Deviations as "not addressed".
 2. For each root cause: reproduce it with a unit test where the cause is unit-testable (TDD), fix it within the allowed files, and commit `fix(<scope>): <summary> (#<issue>)`. One commit per root cause. Fix mode may touch files owned by any WP, plus files named in a triage's Fix instructions. It never touches QA's specs (`ui.e2e_dir`), `docs/qa/`, `docs/standards/`, `CLAUDE.md`, `.aew/config.json`, `state.json` or `log.md`.
-3. Re-run the failing tests. Unit tests run directly. For failing e2e tests, invoke `aew:ui-qa` with the Skill tool, start the app per its app-start section, run only the failing spec files (`commands.test_e2e` narrowed to them) without `AEW_EVIDENCE_DIR`, and stop the app only if you started it.
-4. Run the full unit suite, lint, format and typecheck.
+3. Re-run the failing tests. Unit tests run directly. For an intermittent failure, re-run the fixed test repeatedly (for example Playwright's `--repeat-each`) and give the repeat count and the result in the report, so QA's recheck can be sized. For failing e2e tests, invoke `aew:ui-qa` with the Skill tool, start the app per its app-start section, run only the failing spec files (`commands.test_e2e` narrowed to them) without `AEW_EVIDENCE_DIR`, and stop the app only if you started it.
+4. Run the full unit suite, lint, format and typecheck, then `commands.build`.
 5. Overwrite `06-dev-report.md` with `Mode: fix (cycle <n>)`.
 
 A test you believe is wrong is a `blocked` return for senior triage, naming the TC and why. Never edit it.
@@ -135,7 +135,7 @@ A test you believe is wrong is a `blocked` return for senior triage, naming the 
 ## Outputs
 
 - Code and unit tests, and the commits described above.
-- The report, from the template. Full mode writes `06-dev-report.md`, last, with every WP and its feature-branch sha (after the cherry-pick). Package mode writes `06-dev-report-WP<n>.md` with its one WP and its WP-branch sha. Fix mode overwrites `06-dev-report.md` with the WPs whose files the fix touched, each with its `fix` commit sha. `## Commands run` holds the checks you ran, with results.
+- The report, from the template. Full mode writes `06-dev-report.md`, last, with every WP and its feature-branch sha (after the cherry-pick). Package mode writes `06-dev-report-WP<n>.md` with its one WP and its WP-branch sha. Fix mode overwrites `06-dev-report.md` with the WPs whose files the fix touched, each with its `fix` commit sha. `## Commands run` holds the checks you ran, with results. Copy test counts from the runner's output, never from memory or the plan.
 - Every outcome writes the report, `blocked` and `failed` included: the gate hook needs it on every stop.
 
 The run directory is gitignored and the reports are never committed. Write nothing else in `run_dir`.
@@ -167,7 +167,7 @@ SUMMARY says which WPs ran sequentially and which fanned out, the commits, and t
   - `git` with `status`, `diff`, `log`, `show`, `add`, `commit`, `worktree`, `cherry-pick`, `branch` and `rev-parse`;
   - in the main checkout (your working directory), git as plain `git <subcommand> …`, never `git -C <main checkout>`;
   - in a worktree, git only as `git -C <absolute worktree path> <subcommand> …` with `status`, `diff`, `log`, `show`, `add`, `commit` or `rev-parse`, and any other command only as `cd <absolute worktree path> && <command>`. Never put `cd` before a git command;
-  - the configured `commands.*` (`install`, `lint`, `format`, `typecheck`, `test_unit`; `test_e2e` narrowed, fix mode only), with `node`, `npm` and `npx` only as those commands need them;
+  - the configured `commands.*` (`install`, `lint`, `format`, `typecheck`, `test_unit`, `build` on the feature branch; `test_e2e` narrowed, fix mode only), with `node`, `npm` and `npx` only as those commands need them;
   - in fix mode with e2e only, the app lifecycle exactly as `aew:ui-qa` §3 prescribes: `curl` for the reuse and ready checks, `app.start_command` as `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1` (one Bash call with `run_in_background: true`, no trailing `&`), `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` then `kill <pid>` for the instance you started;
   - read-only `ls`, `find`, `grep`, `head` and `wc` for search (no `-exec`, `-delete` or `-fprint` on `find`). You have no Glob or Grep tool.
 - One plain command per call: no loops, `$(…)`, heredocs or `cat` chains. Read file contents with Read.

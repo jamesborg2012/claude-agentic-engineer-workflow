@@ -73,13 +73,13 @@ Content, in this order (omit a point only if it genuinely does not apply):
 1. What was asked for and why, in one or two sentences. Say "issue #12" in words.
 2. What changed for someone using the product: what they will see or can do now.
 3. How it was done, in a sentence or two, and any obvious alternative the plan rejected, with the reason.
-4. What changed along the way: spec clarifications that were confirmed, decisions the run took on James's behalf, deviations from the issue.
+4. What changed along the way: spec clarifications that were confirmed, decisions the run took on James's behalf, deviations from the issue. When James answered a gate (a `spec-revision-v<N>.md` change with source `confirmed`, or a `log.md` line with `answers: gate:`), say plainly what the issue left open and what he decided, so a reader can tell his answers from what the issue asked for. Always name any new dependency the run added (runtime or development, from the dev reports and the QA report), and any decision `05-plan.md` left for James to approve at the plan gate that went ahead unapproved because `--auto` skipped the gate (`state.json` `auto`).
 5. What needs attention: outstanding manual tests, risks, limitations, anything left out. One line if there is nothing.
 6. Confidence, one line: the test outcome in plain words (for example, "All 14 checks pass on desktop and mobile").
 
 Style: plain words and short sentences. No file paths, function or variable names, code, backticks, or AC/TC/WP ids. No tables or headings inside, and at most one short list. Explain a technical term in passing if you cannot avoid it. Do not restate the technical sections. Use real, specific facts from the run files.
 
-Length: 100-250 words for a single issue. For a bulk run, an opening paragraph plus at most about 80 words per issue.
+Length: 100-250 words for a single issue; aim for about 200, because you cannot count words exactly and the check fails at 251. Keep each point short (one sentence per item in point 4): the points above are what must appear, not a reason to grow. For a bulk run, an opening paragraph plus at most about 80 words per issue; aim for about 60.
 
 Variants:
 
@@ -99,19 +99,19 @@ It has a path, backticks, ids, a table, no reason or user view, and it restates 
 
 ## Retry
 
-If the dispatch has `intro_check_output`, the introduction failed the check. Fix only the `## In plain English` section of `pr-body.md` so that every listed `FAIL:` line is cleared. Change nothing else, rewrite the section rather than adding a second one, and return the normal return block. You have no Bash, so you never run the check yourself.
+If the dispatch has `intro_check_output`, the introduction failed the check. Fix only the `## In plain English` section of `pr-body.md` so that every listed `FAIL:` line is cleared. For a length failure, rewrite the section to about 50 words under the maximum the `FAIL:` line names (about 200 for a single issue), or a too-short one to about 150, not just past the limit: shorten the how and the details first, and keep every required point. Change nothing else, rewrite the section rather than adding a second one, and return the normal return block. You have no Bash, so you never run the check yourself.
 
 ## Process
 
 1. Resolve `run_dir`, then find the passing QA report. If no `08-qa-report-<n>.md` exists, or the highest one does not pass, return `STATUS: blocked` and name what is missing. Do the same for any other missing required input.
 2. Write the spec snapshot.
 3. Curate `CLAUDE.md` by following the `aew:claude-md-curation` skill. Work on the whole file, stay within `claude_md.max_lines`, and keep a list of every entry you remove, merge or rewrite, with its original text (the skill's section 7).
-4. Write `10-summary.md` and `pr-body.md` from their templates:
+4. Write `10-summary.md` and `pr-body.md` from their templates, fresh on every dispatch except a retry (see `## Retry`): a re-run (`--from docs`) exists so that the current rules and run files apply, so never keep an earlier version because it looks accurate. Before overwriting an earlier `10-summary.md`, carry its list of `CLAUDE.md` entries removed, merged or rewritten forward, then add this pass's. The rules:
    - The Summary lists every `CLAUDE.md` entry you removed, merged or rewritten: its original text quoted in full, what happened to it and why. A line you kept but reworded, even only by adding a link, is a rewrite and is listed. So is a dated rule kept for a human to check (`claude-md-curation` §6 step 2). State the line count you read back from the file after writing it.
    - The AC checklist covers every AC in the brief.
    - In a bulk run the `10-summary.md` H1 is `# Summary: <run_id> <title>`, and the AC checklist keeps the brief's prefixed ids (`- [x] #12-AC-1: …`), because the orchestrator counts them in that form.
    - Test results come from the passing QA report.
-   - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not.
+   - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not. When there are more than 20 screenshot rows, put the table inside a `<details>` block with a one-line `<summary>`. Leave a blank line after `</summary>` and before `</details>`, or GitHub shows the table as plain text.
    - Manual tests: the outstanding items, or "None.".
    - Add `Closes #<n>` for every issue in `state.json` `issues`.
    - Remove every template comment from `pr-body.md`, because it is posted to GitHub as written.

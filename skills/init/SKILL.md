@@ -217,6 +217,8 @@ jq -r -s '.[0] as $e | .[1] as $q
 Then ask **one** AskUserQuestion round: only the inferred values not already in the existing config, plus the
 Playwright offer when §4 found a UI project and no `@playwright/test`. Each question puts the recommended
 answer first, its label ending "(recommended)", with one or two alternatives ("Other" is always available).
+Ask every inferred value, `retro.repo` included, even one that looks like the only sensible answer: the user
+may file retro items in another repo (a fork, or a sandbox repo when the plugin repo is out of reach).
 
 The Playwright question is: "Set up Playwright and axe for UI QA now? This installs `@playwright/test` and
 `@axe-core/playwright` as dev dependencies and downloads Chromium." It recommends **skip** (QA sets Playwright
@@ -317,13 +319,17 @@ Propose rules that cut down permission prompts for the commands aew runs. Nothin
 `.claude/settings.local.json` holds the plugin scripts by absolute path (gitignored, so this machine's path
 never reaches other cloners); `.claude/settings.json` holds the portable rules (committed in the init PR).
 
-Every rule is an exact command, or a subcommand plus a single trailing ` *`; none has a wildcard before the
+Every Bash rule is an exact command, or a subcommand plus a single trailing ` *`; none has a wildcard before the
 subcommand. `${CLAUDE_PLUGIN_ROOT}` is substituted when this skill loads, so the proposal carries the real path.
+The one `Read` rule lets the skills and agents read the plugin's references and templates, which sit outside the
+project: a headless run denies any read outside its working directories that no rule allows (`//` marks an
+absolute path, so `/${CLAUDE_PLUGIN_ROOT}` becomes `//<plugin root>`).
 
 Template 1 is `.claude/settings.local.json`:
 
 ```json
 { "permissions": { "allow": [
+  "Read(/${CLAUDE_PLUGIN_ROOT}/**)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/state.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-labels.sh *)",
@@ -350,36 +356,17 @@ Template 2 is `.claude/settings.json`. Replace `<default_branch>` with the defau
   "Bash(git ls-remote --symref origin HEAD)",
   "Bash(git restore -- .claude/agent-memory/aew-standards-setter/)",
   "Bash(command -v *)", "Bash(jq *)", "Bash(echo *)", "Bash(printf *)",
-  "Bash(date +%Y-%m-%d)"
+  "Bash(date +%Y-%m-%d)",
+  "Bash(rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/init-permissions.json .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md)"
 ] } }
 ```
 
 The plugin path changes with each version; re-running init adds the new rules and keeps the old, harmless ones.
 
-**Rules from the config**, added to the portable list:
-
-- `commands.install` becomes the exact command, no wildcard (for example `Bash(npm install)`).
-- `build`, `lint`, `format`, `typecheck`, `test_unit`, `test_e2e` become `Bash(<command> *)`; a UI project also
-  gets `Bash(npx playwright test *)` and `Bash(npx playwright install chromium)`.
-- A command becomes a rule only if it is one simple command: no `&`, `|`, `;`, `>`, `<`, `*`, `$(`,
-  backtick or newline, and it doesn't start with `cd `, `sh `, `bash `, `env ` or a `NAME=` assignment.
-  Anything else is listed as not pre-approved.
-- `dev` and `app.start_command` get no rule (QA starts the app through ui-qa §3).
-- `commands.seed` gets no rule, because it may reset data.
-
-**Deliberately not pre-approved.** These are listed as prose and never written as rules, and they prompt when
-used:
-
-- `git -C <dir> …`, the sub-developers' worktree form (a wildcard before the subcommand would also match
-  `-c core.fsmonitor=<cmd>`).
-- `git diff`, `git log`, `git show` and `git format-patch` with a wildcard (`--output=<path>` writes files);
-  their read-only forms already run without a prompt.
-- `git fetch` and `git ls-remote` with a wildcard (`--upload-pack=<cmd>`), and `git symbolic-ref` with one
-  (it can repoint `HEAD`); only the exact preflight and §2 forms are allowed.
-- `git push` (it goes through `git-branch.sh` only) and every other `gh` command (only the scripts call `gh`).
-- `sh -c`, `nohup`, `cd <dir> && …`, `cp`, `curl`, `kill`, `rm -rf`, `awk` (its programs can write any file),
-  `node -p` and bare `npx`, `npm` or `node`, so §6's `npx … ajv validate` prompts (its `-c` loads a module).
-- `commands.seed` (may reset data).
+Read `${CLAUDE_PLUGIN_ROOT}/skills/init/references/permissions.md` with the Read tool: `## Rules from the config` adds
+the config's commands to the portable list, and `## Deliberately not pre-approved` is the prose list printed with
+the proposal (never written as rules). In a headless run that read can be denied, because the `Read` rule below does not
+exist yet; permissions are never written headless (the ask rule), so list the two templates in the report and carry on.
 
 These rules only cut down prompts. They are not a security boundary: the plugin's Bash guard hook is what
 blocks dangerous commands. An anchored rule can never match global git options (they sit before the
@@ -494,8 +481,7 @@ printf 'ahead '; git rev-list --count <default_branch>..HEAD
 ## 13. Report
 
 ```sh
-rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/init-permissions.json \
-  .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md
+rm -f .aew/runs/init-config.json .aew/runs/init-config-merged.json .aew/runs/init-permissions.json .aew/runs/init-permissions-local.json .aew/runs/init-settings.json .aew/runs/init-pr-body.md
 ```
 
 Print, in order: prerequisite and stack-tool warnings (and the PR introduction check warning, if any); stacks; config written or unchanged and the detected

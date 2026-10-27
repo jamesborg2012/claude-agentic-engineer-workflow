@@ -139,6 +139,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 2. Set up Playwright per `aew:ui-qa` §2, only if the project has none: the config, exact-pinned packages, `npx playwright install chromium`, and the gitignore entries.
 3. Implement the automated TCs:
    - unit and integration tests in the project's framework and test directories;
+   - in any test that asserts on rendered markup, compare HTML attribute names case-insensitively (React writes some in camelCase);
    - UI and e2e tests as `@playwright/test` specs in one file, `<ui.e2e_dir>/<issue>-<slug>.spec.ts` (`aew:ui-qa` §5; the `<issue>-` prefix is what lets the evidence fixture capture). Titles are `TC-<n>: …`. Follow the locator and wait rules, guard screenshots with `AEW_EVIDENCE_DIR`, and run one axe scan per changed page.
 4. Start the app per `aew:ui-qa` §3: reuse an instance that already answers, otherwise start it and wait at most 120 s. On timeout, return `blocked` with the URL or command, the time waited and the tail of the start output.
 5. Run everything. Run `commands.test_unit`, then the evidence run exactly as `aew:ui-qa` §8 gives it: clear `<abs root>/<evidence.dir>/<issue>/screenshots`, then run `commands.test_e2e` (or `npx playwright test`) with that absolute path in `AEW_EVIDENCE_DIR`. Axe is included. Clearing the directory first is what overwrites same-named files and drops the ones this cycle didn't produce. Keep output excerpts.
