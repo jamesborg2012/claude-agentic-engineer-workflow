@@ -578,6 +578,20 @@ git-branch.sh')"
     grep -qF 'Co-Authored-By: Claude <noreply@anthropic.com>' || { echo "prompt template has no plain trailer rule" >&2; return 1; }
 }
 
+@test "retro fixes from prompt 07 stay in their prompts" {
+  local bad=""
+  grep -qF 'the last line number the Read tool shows' "$REPO_ROOT/skills/claude-md-curation/SKILL.md" || bad="$badskills/claude-md-curation/SKILL.md"$'\n'
+  grep -qF 'Copy test counts from the runner'\''s output' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
+  grep -qF 'reuse the exact strings the brief gives' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
+  grep -qF 'give the repeat count and the result in the report' "$REPO_ROOT/agents/developer.md" || bad="$badagents/developer.md"$'\n'
+  grep -qF 'check it serves the current change' "$REPO_ROOT/skills/ui-qa/SKILL.md" || bad="$badskills/ui-qa/SKILL.md"$'\n'
+  grep -qF 'From here on `spec-final.md` is the spec' "$REPO_ROOT/skills/ship/references/gates.md" || bad="$badskills/ship/references/gates.md"$'\n'
+  grep -qF 'so the two numbering schemes never mix' "$REPO_ROOT/agents/brief-compiler.md" || bad="$badagents/brief-compiler.md"$'\n'
+  grep -qF 'put the table inside a `<details>` block' "$REPO_ROOT/agents/doc-writer.md" || bad="$badagents/doc-writer.md"$'\n'
+  grep -qF 'compare HTML attribute names case-insensitively' "$REPO_ROOT/agents/qa-engineer.md" || bad="$badagents/qa-engineer.md"$'\n'
+  report_offenders "retro rule missing from" "$bad"
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')
