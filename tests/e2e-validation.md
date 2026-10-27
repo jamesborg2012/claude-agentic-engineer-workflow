@@ -900,6 +900,14 @@ nothing on GitHub). Issue #12 stays open with only `aew:spec-revised`: prompt mo
 Prompt mode left the spec-analyser's agent memory modified on the sandbox's `main` (two `.claude/agent-memory/` files):
 it has no branch and never commits, so the next ship run starts from a tree with those changes (retro item, Phase F).
 
+## S9
+
+**Skipped** (optional; James's decision at CP-5, 2026-10-27). Reason: the Docker daemon was not running at the
+checkpoint (`docker info` exit 1; Docker 29.5.3 installed), and wp-env needs it. Spend then stood at $86.39 of the
+$200 stop, so the budget did not decide it. Consequences: no WordPress + WooCommerce stack detection or standards run on
+real code in prompt 07; the init fixes `658615f` (ask `retro.repo`), `7ab432b` (the clean-up rule) and `444a579` (the
+plugin Read rule) are verified by their tests and by the sandbox's hand-applied equivalents, not by a fresh live init.
+
 ## Guard false positives
 
 ## Fix log
@@ -911,7 +919,7 @@ re-checked by the reviewer: each new test fails on the pre-fix file.
 | Commit | Problem | Scenario | Re-run | Result |
 |---|---|---|---|---|
 | `f33feb1` | `skills/init/SKILL.md` was 507 lines, over the 500-line guidance (refactor before any init fix) | init | none needed | 486 lines; suite green |
-| `658615f` | init skipped the inferred `retro.repo` question and wrote the plugin repo | init.1 | not re-run: a re-run keeps existing config values; sandbox config corrected by hand (`7caf360`). Re-checked by the next fresh init (S9, if it runs) | `skills.bats` test red, then green |
+| `658615f` | init skipped the inferred `retro.repo` question and wrote the plugin repo | init.1 | not re-run: a re-run keeps existing config values; sandbox config corrected by hand (`7caf360`); S9, the next fresh init, was skipped | `skills.bats` test red, then green |
 | `7ab432b` | init's §13 clean-up prompted in an attended session (two lines, no rule) | init.1 | as above | `skills.bats` test red, then green |
 | `c3476b8` | the plan gate asked "Approve the plan for #1?" with no summary or plan path | S1.1 | S5.1 (attended, no `--auto`), James's choice | `skills.bats` test red, then green; **verified live in S5.1**: 17-line summary and the path in the question |
 | `444a579` | a headless run cannot read the plugin's references and templates (Read outside the working directories needs approval) | S2.1 | S2.2 (and every later headless run) | `skills.bats` test red, then green; S2.2 read them |
