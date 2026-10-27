@@ -910,6 +910,11 @@ plugin Read rule) are verified by their tests and by the sandbox's hand-applied 
 
 ## Guard false positives
 
+None. No aew guard denial (Bash or Edit/Write) occurred in any session: every scenario's CR-6 row shows no `aew guard:`
+text in its streams or transcripts. The only guard that fired was dev-workflow's Bash guard, in the executor's own
+session (not a run), on command text containing `git push`; the executor moved those commands into script files or
+made the edits with the Edit tool. AC-8 keeps dev-workflow out of the sandbox runs.
+
 ## Fix log
 
 A batched senior review of the Phase B fixes (2026-10-27) approved 11 of 14 (most with notes) and asked for three wording
@@ -1051,3 +1056,30 @@ Totals: 30 items (27 from the runs, 3 filed by the executor); 12 fixed (10 in Ph
 
 
 ## Roll-up
+
+Build prompt 07's expectations and acceptance criteria (Cut 4: the prompt's, not all 35 spec ACs; the AC-by-AC
+re-read is in the final summary).
+
+| Expectation | Result | Where |
+|---|---|---|
+| Install for real at user scope; dependencies installed; skills, agents listed; Playwright MCP connects; commands in the README | pass | `## Environment` (install checks, install probe), README `## Install` |
+| Sandbox: private `aew-sandbox`, Next.js + Tailwind, a form, an API route, lint and unit tests, no Playwright, pushed | pass | `## Sandbox fixtures` |
+| init: its PR checked, merged by James | pass (two init defects fixed) | `## init` |
+| S1: `ship`, gates on; plan gate shown; ACs traced; PR opened | pass (plan gate summary fixed, verified in S5) | `## S1` |
+| S2: `ship --auto`; Playwright specs; screenshots for both viewports in `docs/qa/`; axe in the report | pass (after the headless-read fix) | `## S2` |
+| S3: spec gate fires even with `--auto`; v2 on the issue with the original collapsed | pass | `## S3` |
+| S4: manual-testing section on the issue, label, listed in the PR | pass (five manual tests instead of one; spec-analyser fixed) | `## S4` |
+| S5: `ship-milestone` recommends bulk; one PR closes all three | pass | `## S5` |
+| S6: `ship-milestone --sequential`; correct order; stacked PRs | pass | `## S6` |
+| S7: interrupt in `develop`; `status` shows it; the SessionStart hook mentions it; `resume` continues from `develop` | pass | `## S7` |
+| S8: `prompt`; `prompt.md` self-sufficient in a session without the plugin, at least the first work package | pass (the whole issue delivered) | `## S8` |
+| S9 (optional) | skipped: Docker not running | `## S9` |
+| Every PR's `## In plain English` checked by the script and judged accurate | pass after fixes: 10 PRs (#13 to #22), 13 verdicts with the re-runs; S2.3, S3.1 and #21 failed and were fixed (S2.4, S3.3 and S7 verified the fixes) | each scenario's AC-14 row |
+| Pass/fail, cycles, duration and problems recorded per scenario | pass | each scenario section |
+| No guard false positive unresolved | pass (none occurred) | `## Guard false positives` |
+| Plugin problems fixed as found, each its own commit, prompts improved rather than expectations weakened | pass: 16 fixes from the runs, 5 review follow-ups, 2 refactors, AC-20 lifted | `## Fix log` |
+| Retro items triaged; small ones fixed; the rest open with a note | pass: 30 items, 12 fixed, 18 open | `## Retro triage` |
+| README finalised; CHANGELOG 0.1.0; version unchanged (0.1.0, never released); tag `aew--v0.1.0` | pass up to the tag; the tag follows James's merge | README, `CHANGELOG.md`, Phase F |
+
+Spend: $86.39 of the $200 stop (subtotal approved $150.50; reserve used: $1.87 for the two S3 docs re-runs, approved by
+James). Twenty sessions in the ledger: the probe and 19 scenario sessions, six of them attended.
