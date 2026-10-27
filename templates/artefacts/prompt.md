@@ -42,7 +42,7 @@ Everything else, decide and note the decision.
 ## Git and PR
 
 - Work on a branch named <branch>. Never push to <default branch>, never force-push, never merge.
-- Use conventional commits with `(#<issue>)`.
+- Use conventional commits with `(#<issue>)`, each ending with exactly one trailer, `Co-Authored-By: Claude <noreply@anthropic.com>` (no model name).
 - Open a PR whose body lists the acceptance criteria, test results and screenshots, and ends with `Closes #<issue>`.
 
 ## Definition of Done
