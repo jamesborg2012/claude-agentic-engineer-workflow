@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-27
+
 ### Added
 
 - Plugin manifest (`aew`) with dependencies on superpowers, context7 and frontend-design.
@@ -42,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `state.sh index init|set` for a sequential run's `index.json`, and `state.sh init --mode bulk` creating the per-issue `issues/<k>/` subdirs.
 - `tests/scripts/skills.bats` checks that `ship-milestone` holds no `## Stage:` copy of `ship`.
 - Milestone smoke runs M1, M3, B1, Q1 to Q3 and their ledger (stop $45) in `tests/agent-smoke/README.md` section 10.
+- End-to-end validation on real GitHub (build prompt 07), recorded in `tests/e2e-validation.md`: a real user-scope install, a private sandbox, init, scenarios S1 to S8 (S9 skipped: Docker not running), the fix log, the retro triage and the spend ledger.
+- README: prerequisites, a config reference for every schema field, the labels, the files aew creates in a project, troubleshooting from the validation runs, and uninstall commands.
 
 ### Changed
 
@@ -65,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ship` gains one-line hooks into the bulk and sequential references, hands a finished or blocked sequential child back to the sequence, and `preflight.md` Check 5 allows a milestone parent and its child to be active together.
 - Agent inputs: `brief-compiler` takes `issues` for one bulk brief, `qa-engineer` takes `m-<n>` as `<issue>` in a bulk run (evidence in `docs/qa/m-<n>/`), and `doc-writer` writes one spec snapshot per issue.
 - `docs/DESIGN.md` section 10 records the prompt-06 deviations; run-protocol, github-ops and the README document milestone runs.
+- `docs/DESIGN.md` §3 re-verifies the install, dependency, tag, `--bare`, budget and uninstall facts, and records that a local-marketplace install loads in place from the checkout and that aew's dependency tags go on this repo (build prompt 07).
+- `init`'s permission rule lists move to `skills/init/references/permissions.md`, bringing `SKILL.md` under 500 lines.
+- `docs/DESIGN.md` records prompt 07's deviations: the introduction's contents and length targets, behaviour-only ACs, the developer's build step, and init's plugin `Read` rule.
+- Runtime prompts no longer carry build-history notes.
 
 ### Fixed
 
@@ -74,3 +82,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `developer` ignores `.claude/agent-memory/` in its clean-tree and allowed-files checks, listing untracked files individually because `git status --porcelain` collapses an untracked directory to one line (found by B1.1).
 - `qa-engineer` lists files only in ARTEFACTS, never a directory, so ship's return check no longer blocks a QA run (found by Q3.1).
 - The bulk spec-revision lookup in `bulk.md` puts `jq --arg` after the filter, so it is pre-approvable headless (found by B1.1 and B1.2; not re-run live), and the `bulk.md` filters sit in `sh` fences so `skills.bats` checks them.
+- `init` asks every inferred config value, `retro.repo` included, instead of skipping one that looks obvious (found by the sandbox init).
+- `init`'s report clean-up is one command with an exact allow rule, so an attended init no longer prompts on it (found by the sandbox init).
+- `init` pre-approves reading the plugin's own references and templates (`Read(//<plugin root>/**)`), which a headless run otherwise denies (found by S2).
+- The plan-approval gate puts the plan summary and the `05-plan.md` path in the question itself (found by S1; verified in S5).
+- The doc-writer's PR introduction names new dependencies and plan decisions taken unapproved under `--auto` (found by S2), and says what the issue left open and what James decided at a gate (found by S3).
+- The doc-writer rewrites the summary and PR body on every dispatch except a retry, aims the introduction at about 200 words, and cuts a length retry relative to the check's maximum (found by S3 and S6; verified in S7).
+- The developer runs the configured build once on the feature branch and in fix mode, and never commits files the build leaves behind (found by S3).
+- `gh-retro.sh` stays quiet when the retro label already exists (found by S3).
+- `ship` checks each ARTEFACTS path in its own call, never in a `for` loop that a headless run denies (found by S3).
+- The spec analyser adds behaviour ACs only, never ACs about how a criterion is tested (found by S4).
+- The build prompt `prompt.md` asks for aew's plain commit trailer (found by S8).
+- Retro fixes: CLAUDE.md lines are counted as the last line number Read shows (retro #26); the developer copies test counts from the runner (retro #9), reuses the brief's exact contract strings in fixtures (retro #10) and records a repeat count for an intermittent fix (retro #20); ui-qa checks that a reused app serves the current change (retro #11); `ship` says `spec-final.md` is the spec after a revision (retro #24); the brief keeps spec criterion numbers and AC ids distinct (retro #25); long screenshot tables fold into a `<details>` block (retro #21); QA compares HTML attribute names case-insensitively (retro #28).
