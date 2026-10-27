@@ -567,6 +567,12 @@ git-branch.sh')"
   awk '/^## Retry$/{f=1; next} /^## /{f=0} f' "$f" | grep -q 'about 200' || { echo "doc-writer retry does not cut to the target" >&2; return 1; }
 }
 
+@test "doc-writer: a retry is exempt from the fresh rewrite and cuts relative to the check's maximum" {
+  local f="$REPO_ROOT/agents/doc-writer.md"
+  grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*except a retry' "$f" || { echo "step 4 does not exempt the retry" >&2; return 1; }
+  awk '/^## Retry$/{f=1; next} /^## /{f=0} f' "$f" | grep -q 'under the maximum' || { echo "retry length target is not relative to the maximum" >&2; return 1; }
+}
+
 @test "init: numbered sections 1 to 13 in order" {
   local got
   got=$(grep -E '^## [0-9]+\. ' "$REPO_ROOT/skills/init/SKILL.md" | sed -E 's/^## ([0-9]+)\..*/\1/' | tr '\n' ' ')

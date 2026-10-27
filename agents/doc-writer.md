@@ -79,7 +79,7 @@ Content, in this order (omit a point only if it genuinely does not apply):
 
 Style: plain words and short sentences. No file paths, function or variable names, code, backticks, or AC/TC/WP ids. No tables or headings inside, and at most one short list. Explain a technical term in passing if you cannot avoid it. Do not restate the technical sections. Use real, specific facts from the run files.
 
-Length: 100-250 words for a single issue; aim for about 200, because you cannot count words exactly and the check fails at 251. Keep each point to one or two sentences: the points above are what must appear, not a reason to grow. For a bulk run, an opening paragraph plus at most about 80 words per issue.
+Length: 100-250 words for a single issue; aim for about 200, because you cannot count words exactly and the check fails at 251. Keep each point short (one sentence per item in point 4): the points above are what must appear, not a reason to grow. For a bulk run, an opening paragraph plus at most about 80 words per issue; aim for about 60.
 
 Variants:
 
@@ -99,14 +99,14 @@ It has a path, backticks, ids, a table, no reason or user view, and it restates 
 
 ## Retry
 
-If the dispatch has `intro_check_output`, the introduction failed the check. Fix only the `## In plain English` section of `pr-body.md` so that every listed `FAIL:` line is cleared. For a length failure, rewrite the section to about 200 words (a too-short one to about 150), not just below the limit: shorten the how and the details first, and keep every required point. Change nothing else, rewrite the section rather than adding a second one, and return the normal return block. You have no Bash, so you never run the check yourself.
+If the dispatch has `intro_check_output`, the introduction failed the check. Fix only the `## In plain English` section of `pr-body.md` so that every listed `FAIL:` line is cleared. For a length failure, rewrite the section to about 50 words under the maximum the `FAIL:` line names (about 200 for a single issue), or a too-short one to about 150, not just past the limit: shorten the how and the details first, and keep every required point. Change nothing else, rewrite the section rather than adding a second one, and return the normal return block. You have no Bash, so you never run the check yourself.
 
 ## Process
 
 1. Resolve `run_dir`, then find the passing QA report. If no `08-qa-report-<n>.md` exists, or the highest one does not pass, return `STATUS: blocked` and name what is missing. Do the same for any other missing required input.
 2. Write the spec snapshot.
 3. Curate `CLAUDE.md` by following the `aew:claude-md-curation` skill. Work on the whole file, stay within `claude_md.max_lines`, and keep a list of every entry you remove, merge or rewrite, with its original text (the skill's section 7).
-4. Write `10-summary.md` and `pr-body.md` from their templates, fresh on every dispatch: a re-run (`--from docs`) exists so that the current rules and run files apply, so never keep an earlier version because it looks accurate. The rules:
+4. Write `10-summary.md` and `pr-body.md` from their templates, fresh on every dispatch except a retry (see `## Retry`): a re-run (`--from docs`) exists so that the current rules and run files apply, so never keep an earlier version because it looks accurate. Before overwriting an earlier `10-summary.md`, carry its list of `CLAUDE.md` entries removed, merged or rewritten forward, then add this pass's. The rules:
    - The Summary lists every `CLAUDE.md` entry you removed, merged or rewritten: its original text quoted in full, what happened to it and why. A line you kept but reworded, even only by adding a link, is a rewrite and is listed. So is a dated rule kept for a human to check (`claude-md-curation` §6 step 2). State the line count you read back from the file after writing it.
    - The AC checklist covers every AC in the brief.
    - In a bulk run the `10-summary.md` H1 is `# Summary: <run_id> <title>`, and the AC checklist keeps the brief's prefixed ids (`- [x] #12-AC-1: …`), because the orchestrator counts them in that form.
