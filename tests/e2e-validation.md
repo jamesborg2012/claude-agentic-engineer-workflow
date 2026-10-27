@@ -60,9 +60,9 @@ means the local `claude … --help` output of 2.1.308. "Not documented" is never
 | V-4 | Dependency tag format and the repo it is read from | "Tag each release as `<plugin-name>--v<version>`, where `<version>` matches the `version` field in that commit's `plugin.json`." Tag "the repository that the plugin's plugin source in `marketplace.json` points at": for a relative-path source, the marketplace repo. CLI help: `claude plugin tag` "Create a {name}--v{version} git tag for a plugin release". | https://code.claude.com/docs/en/plugins/dependencies.md, https://code.claude.com/docs/en/plugins/cli-reference.md | 2026-10-26 | §3 Dependencies: which repo carries the tag |
 | V-5 | What `--bare` disables; login; with `-p`; a plugin-less alternative | `--bare` skips hooks, plugin sync, auto-memory, keychain reads and `CLAUDE.md` auto-discovery, and "Anthropic auth is strictly ANTHROPIC_API_KEY or apiKeyHelper via --settings (OAuth and keychain are never read)" (CLI help), so it does not work with a claude.ai login. It combines with `-p`. `--safe-mode` disables "CLAUDE.md, skills, plugins, hooks, MCP servers" with normal auth. Per plugin: `enabledPlugins` `false`. | https://code.claude.com/docs/en/headless.md, https://code.claude.com/docs/en/cli-reference.md | 2026-10-26 | none (decides S8's profile, Phase D) |
 | V-6 | How a plugin MCP server shows as connected | "The `system/init` event reports session metadata including the model, tools, MCP servers, and loaded plugins"; plugin servers register as `plugin:<plugin-name>:<server-name>`. The full `status` enumeration and whether `claude mcp list` includes plugin servers: not documented. | https://code.claude.com/docs/en/headless.md, https://code.claude.com/docs/en/mcp.md | 2026-10-26 | none |
-| V-7 | Where SessionStart `additionalContext` appears in a headless stream | Runtime: recorded from Phase B's headless `/aew:status` stream (Cut 1). Docs: SessionStart hook lifecycle events are always in stream-json; where `additionalContext` appears is not documented. | https://code.claude.com/docs/en/hooks.md, https://code.claude.com/docs/en/cli-reference.md | 2026-10-26 | pending (Phase B) |
+| V-7 | Where SessionStart `additionalContext` appears in a headless stream | Docs: SessionStart hook lifecycle events are always in stream-json; where `additionalContext` appears is not documented. **Runtime (S7.2, 2026-10-27):** a `system` event with `subtype` `hook_response` for `SessionStart`, whose `output` (and `stdout`) holds the hook's JSON with `hookSpecificOutput.additionalContext` (`Active aew run 11 at stage develop (running). Use /aew:resume.`); also in `debug.log`. | https://code.claude.com/docs/en/hooks.md, https://code.claude.com/docs/en/cli-reference.md | 2026-10-27 | none |
 | V-8 | `--max-budget-usd` interactively; reading an interactive session's cost | CLI help: "--max-budget-usd <amount> Maximum dollar amount to spend on API calls (only works with --print)". Interactive cost is the `/usage` Session block "Total cost": "Claude Code computes the dollar figure locally from token counts at list price". `/cost` is not on the costs page. | https://code.claude.com/docs/en/cli-reference.md, https://code.claude.com/docs/en/costs.md | 2026-10-26 | none (attended sessions are capped by James reading `/usage`) |
-| V-9 | `claude -p` and SIGINT | "To end the turn instead, send SIGINT, or call the Agent SDK's `interrupt()`, before you stop the process." SIGTERM "exits with code 143". The `-p` exit code after SIGINT and subagent cancellation: not documented. | https://code.claude.com/docs/en/headless.md | 2026-10-26 | none (the launcher sends INT, then TERM, then KILL) |
+| V-9 | `claude -p` and SIGINT | "To end the turn instead, send SIGINT, or call the Agent SDK's `interrupt()`, before you stop the process." SIGTERM "exits with code 143". The `-p` exit code after SIGINT and subagent cancellation: not documented. **Runtime (S7.1, 2026-10-27):** on SIGINT during a developer dispatch the session exited 0 within the first 30 s and emitted a `result` event (`error_during_execution`, with its real cost); no TERM was needed, and no subagent work continued. | https://code.claude.com/docs/en/headless.md | 2026-10-27 | none (the launcher sends INT, then TERM, then KILL) |
 | V-10 | gh token precedence, git credential helper, PAT scope, `gh issue transfer` | Proved by running: A6 canary (`GH_TOKEN` precedence, `gh auth git-credential` with an empty `GH_CONFIG_DIR`); `gh issue transfer` in Phase F (Cut 6). | n/a (gh) | 2026-10-26 | none |
 | V-11 | gh milestones; `gh repo create --private --source --push` | Proved by running: A3 (`gh repo create aew-sandbox --private --source … --remote origin --push` created the repo and pushed `main`); milestones in Phase B (Cut 6). | n/a (gh) | 2026-10-26 | none |
 | V-12 | Uninstall commands and cache clean-up | `claude plugin uninstall <plugin> [-s user\|project\|local] [--keep-data] [--prune] [-y]`; `claude plugin marketplace remove <name>`: "When you remove a marketplace from the last scope that declares it, Claude Code also deletes its cache and uninstalls every plugin you installed from it." Old version directories get an `.orphaned_at` marker and go "14 days later". Auto-installed dependencies stay until `claude plugin prune`. | https://code.claude.com/docs/en/plugins/cli-reference.md, https://code.claude.com/docs/en/plugins/loading.md | 2026-10-26 | none (README uninstall, Phase F) |
@@ -299,6 +299,9 @@ a killed or crashed session, charged at its cap.
 | S4 | S4.2 | 10 | 9.74 | 40.40 | no (S4's line: 11.68 of 12) | yes | usage |
 | S5 | S5.1 | 25 | 11.82 | 52.22 | no | yes | usage |
 | S6 | S6.1 | 30 | 17.43 | 69.65 | no | no | result |
+| S7 | S7.1 | 8 | 8 (result 3.25) | 77.65 | no | no | cap (killed) |
+| S7 | S7.2 | 1 | 0.21 | 77.86 | no | no | result |
+| S7 | S7.3 | 12 | 3.71 | 81.57 | no | no | result |
 
 ## Sandbox fixtures
 
@@ -822,6 +825,36 @@ retro item.
 
 Cycles: review 0, fix 0 for each child. Duration: 48 minutes. Problems: the introduction length (`4b2eca1`).
 
+## S7
+
+Issue #11 "Normalise contact fields on the server", run `11`. Ctrl-C is reproduced by the launcher's SIGINT
+(Assumption 8). S1's auto revision had already made the route trim every field (the S1 fixture note); this issue's own
+spec v2 still covered lowercasing, what counts as a space, and length after trimming.
+
+| Attempt | Drive | Cap | Cost | What happened |
+|---|---|---|---|---|
+| S7.1 | headless `/aew:ship 11 --auto`, kill at `develop` + `aew:developer` | 8 | 8 (charged at cap; the stream's `result` says 3.25) | spec → brief → standards → plan → `develop running` at 08:57:13Z; SIGINT at 08:57:17Z (`killed-at`: `INT`) |
+| S7.2 | headless `/aew:status 11` | 1 | 0.21 | read-only report; the SessionStart hint in the stream |
+| S7.3 | headless `/aew:resume 11` | 12 | 3.71 | `develop running — resume` → review (changes required) → `develop running — review fix 1` → review (approved) → QA → docs → PR #22 |
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| Kill landed during `develop` | pass | `state.json` `develop` / `running` after the kill; `.aew/runs/current` `11`; the developer had made no commit and left no partial work (only agent-memory changes in the tree); no new `@playwright/mcp` process (the one present belongs to the executor's own session, C-8) |
+| V-9: SIGINT on `claude -p` | recorded | the session exited **0** on the first signal (no TERM or KILL needed) and **did** emit a `result` event (`subtype` `error_during_execution`, `is_error` true, `total_cost_usd` 3.25). The prompt-05 kills used TERM, which emits none. The ledger still charges the cap (the §9.1 rule) |
+| [P] `status` shows it | pass | `/aew:status 11`: `Status running`, `Stage develop`, the branch, `PR none yet`, `review 0/2, fix 0/3`, the last log lines; `state.json` byte-identical before and after (read-only) |
+| [P] The SessionStart hook mentions it | pass | the S7.2 stream has a `system` / `hook_response` event for `SessionStart` whose `output` carries `hookSpecificOutput.additionalContext` `Active aew run 11 at stage develop (running). Use /aew:resume.` (also in `debug.log`). **V-7 answered** |
+| [P] `resume` continues from `develop` | pass | `log.md` after the kill: `develop running — resume`, then review, `develop running — review fix 1`, review, QA, docs, PR; `shasum -c` of the eight earlier artefacts all `OK`; 0 log lines for spec_analysis, brief, standards, qa_test_plan or plan; main-thread dispatches only `aew:developer` ×2, `aew:senior-engineer` ×2, `aew:qa-engineer`, `aew:doc-writer` |
+| Review changes-required loop (first live run) | pass | review 1 found a major (look-alike Unicode test fixtures typed raw); fix `bb463f7` writes them as escapes; review 2 approved; `review_cycle` 1 |
+| PR (CR-3) | pass | PR #22, base `main`, `Closes #11` |
+| CR-1, CR-2 | pass | `state.json` valid, `done`; `current` empty; labels `aew:ready-for-review aew:spec-revised` |
+| CR-4 | pass | lint 0, Vitest 362 passed, build 0, `tsc` 0; the developer's report shows `npm run build | pass` |
+| CR-5 | pass | 5 commits, plain trailer |
+| CR-6, CR-7 | recorded | no guard text in any S7 stream; one denial in S7.3: an agent's improvised `grep -n -o -P ".{0,3}[\x{212A}\x{00A0}].{0,3}" …` (a Unicode search; improvised, not prescribed) |
+| CR-8 | pass | review 1, fix 0; 08:47 to 09:10 (23 minutes, including the kill and the 1-minute gap) |
+| Introduction (AC-14) | **accurate**, and the S6 length fix verified | `check-pr-intro.sh` passed on the first run (one call, no retry) at 232 words. It explains the tidying, the rejected helper and the rejected built-in lower-casing (the Kelvin sign), the clarifications made without James, no new dependency, the review catch, no manual check, and that the developer ran the build. `10-summary.md` does not mention the interruption, so the introduction need not |
+
+Cycles: review 1, fix 0. Problems: none in the plugin.
+
 ## Guard false positives
 
 ## Fix log
@@ -841,7 +874,7 @@ Cycles: review 0, fix 0 for each child. Duration: 48 minutes. Problems: the intr
 | `d141b4d` | the orchestrator checked ARTEFACTS with a `for` loop, denied headless (recurred) | S3.2, S3.3 | next headless run | test red, then green |
 | `637e591` | the spec analyser added ACs about how a criterion is tested, turning one manual check into five | S4.2 | not re-run (about $12) | test red, then green |
 | `43ee2fe` | AC-20: the "no rewrite of a real issue body" limitation lifted after the evidence (v1 byte-identical on #1, #3 and #4; S4's manual-tests block lost no line) | S1, S3, S4 | none | the limitation line is gone from `skills/github-ops/SKILL.md` and `CHANGELOG.md`; suite green |
-| `4b2eca1` | first introduction drafts ran 292 and 294 words; #21's retry still came back at 260 against the 250 limit | S6.1 | S7 (next single-issue run) | test red, then green |
+| `4b2eca1` | first introduction drafts ran 292 and 294 words; #21's retry still came back at 260 against the 250 limit | S6.1 | S7.3 | test red, then green; **verified live in S7.3**: 232 words, passed first time |
 
 ## Retro triage
 
