@@ -853,6 +853,9 @@ spec v2 still covered lowercasing, what counts as a space, and length after trim
 | CR-8 | pass | review 1, fix 0; 08:47 to 09:10 (23 minutes, including the kill and the 1-minute gap) |
 | Introduction (AC-14) | **accurate**, and the S6 length fix verified | `check-pr-intro.sh` passed on the first run (one call, no retry) at 232 words. It explains the tidying, the rejected helper and the rejected built-in lower-casing (the Kelvin sign), the clarifications made without James, no new dependency, the review catch, no manual check, and that the developer ran the build. `10-summary.md` does not mention the interruption, so the introduction need not |
 
+Merge (CP-3): James merged PR #22 with a normal merge commit (`d1c7a07`) and deleted the branch; issue #11 closed; `main`
+fast-forwarded.
+
 Cycles: review 1, fix 0. Problems: none in the plugin.
 
 ## Guard false positives
