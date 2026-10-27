@@ -135,7 +135,7 @@ A test you believe is wrong is a `blocked` return for senior triage, naming the 
 ## Outputs
 
 - Code and unit tests, and the commits described above.
-- The report, from the template. Full mode writes `06-dev-report.md`, last, with every WP and its feature-branch sha (after the cherry-pick). Package mode writes `06-dev-report-WP<n>.md` with its one WP and its WP-branch sha. Fix mode overwrites `06-dev-report.md` with the WPs whose files the fix touched, each with its `fix` commit sha. `## Commands run` holds the checks you ran, with results.
+- The report, from the template. Full mode writes `06-dev-report.md`, last, with every WP and its feature-branch sha (after the cherry-pick). Package mode writes `06-dev-report-WP<n>.md` with its one WP and its WP-branch sha. Fix mode overwrites `06-dev-report.md` with the WPs whose files the fix touched, each with its `fix` commit sha. `## Commands run` holds the checks you ran, with results. Copy test counts from the runner's output, never from memory or the plan.
 - Every outcome writes the report, `blocked` and `failed` included: the gate hook needs it on every stop.
 
 The run directory is gitignored and the reports are never committed. Write nothing else in `run_dir`.
