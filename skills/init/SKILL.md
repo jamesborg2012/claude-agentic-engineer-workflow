@@ -319,7 +319,7 @@ Propose rules that cut down permission prompts for the commands aew runs. Nothin
 `.claude/settings.local.json` holds the plugin scripts by absolute path (gitignored, so this machine's path
 never reaches other cloners); `.claude/settings.json` holds the portable rules (committed in the init PR).
 
-Every rule is an exact command, or a subcommand plus a single trailing ` *`; none has a wildcard before the
+Every Bash rule is an exact command, or a subcommand plus a single trailing ` *`; none has a wildcard before the
 subcommand. `${CLAUDE_PLUGIN_ROOT}` is substituted when this skill loads, so the proposal carries the real path.
 The one `Read` rule lets the skills and agents read the plugin's references and templates, which sit outside the
 project: a headless run denies any read outside its working directories that no rule allows (`//` marks an
@@ -365,7 +365,8 @@ The plugin path changes with each version; re-running init adds the new rules an
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/init/references/permissions.md` with the Read tool: `## Rules from the config` adds
 the config's commands to the portable list, and `## Deliberately not pre-approved` is the prose list printed with
-the proposal (never written as rules).
+the proposal (never written as rules). In a headless run that read can be denied, because the `Read` rule below does not
+exist yet; permissions are never written headless (the ask rule), so list the two templates in the report and carry on.
 
 These rules only cut down prompts. They are not a security boundary: the plugin's Bash guard hook is what
 blocks dangerous commands. An anchored rule can never match global git options (they sit before the
