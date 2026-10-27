@@ -111,7 +111,7 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
    - The AC checklist covers every AC in the brief.
    - In a bulk run the `10-summary.md` H1 is `# Summary: <run_id> <title>`, and the AC checklist keeps the brief's prefixed ids (`- [x] #12-AC-1: …`), because the orchestrator counts them in that form.
    - Test results come from the passing QA report.
-   - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not. When there are more than 20 screenshot rows, put the table inside a `<details>` block with a one-line `<summary>`.
+   - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not. When there are more than 20 screenshot rows, put the table inside a `<details>` block with a one-line `<summary>`. Leave a blank line after `</summary>` and before `</details>`, or GitHub shows the table as plain text.
    - Manual tests: the outstanding items, or "None.".
    - Add `Closes #<n>` for every issue in `state.json` `issues`.
    - Remove every template comment from `pr-body.md`, because it is posted to GitHub as written.
