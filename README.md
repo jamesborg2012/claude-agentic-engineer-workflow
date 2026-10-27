@@ -379,15 +379,15 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
 - **A headless or `--auto` run stops with `awaiting_input`:** the spec, plan-challenge, triage and
   spec-ambiguity gates always ask, even with `--auto`. Run `/aew:resume <run-id>` in an interactive session
   and answer.
-- **Preflight says the default branch is behind `origin`:** `git switch <default branch>` and
-  `git pull --ff-only`, then start again.
+- **After merging an aew pull request:** run `git pull --ff-only` on the default branch before the next run;
+  preflight stops on a branch that is behind `origin`.
 - **QA blocks because the app shows old content:** QA reuses an app that is already running but never
   restarts one it did not start. A Next.js dev server can keep serving stale CSS after a branch switch:
   restart it, then `/aew:resume <run-id>`.
 - **Next.js 16 writes an untracked `AGENTS.md` when the dev server starts:** it then fails aew's clean-tree
   check. Set `agentRules: false` in `next.config.ts`.
 - **`npx tsc --noEmit` fails on a fresh Next.js 16 checkout (`Cannot find name 'LayoutProps'`):** the route
-  types are generated into `.next/` by a build or dev run; run `npm run build` (or `next typegen`) first.
+  types are generated into `.next/` by a build or dev run; run `npm run build` first.
 - **Stacked pull requests from a sequential milestone:** merge them in order, each with a merge commit (not
   squash). Deleting each merged branch lets GitHub retarget the next PR to the default branch; its
   `Closes #n` then closes the issue on merge.
@@ -402,11 +402,12 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
 
 ```bash
 claude plugin uninstall aew@jamesborg-plugins --scope user
-claude plugin prune                                  # removes superpowers, context7 and frontend-design if nothing else needs them
 claude plugin marketplace remove jamesborg-plugins
+claude plugin prune      # removes the dependencies the aew install pulled in, if nothing else needs them
 ```
 
-The uninstall reports the dependencies it no longer needs; `prune` removes them. The plugin's cache folder
+The uninstall reports the dependencies it no longer needs; `prune` removes the auto-installed ones (dependencies
+you installed yourself stay). The plugin's cache folder
 is marked and deleted about 14 days later. A project keeps what aew added (`.aew/`, the `aew:` labels,
 `docs/standards/`, the `CLAUDE.md` section and the permission rules in `.claude/settings*.json`); remove
 those by hand if you want them gone.

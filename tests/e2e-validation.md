@@ -918,7 +918,7 @@ made the edits with the Edit tool. AC-8 keeps dev-workflow out of the sandbox ru
 ## Fix log
 
 A batched senior review of the Phase B fixes (2026-10-27) approved 11 of 14 (most with notes) and asked for three wording
-revisions in the doc-writer and DESIGN; those and the cheap notes are the last five rows. Red-then-green was
+revisions in the doc-writer and DESIGN; those and the cheap notes are the five rows after `4b2eca1`. The final whole-branch review (APPROVED WITH NOTES) added the last two rows. Red-then-green was
 re-checked by the reviewer: each new test fails on the pre-fix file.
 
 | Commit | Problem | Scenario | Re-run | Result |
@@ -943,7 +943,9 @@ re-checked by the reviewer: each new test fails on the pre-fix file.
 | `6105d4d` | review MINOR: files a build leaves behind are named under Deviations, never committed | review | none | suite green |
 | `4a9e7dc` | review NIT: build-history notes removed from runtime prompts | review | none | suite green |
 | `749ae95` | `prompt.md` named no commit trailer, so the plugin-less session used its model-named default | S8.3 | not re-run (needs a fresh `prompt.md`) | test red, then green |
-| `df754c8`, `7d92792`, `7a5a4db`, `95422c5`, `2976aeb`, `1e5d984`, `8eff87e`, `aefccf8`, `75c9a3f` | nine small retro items (#26, #9, #10, #20, #11, #24, #25, #21, #28), one commit each | retro triage | none: tests only | `skills.bats`, `conventions.bats` and the full suite green after each |
+| `df754c8`, `7d92792`, `7a5a4db`, `95422c5`, `2976aeb`, `1e5d984`, `8eff87e`, `aefccf8`, `75c9a3f` | nine small retro items (#26, #9, #10, #20, #11, #24, #25, #21, #28), one commit each | retro triage | none (prompt wording) | suite green after each; pinned afterwards by `c391e4d`, whose assertions fail on `main`'s files |
+| `5bfb7cc`, `52fd4e3`, `bf0aed4` | final review (MINOR): `gates.md` wrongly said nothing re-fetches the issue (`--from spec_analysis` does); the markup-attribute rule sat in the e2e bullet though its incident was a unit test; a table in `<details>` needs blank lines to render | final review | none | suite green |
+| `c391e4d` | final review (MINOR): the nine retro fixes had no regression test | final review | none | one `skills.bats` test; each assertion fails on `main`'s file |
 
 ## Retro triage
 
@@ -1052,7 +1054,7 @@ Small means a one-commit fix with no design decision. Fixed items close through 
 | 35 | Init's inferred typecheck fails on a fresh Next.js 16 checkout | S6 (executor) | not small | open: design choice |
 | 36 | Milestone final report names the project repo for retro items | S6 (executor) | not small | open: model prose, needs a report rule |
 
-Totals: 30 items (27 from the runs, 3 filed by the executor); 12 fixed (10 in Phase F, 2 earlier by validation fixes covering 3 items); 18 left open with a triage comment.
+Totals: 30 items (27 from the runs, 3 filed by the executor); 12 fixed (9 in Phase F, one commit each; 3 earlier: #13 and #33 by `97291e4`, #29 by `4b2eca1` and `d2dd7bc`); 18 left open with a triage comment.
 
 
 ## Roll-up
@@ -1068,7 +1070,7 @@ re-read is in the final summary).
 | S1: `ship`, gates on; plan gate shown; ACs traced; PR opened | pass (plan gate summary fixed, verified in S5) | `## S1` |
 | S2: `ship --auto`; Playwright specs; screenshots for both viewports in `docs/qa/`; axe in the report | pass (after the headless-read fix) | `## S2` |
 | S3: spec gate fires even with `--auto`; v2 on the issue with the original collapsed | pass | `## S3` |
-| S4: manual-testing section on the issue, label, listed in the PR | pass (five manual tests instead of one; spec-analyser fixed) | `## S4` |
+| S4: manual-testing section on the issue, label, listed in the PR | pass, with one expectation failed and fixed but not re-run live (James's call): five manual tests instead of one; spec analyser fixed in `637e591` | `## S4` |
 | S5: `ship-milestone` recommends bulk; one PR closes all three | pass | `## S5` |
 | S6: `ship-milestone --sequential`; correct order; stacked PRs | pass | `## S6` |
 | S7: interrupt in `develop`; `status` shows it; the SessionStart hook mentions it; `resume` continues from `develop` | pass | `## S7` |
@@ -1077,9 +1079,14 @@ re-read is in the final summary).
 | Every PR's `## In plain English` checked by the script and judged accurate | pass after fixes: 10 PRs (#13 to #22), 13 verdicts with the re-runs; S2.3, S3.1 and #21 failed and were fixed (S2.4, S3.3 and S7 verified the fixes) | each scenario's AC-14 row |
 | Pass/fail, cycles, duration and problems recorded per scenario | pass | each scenario section |
 | No guard false positive unresolved | pass (none occurred) | `## Guard false positives` |
-| Plugin problems fixed as found, each its own commit, prompts improved rather than expectations weakened | pass: 16 fixes from the runs, 5 review follow-ups, 2 refactors, AC-20 lifted | `## Fix log` |
+| Plugin problems fixed as found, each its own commit, prompts improved rather than expectations weakened | pass: 28 fix commits (13 found by the runs, 3 from the Phase B review, 9 retro fixes, 3 from the final review), plus 1 DESIGN record, 2 refactors, 1 regression test and the AC-20 lift | `## Fix log` |
 | Retro items triaged; small ones fixed; the rest open with a note | pass: 30 items, 12 fixed, 18 open | `## Retro triage` |
 | README finalised; CHANGELOG 0.1.0; version unchanged (0.1.0, never released); tag `aew--v0.1.0` | pass up to the tag; the tag follows James's merge | README, `CHANGELOG.md`, Phase F |
+
+`claude plugin validate .` passes with warnings that need no change for a personal plugin: the plugin-directory checks
+report no LICENSE (`LICENSE_MISSING`) and no icon (aew is not submitted to the directory), the root `CLAUDE.md` is
+not loaded as plugin context (it is for working on this repo, by design), and `.DS_Store` exists on disk (untracked,
+gitignored).
 
 Spend: $86.39 of the $200 stop (subtotal approved $150.50; reserve used: $1.87 for the two S3 docs re-runs, approved by
 James). Twenty sessions in the ledger: the probe and 19 scenario sessions, six of them attended.
