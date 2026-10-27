@@ -54,7 +54,9 @@ any version mismatch in the report.
 ddev and docker) is started by `start_command`.
 
 1. Reuse: `curl -fsS -o /dev/null --max-time 5 "<base_url>"`. If it exits 0, an instance is already running:
-   use it and **leave it running**.
+   use it and **leave it running**. Before relying on it, check it serves the current change (for example, a style
+   or text the change introduced appears in the page or its stylesheet). If it serves stale content, return
+   `blocked` and ask for that server to be restarted, because you may not restart one you did not start.
 2. Otherwise start it from the project root in the background, logging to the run dir, with one Bash call that sets
    `run_in_background: true` and the command `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1`. Do not add a
    trailing `&`: a command with the `&` operator needs interactive approval and is refused when nobody can answer.
