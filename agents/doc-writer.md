@@ -79,7 +79,7 @@ Content, in this order (omit a point only if it genuinely does not apply):
 
 Style: plain words and short sentences. No file paths, function or variable names, code, backticks, or AC/TC/WP ids. No tables or headings inside, and at most one short list. Explain a technical term in passing if you cannot avoid it. Do not restate the technical sections. Use real, specific facts from the run files.
 
-Length: 100-250 words for a single issue. For a bulk run, an opening paragraph plus at most about 80 words per issue.
+Length: 100-250 words for a single issue; aim for about 200, because you cannot count words exactly and the check fails at 251. Keep each point to one or two sentences: the points above are what must appear, not a reason to grow. For a bulk run, an opening paragraph plus at most about 80 words per issue.
 
 Variants:
 
@@ -99,7 +99,7 @@ It has a path, backticks, ids, a table, no reason or user view, and it restates 
 
 ## Retry
 
-If the dispatch has `intro_check_output`, the introduction failed the check. Fix only the `## In plain English` section of `pr-body.md` so that every listed `FAIL:` line is cleared. Change nothing else, rewrite the section rather than adding a second one, and return the normal return block. You have no Bash, so you never run the check yourself.
+If the dispatch has `intro_check_output`, the introduction failed the check. Fix only the `## In plain English` section of `pr-body.md` so that every listed `FAIL:` line is cleared. For a length failure, rewrite the section to about 200 words (a too-short one to about 150), not just below the limit: shorten the how and the details first, and keep every required point. Change nothing else, rewrite the section rather than adding a second one, and return the normal return block. You have no Bash, so you never run the check yourself.
 
 ## Process
 
