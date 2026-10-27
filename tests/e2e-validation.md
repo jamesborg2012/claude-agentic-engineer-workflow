@@ -859,6 +859,10 @@ Cycles: review 1, fix 0. Problems: none in the plugin.
 
 ## Fix log
 
+A batched senior review of the Phase B fixes (2026-10-27) approved 11 of 14 (most with notes) and asked for three wording
+revisions in the doc-writer and DESIGN; those and the cheap notes are the last five rows. Red-then-green was
+re-checked by the reviewer: each new test fails on the pre-fix file.
+
 | Commit | Problem | Scenario | Re-run | Result |
 |---|---|---|---|---|
 | `f33feb1` | `skills/init/SKILL.md` was 507 lines, over the 500-line guidance (refactor before any init fix) | init | none needed | 486 lines; suite green |
@@ -875,6 +879,11 @@ Cycles: review 1, fix 0. Problems: none in the plugin.
 | `637e591` | the spec analyser added ACs about how a criterion is tested, turning one manual check into five | S4.2 | not re-run (about $12) | test red, then green |
 | `43ee2fe` | AC-20: the "no rewrite of a real issue body" limitation lifted after the evidence (v1 byte-identical on #1, #3 and #4; S4's manual-tests block lost no line) | S1, S3, S4 | none | the limitation line is gone from `skills/github-ops/SKILL.md` and `CHANGELOG.md`; suite green |
 | `4b2eca1` | first introduction drafts ran 292 and 294 words; #21's retry still came back at 260 against the 250 limit | S6.1 | S7.3 | test red, then green; **verified live in S7.3**: 232 words, passed first time |
+| `d2dd7bc` | Phase B review (MAJOR): "fresh on every dispatch" contradicted the doc-writer's retry; the fixed 200-word retry target would gut a bulk introduction; no bulk headroom; a fresh summary lost the first pass's CLAUDE.md change list | review of `468ed5f`, `4b2eca1` | next doc-writer run | test red, then green |
+| `2aaf234` | Phase B review (MAJOR): DESIGN's introduction content list and length still predated `7f188e8`, `22b901f` and `4b2eca1`; plus §8.1 (behaviour ACs), the M2 pointer and test 17's coverage | review | none (DESIGN) | suite green |
+| `19f14d8` | review MINOR: "Every rule" now says "Every Bash rule" (the Read rule ends in `**`); a headless init carries on when its permission-references read is denied | review | none | suite green |
+| `6105d4d` | review MINOR: files a build leaves behind are named under Deviations, never committed | review | none | suite green |
+| `4a9e7dc` | review NIT: build-history notes removed from runtime prompts | review | none | suite green |
 
 ## Retro triage
 
