@@ -72,7 +72,7 @@ Develop mode is fix only when `review_cycle` is at least 1 and `test <rd>/07-rev
 ## Return check
 
 1. The last four non-blank lines of the Agent result must be, in order, `STATUS: <ok|needs_input|blocked|failed>` (exactly one of the four words), `ARTEFACTS: <non-empty>`, `SUMMARY: <non-empty>` and `NEXT: <non-empty>`. This is the rule of `valid_return_block` in `${CLAUDE_PLUGIN_ROOT}/scripts/hooks/gate-subagent.sh`. The template form `STATUS: ok | needs_input | blocked | failed` is invalid.
-2. Every comma-separated ARTEFACTS path must print `yes` from `test -f <path> && echo yes || echo no`, one call per path with the path written out: never a `for` loop, whose loop variable a headless run denies (DESIGN §3 H1; prompt 07 saw it twice). Paths are relative to the project root, or absolute for a sub-developer's report.
+2. Every comma-separated ARTEFACTS path must print `yes` from `test -f <path> && echo yes || echo no`, one call per path with the path written out: never a `for` loop, whose loop variable a headless run denies (DESIGN §3 H1). Paths are relative to the project root, or absolute for a sub-developer's report.
 3. Developer only: for each `06-dev-report.md` or `06-dev-report-WP<n>.md` named in ARTEFACTS, `grep -v '^$' <file> | tail -n 4` must also pass rule 1. In fan-out the gate hook can pass on a sibling's report, so the orchestrator checks every named report itself (CTO-3b).
 4. If any rule fails, the return counts as `failed` (see `## Retries`). Do not open the artefact to fix it.
 5. Otherwise route on STATUS through `routing.md` `## Agent status routing`. SUMMARY and NEXT are the only parts of the result the orchestrator uses.
