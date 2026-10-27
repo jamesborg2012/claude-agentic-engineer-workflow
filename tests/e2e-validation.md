@@ -297,6 +297,7 @@ a killed or crashed session, charged at its cap.
 | S3 | S3.3 | 2 | 0.93 | 28.72 | reserve, approved by James | no | result |
 | S4 | S4.1 | 12 | 1.94 | 30.66 | no | no | result |
 | S4 | S4.2 | 10 | 9.74 | 40.40 | no (S4's line: 11.68 of 12) | yes | usage |
+| S5 | S5.1 | 25 | 11.82 | 52.22 | no | yes | usage |
 
 ## Sandbox fixtures
 
@@ -618,7 +619,7 @@ James ran `e2e-session.sh <sandbox> S1.1 15` and `/aew:ship 1` (no `--auto`). Ru
 | Expectation | Result | Evidence |
 |---|---|---|
 | [P] `ship` with gates on | pass | `state.json` `auto` `false`; `log.md`: `plan awaiting_plan_approval — gate:plan-approval 05-plan.md`, then `develop running — plan approved` |
-| [P] Plan gate shown | **partial, fixed** | One AskUserQuestion, header `Plan gate`, question `Approve the plan for #1?`, options `Approve` / `Request changes` / `Stop` (transcript). But no summary and no `05-plan.md` path was shown: the orchestrator read the plan and asked at once (`gates.md` step 3 and DESIGN §9 require both). Fix `c3476b8` puts the summary and path in the question text; James chose to verify it live in S5 (attended, no `--auto`) rather than re-run S1 |
+| [P] Plan gate shown | **partial, fixed** | One AskUserQuestion, header `Plan gate`, question `Approve the plan for #1?`, options `Approve` / `Request changes` / `Stop` (transcript). But no summary and no `05-plan.md` path was shown: the orchestrator read the plan and asked at once (`gates.md` step 3 and DESIGN §9 require both). Fix `c3476b8` puts the summary and path in the question text; James chose to verify it live in S5 rather than re-run S1, and S5.1 confirmed it |
 | [P] ACs traced to tests | pass | spec v2 has 11 criteria; the brief splits them into AC-1 to AC-22 with an explicit mapping (`02-brief.md` judgement note); `08-qa-report-1.md` maps TC-1 to TC-22 one-to-one, all pass; `10-summary.md` lists 22/22 checked; unit 40/40 |
 | [P] PR opened (CR-3) | pass | PR #14, base `main`, body `Closes #1`, title `Validate contact submissions on the server` |
 | Spec revision (non-material, auto) | pass | v2 added ACs 5 to 11 (exact 422 body, trim every field, WHATWG email rule, code points, non-strings, non-object body, 400 on bad JSON), all `non-material`, `source: auto`. Issue #1 now shows v2 on top; v1 extracted with `gh-issue-body.bats`'s `prev_of` is byte-identical to B2's read-back and to the `## Body` section of `00-issue-original.md` (the file adds a separator line); `Spec v1 (original)` summary present; one `Spec revision v2` comment |
@@ -759,6 +760,31 @@ closed; `main` fast-forwarded.
 Cycles: review 0, fix 0. Problems: the spec analyser's test-method ACs (`637e591`); the harness `awk` gap (James's
 decision).
 
+## S5
+
+### S5.1 (attended, no `--auto`, 2026-10-27)
+
+Milestone 1 "Contact page polish" (#5, #6, #7). James ran `e2e-session.sh <sandbox> S5.1 25` and
+`/aew:ship-milestone 1` (no mode flag, no `--auto`, so the plan gate fires: the live check of `c3476b8`). Run `m-1`,
+07:00:47Z to 07:43:52Z (43 minutes); cost $11.82 (`/usage`), cap $25. James approved the recommended mode and the
+plan, and answered nothing else.
+
+| Expectation | Result | Evidence |
+|---|---|---|
+| [P] `ship-milestone` recommends bulk | pass | AskUserQuestion header `Mode`, `How should aew run milestone m-1 Contact page polish?`, options `Bulk (recommended)` / `Sequential` / `Stop`; James chose bulk; `state.json` `mode` `bulk`, `issues` `[5, 6, 7]` |
+| [P] One PR closes all three | pass | PR #18 `Contact page polish`, base `main`, body `Closes #5`, `Closes #6`, `Closes #7`; `milestone-report.md` lists all three as shipped on PR #18; no other open PR |
+| Plan gate shows the summary (S1 fix `c3476b8`, live) | **pass** | the gate's question text is a 17-line summary (approach, one WP and why, a line per issue, challenges, risks, "All 28 ACs map to WP-1"), then `.aew/runs/m-1/05-plan.md` on its own line, then `Approve the plan for m-1?`; options `Approve` / `Request changes` / `Stop` |
+| QA fix loop (first live run) | pass | cycle 1: TC-12 (#6-AC-10) failed intermittently on desktop, classed `impl_bug`; `log.md` `qa running — fix 1: developer`; fix `6a02c42` (re-read the restored message on `pageshow`); cycle 2: 30/30 TCs, TC-12 passing 40 of 40 repeats |
+| Spec revision (bulk, per issue) | pass | `spec revision: #6 v2` (non-material); `aew:spec-revised` on #6 only |
+| CR-1, CR-2 | pass | `state.json` valid, `done`; #5 and #7 `aew:ready-for-review`, #6 also `aew:spec-revised` |
+| CR-4 | pass | lint 0, Vitest 228 passed, `tsc` 0, build 0 |
+| CR-5 | pass | 6 commits, plain trailer (the `feat` commit names only `(#6)` though it carries all three issues' changes: cosmetic) |
+| CR-6, CR-7 | none | no guard text in 14 transcripts; James saw no prompt; settings unchanged |
+| CR-8 | pass | review 0, fix 1; 43 minutes |
+| Introduction (AC-14) | **accurate** | bulk variant: a milestone opening (why built together, no new dependency, plan approved by James), one paragraph per issue with what visitors see, the rejected site-wide title, #6's clarifications "applied automatically, not by your decision", the QA-found Back-button bug and its fix, no manual checks, the results. Check (`--issues 3`) exit 0 |
+
+Cycles: review 0, fix 1. Duration: 43 minutes. Problems: none in the plugin.
+
 ## Guard false positives
 
 ## Fix log
@@ -768,7 +794,7 @@ decision).
 | `f33feb1` | `skills/init/SKILL.md` was 507 lines, over the 500-line guidance (refactor before any init fix) | init | none needed | 486 lines; suite green |
 | `658615f` | init skipped the inferred `retro.repo` question and wrote the plugin repo | init.1 | not re-run: a re-run keeps existing config values; sandbox config corrected by hand (`7caf360`). Re-checked by the next fresh init (S9, if it runs) | `skills.bats` test red, then green |
 | `7ab432b` | init's §13 clean-up prompted in an attended session (two lines, no rule) | init.1 | as above | `skills.bats` test red, then green |
-| `c3476b8` | the plan gate asked "Approve the plan for #1?" with no summary or plan path | S1.1 | verified live in S5 (attended, no `--auto`), James's choice | `skills.bats` test red, then green |
+| `c3476b8` | the plan gate asked "Approve the plan for #1?" with no summary or plan path | S1.1 | S5.1 (attended, no `--auto`), James's choice | `skills.bats` test red, then green; **verified live in S5.1**: 17-line summary and the path in the question |
 | `444a579` | a headless run cannot read the plugin's references and templates (Read outside the working directories needs approval) | S2.1 | S2.2 (and every later headless run) | `skills.bats` test red, then green; S2.2 read them |
 | `7f188e8` | the PR introduction did not mention new dev dependencies added under `--auto` without the plan gate's approval | S2.3 | S2.4 (`--from docs`) | `skills.bats` test red, then green; S2.4's introduction names them |
 | `22b901f` | the introduction stated gate answers as plain facts, not as what the issue left open and James decided | S3.1 | S3.3 | test red, then green; S3.3's introduction names the open questions and the answers |
