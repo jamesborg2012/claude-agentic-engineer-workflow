@@ -783,6 +783,9 @@ plan, and answered nothing else.
 | CR-8 | pass | review 0, fix 1; 43 minutes |
 | Introduction (AC-14) | **accurate** | bulk variant: a milestone opening (why built together, no new dependency, plan approved by James), one paragraph per issue with what visitors see, the rejected site-wide title, #6's clarifications "applied automatically, not by your decision", the QA-found Back-button bug and its fix, no manual checks, the results. Check (`--issues 3`) exit 0 |
 
+Merge (CP-3): James merged PR #18 with a normal merge commit (`4ca64bf`, two parents) and deleted the branch; #5, #6
+and #7 closed; milestone 1 shows 0 open, 3 closed; `main` fast-forwarded.
+
 Cycles: review 0, fix 1. Duration: 43 minutes. Problems: none in the plugin.
 
 ## Guard false positives
