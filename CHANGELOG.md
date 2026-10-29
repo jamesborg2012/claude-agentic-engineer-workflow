@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     first pass instead of being left as a QA check (#19).
   - an AC met by a tool setting is checked against the installed tool version and gets a unit test of the
     setting's effect, not of its presence (#41).
+  - a pinned tool or companion-package version is one the plan has confirmed, with `@latest` as the named
+    fallback and the version used recorded by the developer (#47).
 
 ### Changed
 
