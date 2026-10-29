@@ -56,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which the doc-writer applies (through the CLAUDE.md curation rules) instead of a NEXT line (#18).
 - Every QA test, at every level, has a title starting `TC-<n>: `, and the QA report's Results table gains a Test
   column with each TC's test file, which the spec snapshot's traceability table uses (#8, #30).
+- Agent prompt fixes from the retro:
+  - developer: a look-alike Unicode fixture is an escape in a form the edit tooling keeps (`\u{212A}`), its test
+    asserts the code point, and `grep -n '[^ -~]' <file>` must show no raw character before the report calls
+    it an escape (#31).
 
 ### Changed
 
