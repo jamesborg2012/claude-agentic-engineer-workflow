@@ -717,6 +717,16 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "manual tests that need a GitHub event carry one tag, listed once (#60)" {
+  local bad=""
+  grep -qF '`[needs GitHub]`' "$REPO_ROOT/skills/run-protocol/SKILL.md" || bad="${bad}run protocol does not define the tag"$'\n'
+  grep -qF '[needs GitHub]' "$REPO_ROOT/templates/artefacts/manual-tests.md" || bad="${bad}manual-tests template has no tag"$'\n'
+  grep -E '^7\. Manual-only cases' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF '`[needs GitHub]`' || bad="${bad}QA phase A does not tag GitHub-event cases"$'\n'
+  grep -qF 'Manual tests outstanding: <count> (<k> need GitHub)' "$REPO_ROOT/skills/ship/references/final-report.md" || bad="${bad}final report does not count them"$'\n'
+  grep -qF '`[needs GitHub]` items together' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}doc-writer does not group them"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

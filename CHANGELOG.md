@@ -50,6 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Plan `## Notes for QA`: what QA's phase B tests need to know about how the plan builds the ACs (supporting
   steps, so an order check is relative; seams; test data), read by QA phase B instead of a plan NEXT line the
   orchestrator never passed on (#59).
+- `[needs GitHub]` tag for manual tests that need a real pull request, review or workflow run: defined in the run
+  protocol, applied by QA phase A, grouped in the PR body and counted once in the final report (#60).
 
 ### Changed
 

@@ -113,7 +113,7 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
    - Test results come from the passing QA report.
    - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not. When there are more than 20 screenshot rows, put the table inside a `<details>` block with a one-line `<summary>`. Leave a blank line after `</summary>` and before `</details>`, or GitHub shows the table as plain text.
    - Follow-ups: every minor and nit finding of the highest-numbered `07-review-<n>.md` (the approving review, which re-raises anything still open), one line each, or "None." when there is no such finding or no review.
-   - Manual tests: the outstanding items, or "None.".
+   - Manual tests: the outstanding items, or "None.". List the `[needs GitHub]` items together under one line saying they need a real pull request or other GitHub event, so James can do them in one pass.
    - Add `Closes #<n>` for every issue in `state.json` `issues`.
    - Remove every template comment from `pr-body.md`, because it is posted to GitHub as written.
    - Write the `## In plain English` section last, once the other sections are done (see In plain English).

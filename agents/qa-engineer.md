@@ -125,7 +125,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 4. Write the TCs, `TC-1` onwards and consecutive. Every AC gets at least one TC. Give each a level (`unit | integration | e2e | UI | manual`), and record the test data and the accounts (roles from `app.test_accounts`, never credentials).
 5. Fill the UI tests table: each UI TC, its viewports by name, and the states to screenshot.
 6. Accessibility checks: an axe scan of every page the brief's Affected surfaces changes, at `ui.axe_standard` expanded as `aew:ui-qa` §7 says, plus keyboard and focus checks for each `[A11Y]` AC.
-7. Manual-only cases: only what can't be automated (an external side effect with no test hook such as email delivery, a physical device, a third-party UI). Each has its reason.
+7. Manual-only cases: only what can't be automated (an external side effect with no test hook such as email delivery, a physical device, a third-party UI). Each has its reason. A case that needs a real GitHub event (a pull request, a review, a workflow run) is manual, because agents never touch GitHub: tag it `[needs GitHub]` (template's second line).
 8. Write `## Files read`, as the last section before the return block. List one bullet per project file you opened with Read, written as the path relative to the project root in backticks, in the order you opened them. Run-dir files are included. Leave out plugin files, the plan itself (`04-qa-test-plan.md`), the memory dir `.claude/agent-memory/aew-qa-engineer/`, and any Read that failed.
 9. Self-check before you finish:
    - the set of ACs in Test cases equals step 3's set;
