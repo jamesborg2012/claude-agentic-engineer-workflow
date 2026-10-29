@@ -62,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     it an escape (#31).
   - standards: every generated or updated doc's testing conventions carry the same look-alike fixture rule,
     whatever the stack (#32).
+  - developer fix mode: a fix that changes escaping is tested on the string the code generates (the SQL, the
+    pattern), with a test that fails on the old behaviour (#49).
 
 ### Changed
 
