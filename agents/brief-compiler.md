@@ -84,6 +84,7 @@ These rules apply in both modes.
    - **Acceptance criteria:** per the rules above.
    - **Non-goals:** what the spec explicitly excludes, plus the nearest tempting extras.
    - **Constraints:** stack and versions, standards, commands, browsers and viewports, and any performance or legal limits.
+   - **Standards overrides** (pipeline mode only): read the `docs/standards/` docs the project already has. For each AC whose concrete value (a status code, a format, a name) contradicts one of their rules, write `- <doc>#<section>: <the rule> → <what this brief requires instead> (<AC ids>)`, so later stages follow the spec without arguing from the standard. "None." when nothing conflicts or there are no docs yet.
    - **Affected surfaces:** routes, components, endpoints and tables, by path.
    - **Test data and accounts needed:** roles from `app.test_accounts`, never credentials, plus the seed data needed.
    - **UI changes:** per the section above.

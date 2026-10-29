@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     or process check (#48).
   - tests of state that outlives a request use one isolation pattern the plan names, in a shared helper that
     QA's phase B specs reuse, with no test-only production code path (#15).
+- Brief `## Standards overrides`: an AC whose value contradicts a standards rule (a 422 where the standard says
+  400) is recorded once in the brief, carried into `03-standards.md`, and followed by the planner, developer and
+  reviewer instead of the standard (#7).
 
 ### Changed
 

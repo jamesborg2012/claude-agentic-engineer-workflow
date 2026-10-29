@@ -295,6 +295,7 @@ The orchestrator reads return blocks and only reads full artefacts when a gate o
 - Acceptance criteria. Numbered `AC-1…`, each testable (Given/When/Then where it helps), tagged `[UI] [API] [DATA] [A11Y] [PERF] [SEC]`.
 - Non-goals
 - Constraints
+- Standards overrides: each AC whose value contradicts a `docs/standards/` rule, as `<doc>#<section>: <rule> → <what the brief requires> (<AC ids>)`. The standards-setter carries them into `03-standards.md`, and the planner, developer and reviewer follow the override instead of the rule (#7).
 - Affected surfaces
 - Test data and accounts needed
 - UI changes: yes/no

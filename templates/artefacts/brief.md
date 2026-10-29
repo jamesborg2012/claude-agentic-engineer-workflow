@@ -21,6 +21,10 @@ Source: spec-final.md (v<n>)
 
 ## Constraints
 
+## Standards overrides
+
+<!-- "None." or one line per AC whose concrete value contradicts a rule in docs/standards/: "- <doc>#<section>: <the rule> → <what this brief requires instead> (<AC ids>)". The brief wins over the standard. -->
+
 ## Affected surfaces
 
 ## Test data and accounts needed

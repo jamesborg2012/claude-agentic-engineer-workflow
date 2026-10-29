@@ -670,6 +670,17 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "brief: standards overrides are recorded once and followed downstream (#7)" {
+  local bad=""
+  grep -qx '## Standards overrides' "$REPO_ROOT/templates/artefacts/brief.md" || bad="${bad}brief template has no Standards overrides"$'\n'
+  grep -qx '## Standards overrides' "$REPO_ROOT/templates/artefacts/standards-run.md" || bad="${bad}standards-run template has no Standards overrides"$'\n'
+  grep -qF '**Standards overrides**' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief-compiler does not fill overrides"$'\n'
+  grep -qF '"Standards overrides":' "$REPO_ROOT/agents/standards-setter.md" || bad="${bad}standards-setter does not carry overrides"$'\n'
+  grep -qF '`## Standards overrides` of `03-standards.md`' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}review and plan do not follow overrides"$'\n'
+  grep -qF '`## Standards overrides` of `03-standards.md`' "$REPO_ROOT/agents/developer.md" || bad="${bad}developer does not follow overrides"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
