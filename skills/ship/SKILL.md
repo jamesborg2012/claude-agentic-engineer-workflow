@@ -135,7 +135,7 @@ State is initialised before the fetch (a recorded deviation from DESIGN's order)
 - 3.4 `jq -r .state .aew/runs/<n>/issue.json`. If it prints `CLOSED`, take the same three actions as in 3.3, with the reason `issue #<n> is closed`.
 - 3.5 Read the title on its own: `jq -r .title .aew/runs/<n>/issue.json`. Then `state.sh set title "<that title>"`, with the printed text written into the command as a double-quoted literal (see `## Rules`, free text in a command). Never nest the first command inside the second.
 - 3.6 `gh-labels.sh stage <n> analysing`.
-- 3.7 The slug: `jq -r '.title | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | .[0:40] | rtrimstr("-") | if . == "" then "issue-<n>" else . end' .aew/runs/<n>/issue.json`. Then `git-branch.sh create <n> <slug>` (it prints the branch name), then `state.sh set branch <name>`.
+- 3.7 The slug, without a leading `[NN]` spec prefix (`{spec}` carries it): `jq -r '.title | sub("^[[:space:]]*\\[[0-9]+\\][[:space:]]*"; "") | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | .[0:40] | rtrimstr("-") | if . == "" then "issue-<n>" else . end' .aew/runs/<n>/issue.json`. Then `git-branch.sh create <n> <slug>` (it prints the branch name), then `state.sh set branch <name>`.
 - 3.8 Go to `## Stage: spec_analysis` step 2 (Step 3 has done its Entry).
 
 Milestone child: in a `sequential-child` run, a stop at 3.3 or 3.4 prints its message, then goes to `sequential.md` `## After a child` instead of stopping.
