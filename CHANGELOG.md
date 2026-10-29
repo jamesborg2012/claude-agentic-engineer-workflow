@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The branch slug drops a leading `[NN]` spec prefix from the issue title, so a `{spec}-{issue}-{slug}`
   branch no longer repeats the spec number (`01-38-catch-…`, not `01-38-01-catch-…`) and the prefix no
   longer uses up slug characters. Spec snapshot names follow the same rule (#76).
+- QA phase B runs `commands.format` before its first test run, and again before committing if a test
+  changed, so its test files no longer reach the PR unformatted. A check-only format command makes QA fix
+  its own files by hand; files QA did not write are never staged (#79).
 
 ## [0.2.0] - 2026-10-29
 

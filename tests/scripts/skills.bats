@@ -1041,3 +1041,11 @@ CASES
   grep -E '^\| `review` \|' "$r" | grep -qF '`approve` with a minor finding → Review loop' || bad="${bad}routing table review row still sends every approve to qa"$'\n'
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
+
+@test "qa-engineer: phase B formats its test files before the first run and before committing (#79)" {
+  local bad="" f="$REPO_ROOT/agents/qa-engineer.md"
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$f" | grep -qF 'run `commands.format` before the first run' || bad="${bad}QA phase B does not format before the first run"$'\n'
+  grep -E '^14\. ' "$f" | grep -qF '`commands.format` again' || bad="${bad}QA does not re-format after a test fix"$'\n'
+  grep -qF '`format` (steps 3 and 14)' "$f" || bad="${bad}format is not in QA's phase B Bash families"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
