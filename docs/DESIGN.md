@@ -372,6 +372,7 @@ The orchestrator passes the mode.
   - no public API changes unless specified;
 - the unit tests the developer is expected to write per work package;
 - the environment develop needs (runtimes with their major version, commands on PATH, a running Docker), in line forms `scripts/check-env.sh` checks (§9);
+- notes for QA: what phase B's tests need to know about how the plan builds the ACs (supporting steps, seams, test data), read by QA phase B instead of a NEXT line (#59);
 - risks;
 - an AC→WP traceability matrix.
 

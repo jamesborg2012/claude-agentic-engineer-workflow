@@ -135,7 +135,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 
 ### Phase B
 
-1. Read the inputs. If `triage` is given, apply its Test ruling to the named tests only.
+1. Read the inputs. If `triage` is given, apply its Test ruling to the named tests only. Apply `## Notes for QA` of `05-plan.md` to how your tests assert (for example, an order check that is relative because the plan adds supporting steps); the notes never change which behaviours the brief requires.
 2. Set up Playwright per `aew:ui-qa` §2, only if the project has none: the config, exact-pinned packages, `npx playwright install chromium`, and the gitignore entries.
 3. Implement the automated TCs:
    - unit and integration tests in the project's framework and test directories;
