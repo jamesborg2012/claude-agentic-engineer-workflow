@@ -1,7 +1,7 @@
 <!--
 Artefact: .aew/runs/<run-id>/07-review-<n>.md
 Written by: senior-engineer (review mode), comparing git diff <base>...HEAD with the plan, standards and brief
-Read by: orchestrator (routing, gate review-decision), developer (when changes_required), doc-writer (open minors and nits become the PR body's Follow-ups; Docs follow-ups are applied)
+Read by: orchestrator (routing, gate review-decision), developer (when changes_required, or approve with a minor finding while review cycles remain), doc-writer (open minors and nits become the PR body's Follow-ups; Docs follow-ups are applied)
 -->
 # Review <n>: #<issue> <title>
 

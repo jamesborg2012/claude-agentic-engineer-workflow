@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installs track the `stable` branch, which each release moves to its tag, so a new release arrives with
   auto-update or `claude plugin marketplace update` plus `claude plugin update`, instead of removing and
   re-adding a tag-pinned marketplace. Pinning a release tag still works.
+- An approving review with a minor finding now takes a review fix cycle (developer fix, then re-review)
+  while review cycles remain, instead of going straight to QA with the minors left as PR follow-ups. At the
+  limit it goes to QA as before. This can add one developer and one review dispatch to a run (#80).
 - The dev report has a `## Tests first` section: the failing run of each work package's (or fix's) new
   tests, with the ACs they cover. QA phase B cites those lines under **Failing first** in its report, because
   it never runs its tests against the old code, so the failing-first evidence is in one place (#75).
