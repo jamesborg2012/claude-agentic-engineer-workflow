@@ -23,6 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the brief, as after a triage gate. The gate counts as a review cycle (#40).
 - PR body `## Follow-ups`: the minor and nit findings still open on the last review, so findings an approving
   review raises are no longer lost (#12, #14, #43, #55).
+- Plan hardening, in senior-engineer plan mode (new step 14, tool assumptions):
+  - a tool behaviour the brief flags or the plan relies on is confirmed with context7, or proved by a small test
+    at the start of the work package that relies on it, and listed as an `Unverified:` risk that the plan gate
+    quotes (#42).
+  - a risk mitigation the code can carry (a fallback handler, a retry) goes into a work package's goal in the
+    first pass instead of being left as a QA check (#19).
+  - an AC met by a tool setting is checked against the installed tool version and gets a unit test of the
+    setting's effect, not of its presence (#41).
+  - a pinned tool or companion-package version is one the plan has confirmed, with `@latest` as the named
+    fallback and the version used recorded by the developer (#47).
+  - a container health check names its probe and tests what the code uses (TCP or a real query), never a socket
+    or process check (#48).
+  - tests of state that outlives a request use one isolation pattern the plan names, in a shared helper that
+    QA's phase B specs reuse, with no test-only production code path (#15).
 
 ### Changed
 

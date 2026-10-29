@@ -569,7 +569,7 @@ git-branch.sh')"
 }
 
 @test "ship: the plan-approval summary quotes owner hand-offs" {
-  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md" | grep -qF '`Owner hand-off:` line verbatim' ||
+  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md" | grep -qF 'every `Owner hand-off:` and `Unverified:` line verbatim' ||
     { echo "plan-approval summary does not quote owner hand-offs" >&2; return 1; }
 }
 
@@ -633,6 +633,40 @@ git-branch.sh')"
   grep -qF 'fix the blocker, major and minor findings, and list nits under Deviations' "$REPO_ROOT/agents/developer.md" || bad="${bad}developer fix mode does not fix minors"$'\n'
   grep -qx '## Follow-ups' "$REPO_ROOT/templates/artefacts/pr-body.md" || bad="${bad}PR body template has no Follow-ups"$'\n'
   grep -qF 'Follow-ups: every minor and nit finding of the highest-numbered `07-review-<n>.md`' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}doc-writer does not fill Follow-ups"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "plan: an unverified tool behaviour is confirmed or proved first, and quoted at the gate (#42)" {
+  local bad=""
+  grep -qF 'Risks line `Unverified: <behaviour>: <how WP-<n> proves it first>`' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}plan mode has no Unverified rule"$'\n'
+  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md" | grep -qF 'every `Owner hand-off:` and `Unverified:` line verbatim' || bad="${bad}plan-approval summary does not quote Unverified lines"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "plan: a mitigation the code can carry is built in the first pass, not left to QA (#19)" {
+  grep -E '^10\. \*\*Risks\*\*' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'never leave it as a QA check' ||
+    { echo "plan Risks step does not build code mitigations in" >&2; return 1; }
+}
+
+@test "plan: an AC met by a tool setting gets a test of its effect, not of its presence (#41)" {
+  awk '/^14\. \*\*Tool assumptions\*\*/{f=1; next} /^[0-9]+\. /{f=0} f' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'a unit test of the effect' ||
+    { echo "plan step 14 has no setting-effect rule" >&2; return 1; }
+}
+
+@test "plan: a pinned version is confirmed, with @latest as the named fallback (#47)" {
+  awk '/^14\. \*\*Tool assumptions\*\*/{f=1; next} /^[0-9]+\. /{f=0} f' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'name `@latest` as the fallback' ||
+    { echo "plan step 14 has no version fallback rule" >&2; return 1; }
+}
+
+@test "plan: a health check probes what the code uses, never a socket (#48)" {
+  awk '/^14\. \*\*Tool assumptions\*\*/{f=1; next} /^[0-9]+\. /{f=0} f' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'never a socket or process check' ||
+    { echo "plan step 14 has no readiness-probe rule" >&2; return 1; }
+}
+
+@test "plan: stateful endpoints get one isolation pattern that the developer and QA share (#15)" {
+  local bad=""
+  grep -E '^9\. \*\*Unit tests per work package\*\*' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'name one isolation pattern' || bad="${bad}plan has no isolation-pattern rule"$'\n'
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF "the plan's isolation pattern" || bad="${bad}QA phase B does not use the plan's isolation pattern"$'\n'
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
