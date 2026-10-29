@@ -135,13 +135,13 @@ Blocked:
 #<k> at <stage>: <reason>
 Not started: <#a, #b | none>
 Manual tests outstanding: <#k: <count>, … | none>
-Retro items filed: <count> (<created #a, commented #b>)
+Retro items filed: <count> in <retro.repo> (<created #a, commented #b>)
 Next: <next action>
 Warning: <text>
 ```
 
 - `Shipped: none` and `Blocked: none` when empty. A failed issue reads `#<k> at <stage> (failed): <reason>`.
 - `Next:` by outcome. Done, bulk: `review and merge the PR`. Done, sequential: `review and merge the PRs in order: #a, #b, #c` (the parent's `.issues`). A failed sequential child: `restart #<k> with /aew:ship <k> --from <stage>, then /aew:resume m-<mn>`. A `failed` bulk parent: `remove .aew/runs/m-<mn>, then rerun /aew:ship-milestone <mn> --bulk`. Any other stop: `Resume with /aew:resume m-<mn>`.
-- Retro items: the `created #` and `commented #` lines `gh-retro.sh` printed this session (one call in bulk, one per child in sequential).
+- Retro items: the `created #` and `commented #` lines `gh-retro.sh` printed this session (one call in bulk, one per child in sequential), in `retro.repo` as in `ship/references/final-report.md` `## Counting`.
 - `Warning:` lines, one each: Step 2's (Check 4 ahead-only, Check 6), the `select` stderr warning, the `mode-selection.md` `## Mode given` and bulk cycle or stack-conflict warnings, failed report comments, and any the mode reference passes on.
 - Each sequential child's own ship final report is printed by ship when that child ends.

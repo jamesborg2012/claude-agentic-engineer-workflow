@@ -780,6 +780,15 @@ git-branch.sh')"
     { echo "QA has no config-file matching rule" >&2; return 1; }
 }
 
+@test "final reports name retro.repo for retro items, never the project repo (#36)" {
+  local f bad=""
+  for f in skills/ship/references/final-report.md skills/ship-milestone/SKILL.md; do
+    grep -qF 'Retro items filed: <count> in <retro.repo> (' "$REPO_ROOT/$f" || bad="${bad}$f does not name retro.repo"$'\n'
+  done
+  grep -qF "jq -r '.retro.repo' .aew/config.json" "$REPO_ROOT/skills/ship/references/final-report.md" || bad="${bad}final-report does not say where retro.repo comes from"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

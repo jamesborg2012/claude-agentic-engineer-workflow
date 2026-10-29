@@ -95,6 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   environment blocks, and a full-mode environment block pauses at a new `environment` gate (fixed, continue /
   re-plan / stop) that never skips, even with `--auto`. A sequential work package it interrupted is left
   uncommitted and picked up by the next full-mode dispatch (#51).
+- The ship and milestone final reports name `retro.repo` for retro items; a milestone report had named the
+  project repo (#36).
 
 ## [0.1.0] - 2026-10-27
 

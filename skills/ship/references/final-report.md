@@ -13,7 +13,7 @@ ACs passed: <passed>/<total>
 Review cycles: <review_cycle>/<max_review_cycles>
 Fix cycles: <fix_cycle>/<max_fix_cycles>
 Manual tests outstanding: <count> (<k> need GitHub)
-Retro items filed: <count> (<created #a, commented #b>)
+Retro items filed: <count> in <retro.repo> (<created #a, commented #b>)
 Next: <next action>
 ```
 
@@ -34,7 +34,7 @@ Count, never read. `<id>` is the run id.
 - ACs passed: `grep -c '^- \[x\] AC-' .aew/runs/<id>/10-summary.md`. Total: `grep -cE '^- \[[ x]\] AC-' .aew/runs/<id>/10-summary.md`.
 - In a bulk run the AC ids carry the issue prefix: `grep -c '^- \[x\] #[0-9][0-9]*-AC-' .aew/runs/<id>/10-summary.md`, and for the total `grep -cE '^- \[[ x]\] #[0-9]+-AC-' .aew/runs/<id>/10-summary.md`.
 - Manual tests outstanding: `grep -c '^- \[ \]' .aew/runs/<id>/manual-tests.md`. Of those, need GitHub: `grep -c '^- \[ \].*\[needs GitHub\]' .aew/runs/<id>/manual-tests.md`; drop the bracketed part when it is 0.
-- Retro items: the number of `created #` and `commented #` lines that `gh-retro.sh` printed this session.
+- Retro items: the number of `created #` and `commented #` lines that `gh-retro.sh` printed this session. They are filed in `retro.repo`, never the project repo: `jq -r '.retro.repo' .aew/config.json`, and name that repo, not the one the run works on.
 - Title, PR, stage and cycles: `jq -r '.title, .pr, .stage, .review_cycle, .fix_cycle' .aew/runs/<id>/state.json`. The PR URL is built as in `pr.md` `## Push and pull request` step 3. Do not use `state.sh get`: it reads only the run named in `.aew/runs/current`, which `pr.md` `## Finish` and the plan-gate stop have already cleared, and it exits 1 with "no current run".
 - Limits: `SKILL.md` `## Run variables`.
 
