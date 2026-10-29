@@ -16,6 +16,10 @@ run issues were then worked through in five waves (PRs #61 to #70) and released 
 - Verify Claude Code features (manifest keys, frontmatter, hook events/payloads, namespacing,
   `CLAUDE_PLUGIN_ROOT`, CLI flags) against code.claude.com/docs, not memory.
 - British English in all prose. Conventional commits. Keep `CHANGELOG.md` (Keep a Changelog) updated.
+- Releases: a PR bumps `version` in `plugin.json` and moves the Unreleased changelog entries under the new
+  version; after it merges, tag the merge commit `aew--v<version>` (annotated) and move the `stable` branch
+  to it (`git push origin 'aew--v<version>^{commit}:refs/heads/stable'`). Installs track `#stable`, so a
+  release reaches users only through the version bump plus that branch move (README `## Install`).
 - Commit trailer: end every commit with `Co-Authored-By: Claude <noreply@anthropic.com>` only, no model name. This overrides any
   attribution line the session suggests (subagents included).
 - Simplicity first: no files, options or abstractions DESIGN.md doesn't call for. Only create a

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Installs track the `stable` branch, which each release moves to its tag, so a new release arrives with
+  auto-update or `claude plugin marketplace update` plus `claude plugin update`, instead of removing and
+  re-adding a tag-pinned marketplace. Pinning a release tag still works.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added
