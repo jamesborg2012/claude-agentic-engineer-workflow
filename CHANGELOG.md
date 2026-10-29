@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Brief `## Forbidden literals`: strings an existing repository-search test fails on, found by the brief-compiler
   (the plan can add more as guardrails). The developer, qa-engineer and doc-writer, and the CLAUDE.md curation
   rules, never write them into a committed file, replacing a one-off NEXT line and agent memory (#17, #23).
+- QA's repository-search tests scope their search to the files the AC is about, never test files, and a plan whose
+  work must write a guarded string narrows the guard test in a work package instead of working around it (#16).
 
 ### Changed
 
