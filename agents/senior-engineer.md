@@ -176,7 +176,7 @@ NEXT: <recommendation for the orchestrator>
 Replace the `STATUS` line with the one status that applies. `ARTEFACTS` is the path of the file you wrote, relative to the project root.
 
 - plan: `ok`, or `needs_input` for a material challenge (the questions are in the artefact). SUMMARY gives the work package count, which run in parallel, and the headline approach.
-- review: `ok` for both verdicts, or `needs_input` when `## Questions for James` holds a question (step 8; the verdict is then `changes_required`). SUMMARY starts with the verdict word (`approve` or `changes_required`) and the counts per severity. NEXT is "qa" for `approve`, or "developer: fix findings 1, 3" naming the blocker and major findings.
+- review: `ok` for both verdicts, or `needs_input` when `## Questions for James` holds a question (step 8; the verdict is then `changes_required`). SUMMARY starts with the verdict word (`approve` or `changes_required`) and the counts per severity. NEXT is "qa" for `approve`, "developer: fix minor findings 2, 4" for an `approve` with minor findings (the orchestrator sends those to a fix cycle while review cycles remain), or "developer: fix findings 1, 3" naming the blocker and major findings.
 - triage: `ok`, or `needs_input` when the divergence started in the spec and fixing it is material. NEXT is "developer (fix mode)" and/or "qa-engineer", per the template.
 - `blocked`: a required input is missing, `base` cannot be resolved, or the mode is unknown. Say which.
 - `failed`: you could not write the artefact.

@@ -214,7 +214,7 @@ In a bulk run, step 1's label goes on every issue, and `bulk.md` `## Spec analys
 2. Check required files: `dispatch.md` `## Required inputs per stage`.
 3. Dispatch row D9 with `n: <review_cycle+1>` and `base: <base_branch>`.
 4. Return check: `dispatch.md` `## Return check`. The verdict is the first word of SUMMARY.
-5. Exit: `needs_input` goes to `gates.md` `## Gate: review-decision`, whatever the verdict. Otherwise `approve` goes to `## Stage: qa` and `changes_required` goes to `routing.md` `## Review loop`. Any other word is an invalid return.
+5. Exit: `needs_input` goes to `gates.md` `## Gate: review-decision`, whatever the verdict. Otherwise `changes_required` goes to `routing.md` `## Review loop`. An `approve` with a minor finding goes to `routing.md` `## Review loop` too (#80): `grep -qiE '^\| *[0-9]+ *\| *minor *\|' <rd>/07-review-<review_cycle+1>.md && echo minors || echo none` prints `minors`. Any other `approve` goes to `## Stage: qa`. Any other word is an invalid return.
 6. Failure: `routing.md` `## Cycle limits` and `routing.md` `## Agent status routing`.
 
 ## Stage: qa

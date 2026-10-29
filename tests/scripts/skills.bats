@@ -1021,6 +1021,27 @@ CASES
   report_offenders "3.7 slugs" "$bad"
 }
 
+@test "ship: an approving review with a minor finding takes a review fix cycle while cycles remain (#80)" {
+  local bad="" s="$REPO_ROOT/skills/ship/SKILL.md" r="$REPO_ROOT/skills/ship/references/routing.md" step pat d
+  step=$(awk '/^## Stage: review$/{f=1; next} /^## /{f=0} f' "$s" | grep -E '^5\. Exit:')
+  printf '%s' "$step" | grep -qF '`approve` with a minor finding goes to `routing.md` `## Review loop`' || bad="${bad}review exit does not route minors to the Review loop"$'\n'
+  pat=$(printf '%s' "$step" | sed -nE "s/.*grep -qiE '([^']*)'.*/\1/p")
+  if [ -z "$pat" ]; then
+    bad="${bad}review exit has no minor-finding grep"$'\n'
+  else
+    d="$BATS_TEST_TMPDIR"
+    printf '| # | Severity | Location | Finding | Required fix |\n|---|---|---|---|---|\n| 1 | minor | a.js:3 | weak test | assert the value |\n' > "$d/minor.md"
+    printf '| # | Severity | Location | Finding | Required fix |\n|---|---|---|---|---|\n| 1 | nit | a.js:3 | name | rename |\n' > "$d/nit.md"
+    printf 'None.\n' > "$d/none.md"
+    grep -qiE "$pat" "$d/minor.md" || bad="${bad}the grep misses a minor row"$'\n'
+    if grep -qiE "$pat" "$d/nit.md" || grep -qiE "$pat" "$d/none.md"; then bad="${bad}the grep matches a review with no minor"$'\n'; fi
+  fi
+  awk '/^## Review loop$/{f=1; next} /^## /{f=0} f' "$r" | grep -qF 'or on `approve` with a minor finding' || bad="${bad}Review loop is not reached on approve with minors"$'\n'
+  awk '/^## Review loop$/{f=1; next} /^## /{f=0} f' "$r" | grep -E '^3\. ' | grep -qF 'An `approve` goes to `SKILL.md` `## Stage: qa`' || bad="${bad}Review loop limit blocks an approve"$'\n'
+  grep -E '^\| `review` \|' "$r" | grep -qF '`approve` with a minor finding → Review loop' || bad="${bad}routing table review row still sends every approve to qa"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer gets delivered_by from D13 and states it instead of inferring it (#74)" {
   local bad="" d="$REPO_ROOT/skills/ship/references/dispatch.md" w="$REPO_ROOT/agents/doc-writer.md"
   grep -E '^\| D13 \|' "$d" | grep -qF '`delivered_by: <command>`' || bad="${bad}D13 does not send delivered_by"$'\n'
