@@ -987,6 +987,24 @@ git-branch.sh')"
   report_offenders "pipeline copy in ship-milestone (AC-25)" "$bad"
 }
 
+@test "developer: a skipped plan step is a deviation, and Deviations is None. only when every step ran (#73)" {
+  local bad=""
+  grep -E '^9\. Record the WP' "$REPO_ROOT/agents/developer.md" | grep -qF 'skipped or could not run is a deviation' || bad="${bad}developer step 9 has no skipped-step rule"$'\n'
+  awk '/^## Deviations$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/templates/artefacts/dev-report.md" | grep -qF '"None." only when every planned step and command ran' || bad="${bad}dev-report Deviations comment allows None. after a skip"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "developer records its failing-first runs, and QA phase B cites them (#75)" {
+  local bad="" f="$REPO_ROOT/agents/developer.md"
+  awk '/^## Tests first$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/templates/artefacts/dev-report.md" | grep -qF 'failed before the change' || bad="${bad}dev-report has no Tests first section"$'\n'
+  grep -E '^4\. TDD' "$f" | grep -qF '`## Tests first`' || bad="${bad}developer step 4 does not record the failing run"$'\n'
+  grep -E '^2\. For each root cause' "$f" | grep -qF '`## Tests first`' || bad="${bad}fix mode does not record the failing run"$'\n'
+  awk '/^### Mode: full$/{f=1; next} /^### /{f=0} f' "$f" | grep -qF 'Tests first lines' || bad="${bad}full mode does not carry the WP reports' Tests first lines"$'\n'
+  awk '/^### Phase B$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF '**Failing first**' || bad="${bad}QA phase B does not cite the failing-first lines"$'\n'
+  grep -qF '**Failing first**' "$REPO_ROOT/templates/artefacts/qa-report.md" || bad="${bad}qa-report template has no Failing first label"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "ship: the 3.7 slug drops a leading [NN] spec prefix from the title (#76)" {
   local filter t want got bad=""
   filter=$(grep -E '^- 3\.7 The slug' "$REPO_ROOT/skills/ship/SKILL.md" | sed -E "s/.*jq -r '(.*)' \.aew\/runs.*/\1/; s/<n>/38/g")

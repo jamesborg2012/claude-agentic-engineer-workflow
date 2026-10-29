@@ -157,6 +157,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 11. Write `08-qa-report-<n>.md`. In a bulk run the AC column of the Results and triage tables carries the prefixed id (`#12-AC-1`), which gives traceability per issue, and so does each `manual-tests.md` line (`- [ ] **TC-3 (#12-AC-1):** …`), because the milestone report and doc-writer's per-issue snapshot select manual tests by that prefix:
     - Results: every TC with its test file in the Test column; a manual one has `manual-tests.md` as its Test and `manual` as its Result.
     - Commands and output, with the exploratory label.
+    - Under the bold label `**Failing first**` in `## Commands and output`, the evidence that the new tests failed before the change. You never run your tests against the old code, because you never edit product source, so copy each `## Tests first` line of the `06-dev-report*.md` files, naming its file, then `- none recorded: <AC ids>` for the brief's ACs that no line covers (left out when every AC is covered). Never claim a red run you did not see.
     - Screenshots.
     - Accessibility: one row per changed page, counts summed over viewports, with the rule ids and the raw file names in Notes.
     - `## Docs follow-ups`: a doc the change made stale that you noticed while testing (a `CLAUDE.md` command, a README step), as `- <file>: <what to change and why>`, never a NEXT instruction; or "None.".
