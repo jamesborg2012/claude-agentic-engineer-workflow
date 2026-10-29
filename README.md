@@ -153,6 +153,8 @@ flowchart TD
     gEnv -->|"re-plan"| plan
     review -->|"changes required (max_review_cycles, default 2)"| develop
     review -->|"approved"| qa["qa"]
+    review -->|"a fix needs a spec change"| gReview{{"review-decision gate"}}
+    gReview -->|"answered, re-run from brief"| spec
     qa -->|"failures (max_fix_cycles, default 3)"| fix["triage or developer fix"]
     fix -->|"re-test"| qa
     qa -->|"spec ambiguity"| gQa{{"triage and spec-ambiguity gates"}}
@@ -224,6 +226,7 @@ Gates, each a question put to you in the main session:
 |---|---|---|
 | `spec` | The spec analyser needs answers before it can continue | No |
 | `plan-challenge` | The planner challenges the spec | No |
+| `review-decision` | Review finds a defect that can only be fixed by changing the spec, such as rewriting an acceptance criterion | No |
 | `triage` | QA triage needs a decision about where a failure started | No |
 | `spec-ambiguity` | QA finds the spec ambiguous about intended behaviour | No |
 | `plan-approval` | The plan is ready: approve it, request changes or stop | Yes (also off when `gates.plan_approval` is `false` in the config) |
@@ -400,8 +403,8 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
   reads outside the project unless a rule allows them. Re-run `/aew:init` and accept the permission rules,
   or add `Read(//<plugin folder>/**)` to `.claude/settings.local.json`. Headless runs also need an allowlist
   for the commands aew runs, including its exact `awk` reads (see `docs/DESIGN.md` §3).
-- **A headless or `--auto` run stops with `awaiting_input`:** the spec, plan-challenge, triage,
-  spec-ambiguity and environment gates always ask, even with `--auto`. Run `/aew:resume <run-id>` in an interactive session
+- **A headless or `--auto` run stops with `awaiting_input`:** the spec, plan-challenge,
+  review-decision, triage, spec-ambiguity and environment gates always ask, even with `--auto`. Run `/aew:resume <run-id>` in an interactive session
   and answer.
 - **After merging an aew pull request:** run `git pull --ff-only` on the default branch before the next run;
   preflight stops on a branch that is behind `origin`.

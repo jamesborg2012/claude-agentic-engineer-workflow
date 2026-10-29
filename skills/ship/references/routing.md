@@ -12,7 +12,7 @@ How `SKILL.md` moves between stages. `<rd>` means `.aew/runs/<id>`. D1 to D13 ar
 | `qa_test_plan` | as `plan` (one step) | as `plan` | as `plan` |
 | `plan` | `state.sh stage plan`; label `planning`; D6 ∥ D7 in one message (D7 alone with `notes`) | both `ok` → gate `plan-approval`, or `develop` when auto or the gate is off | plan `needs_input` → gate `plan-challenge`; `failed` → retry only that agent, then blocked path; `blocked` → blocked path |
 | `develop` | `state.sh stage develop`; label `building`; D10 from `07-review-<review_cycle>.md` when `review_cycle` is at least 1 and that review is newer than `05-plan.md` (`dispatch.md` `## Required inputs per stage`), else D8 | `ok` with every named report valid → `review` | full-mode `blocked` → Developer blocked; fix-mode `blocked` → blocked path; `failed` or invalid → retry once, then blocked path |
-| `review` | `state.sh stage review`; label `building`; D9 with n = review_cycle + 1 | `approve` → `qa` | `changes_required` → Review loop (limit → blocked path); `blocked` → blocked path; `failed` or invalid → retry once, then blocked path |
+| `review` | `state.sh stage review`; label `building`; D9 with n = review_cycle + 1 | `approve` → `qa` | `needs_input` → gate `review-decision`; `changes_required` → Review loop (limit → blocked path); `blocked` → blocked path; `failed` or invalid → retry once, then blocked path |
 | `qa` | `state.sh stage qa`; label `testing`; D12 with n = fix_cycle + 1 | `ok` → `docs` | complete failure → QA loop (limit → blocked path); other `failed` → retry once, then blocked path; `blocked` → blocked path |
 | `docs` | `state.sh stage docs`; label `documenting`; D13 | `ok` → docs and memory commits → `pr` | `blocked` → blocked path; `failed` or invalid → retry once, then blocked path |
 | `pr` | `state.sh stage pr`; label set once the PR exists | push, PR, manual tests, retro → label `ready-for-review`, `done`, `current` cleared → final report | a script failure → blocked path (retro failure: warn only) |
@@ -24,7 +24,7 @@ Route on the STATUS of the return block, after the return check (`dispatch.md` `
 | Status | Route |
 |---|---|
 | `ok` | The stage's Exit cell in `## Stage table`. |
-| `needs_input` | Only spec-analyser (gate `spec`), senior-engineer in plan mode (gate `plan-challenge`) and senior-engineer in triage mode (gate `triage`) may return it. From any other agent it is an invalid return. |
+| `needs_input` | Only spec-analyser (gate `spec`), senior-engineer in plan mode (gate `plan-challenge`), senior-engineer in review mode (gate `review-decision`) and senior-engineer in triage mode (gate `triage`) may return it. From any other agent it is an invalid return. |
 | `blocked` | The developer in full mode goes to `## Developer blocked`. Any other agent, and the developer in fix mode, goes to the blocked path. |
 | `failed` | Retry once (`dispatch.md` `## Retries`), then the blocked path. The exception is a QA `failed`, which goes to `## QA loop` first. |
 
@@ -34,7 +34,7 @@ Reached on `changes_required` from `<rd>/07-review-<r>.md`, where r = review_cyc
 
 1. Read `max_review_cycles` (`## Cycle limits`) and `state.sh get review_cycle`.
 2. `review_cycle < max_review_cycles`: run `state.sh bump review_cycle`, then `SKILL.md` `## Stage: develop` with the note `review fix <new review_cycle>`. Develop picks fix mode from the counter and the age of the review (the Entry cell of the `develop` row), and then the review stage runs again.
-3. `review_cycle = max_review_cycles`: the blocked path, with the reason `review cycles used up (<max>): <SUMMARY>`.
+3. `review_cycle` at or above `max_review_cycles` (a `review-decision` gate also counts a cycle, so it can pass the limit): the blocked path, with the reason `review cycles used up (<max>): <SUMMARY>`.
 
 ## Developer blocked
 

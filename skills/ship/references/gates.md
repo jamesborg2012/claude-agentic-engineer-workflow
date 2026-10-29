@@ -1,17 +1,18 @@
 # Gates
 
-Read at `SKILL.md` `## Stage: spec_analysis`, `SKILL.md` `## Stage: plan` and `SKILL.md` `## Stage: qa`, and by `resume`. Every `${CLAUDE_PLUGIN_ROOT}` here is the plugin root stated in `SKILL.md` `## Plugin root`, and a bare `state.sh …` or `gh-labels.sh …` is that root's `scripts/` file by absolute path. `<rd>` is `.aew/runs/<id>`.
+Read at `SKILL.md` `## Stage: spec_analysis`, `SKILL.md` `## Stage: plan`, `SKILL.md` `## Stage: develop`, `SKILL.md` `## Stage: review` and `SKILL.md` `## Stage: qa`, and by `resume`. Every `${CLAUDE_PLUGIN_ROOT}` here is the plugin root stated in `SKILL.md` `## Plugin root`, and a bare `state.sh …` or `gh-labels.sh …` is that root's `scripts/` file by absolute path. `<rd>` is `.aew/runs/<id>`.
 
 Each `## Gate: <id>` section has four steps: set pending, read, ask, apply the answer.
 
 ## Gate ids and pending state
 
-The gate ids are `spec`, `plan-challenge`, `triage`, `spec-ambiguity`, `plan-approval` and `environment`. A gate writes its pending status and label first, so `resume` can find it.
+The gate ids are `spec`, `plan-challenge`, `review-decision`, `triage`, `spec-ambiguity`, `plan-approval` and `environment`. A gate writes its pending status and label first, so `resume` can find it.
 
 | Gate | Status write | Label write | Bounded read (step 2) |
 |---|---|---|---|
 | `spec` | `state.sh status awaiting_input --note "gate:spec 01-spec-analysis.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Questions` of `01-spec-analysis.md` |
 | `plan-challenge` | `state.sh status awaiting_input --note "gate:plan-challenge 05-plan.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Challenges to the spec` of `05-plan.md` |
+| `review-decision` | `state.sh status awaiting_input --note "gate:review-decision 07-review-<r>.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Questions for James` of `07-review-<r>.md` |
 | `triage` | `state.sh status awaiting_input --note "gate:triage 09-triage-<k>.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Root cause` and `## Where the divergence started` of `09-triage-<k>.md` |
 | `spec-ambiguity` | `state.sh status awaiting_input --note "gate:spec-ambiguity 08-qa-report-<k>.md"` | `gh-labels.sh stage <n> awaiting-input` | the triage table and the `### TC-<n>:` entries classed `spec_ambiguity` |
 | `plan-approval` | `state.sh status awaiting_plan_approval --note "gate:plan-approval 05-plan.md"` | `gh-labels.sh stage <n> awaiting-approval` | `05-plan.md` in full |
@@ -27,7 +28,7 @@ In prompt mode (`/aew:prompt`), skip every `gh-labels.sh stage` call in this fil
 
 `jq -r 'if ([.history[] | select(.note == "prompt")] | length) > 0 and .branch == null then "prompt" else "ship" end' .aew/runs/<id>/state.json`
 
-The five `awaiting_input` gates never skip, even with `--auto`. Only `plan-approval` is skippable (`auto` is true, or the plan gate is `off`).
+The six `awaiting_input` gates never skip, even with `--auto`. Only `plan-approval` is skippable (`auto` is true, or the plan gate is `off`).
 
 In a bulk run (`bulk.md` `## Overrides`), the `spec` gate is per issue: `<rd>` is `.aew/runs/<id>/issues/<k>`, `<n>` is `k`, the note is `gate:spec issues/<k>/01-spec-analysis.md`, its label goes on that issue only, and its step 4 returns to `bulk.md` `## Spec analysis`. Every other gate's label goes on every issue, and step 4 of `plan-challenge`, `triage` and `spec-ambiguity` is `bulk.md` `## Re-analysis`.
 
@@ -60,6 +61,15 @@ Entered from `SKILL.md` `## Stage: plan` when senior-engineer returns `needs_inp
 2. Read: `awk '/^## Challenges to the spec$/{f=1;next} /^## /{f=0} f' <rd>/05-plan.md`. Take each material challenge's question, its recommended answer and its alternatives.
 3. Ask (`## Asking`).
 4. Apply: every answer (accept, other or decline) goes the same way. `state.sh stage spec_analysis --note "answers: gate:plan-challenge"`, then `gh-labels.sh stage <n> analysing`, then dispatch row D2 with answers written `Q<k>: <question> => <answer>`, where k continues after `grep -c '^### Q[0-9]' <rd>/01-spec-analysis.md`. On `ok`, run `## Recording a spec revision`, then go to `SKILL.md` `## Stage: brief`. That re-runs brief, standards, QA phase A and the plan in parallel, and the plan gate. Counters are kept.
+
+## Gate: review-decision
+
+Entered from `SKILL.md` `## Stage: review` when senior-engineer (review mode) returns `needs_input`: a finding can only be fixed by a material spec change. `<r>` is the review just written, review_cycle + 1.
+
+1. Set pending: `state.sh bump review_cycle` (the review counts as a cycle, so the next review is `07-review-<r+1>.md` and re-checks this one's findings), then `state.sh status awaiting_input --note "gate:review-decision 07-review-<r>.md"`, then `gh-labels.sh stage <n> awaiting-input`.
+2. Read: `awk '/^## Questions for James$/{f=1;next} /^## |^STATUS:/{f=0} f' <rd>/07-review-<r>.md`. Each `### Q<k>. <question>` is a question, its `**Recommended answer:**` is the first option, and its `**Alternatives:**` (split on `;`) are the rest. On a resume, `<r>` is the file named in the pending note.
+3. Ask (`## Asking`).
+4. Apply: as `## Gate: plan-challenge` step 4 (the change is material by definition), with the note `answers: gate:review-decision`. Then go to `SKILL.md` `## Stage: brief`. The new plan is newer than the review, so develop runs in full mode, and the next review re-checks every finding of review `<r>`.
 
 ## Gate: triage
 

@@ -46,6 +46,10 @@ Checked by scripts/check-pr-intro.sh before the PR is created or updated.
 |---|---|---|
 | TC-1 | ![TC-1 desktop](https://github.com/<owner>/<repo>/blob/<branch>/docs/qa/<issue>/screenshots/TC-1-desktop.jpg?raw=true) | ![TC-1 mobile](https://github.com/<owner>/<repo>/blob/<branch>/docs/qa/<issue>/screenshots/TC-1-mobile.jpg?raw=true) |
 
+## Follow-ups
+
+<!-- "None." or each minor and nit finding left open by the last review, one line each: "- <severity>, <location>: <finding> (review <n>, finding <k>)". The reviewer decides whether to fix them before merging. -->
+
 ## Manual tests
 
 <!-- "None." or the outstanding items from manual-tests.md. -->

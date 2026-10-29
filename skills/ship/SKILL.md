@@ -60,6 +60,7 @@ Read each value fresh before each use.
 | `## Questions` of `01-spec-analysis.md` | gate `spec` | bounded section read (`gates.md`) |
 | `## Challenges to the spec` of `05-plan.md` | gate `plan-challenge` | bounded section read |
 | `## Root cause` and `## Where the divergence started` of `09-triage-<k>.md` | gate `triage` | bounded section read |
+| `## Questions for James` of `07-review-<r>.md` | gate `review-decision` | bounded section read |
 | The triage table of `08-qa-report-<k>.md`, and of `<k-1>` | the QA loop (repeat check) | bounded section read (`routing.md`) |
 | The `### TC-<n>:` entries classed `spec_ambiguity` | gate `spec-ambiguity` | bounded section read |
 | The `Block cause:` line of `06-dev-report.md` | a full-mode developer `blocked` (`routing.md`) | `grep -m1 '^Block cause:'` |
@@ -70,7 +71,7 @@ Read each value fresh before each use.
 | `spec-changes.json` | recording a spec revision | `jq` counts, and a render to a file only |
 | `issue.json` | run start, `--from spec_analysis` | `jq` for `title`, `state` and `url` |
 | The return block of an `08-qa-report-<k>.md` | the complete-failure test (`routing.md`), the `docs` required inputs (`dispatch.md`) | `grep -v '^$' <file> \| tail -n 4` |
-| `01-spec-analysis.md` question count | numbering extra questions in gates `plan-challenge` and `spec-ambiguity` | `grep -c '^### Q[0-9]'` |
+| `01-spec-analysis.md` question count | numbering extra questions in gates `plan-challenge`, `review-decision` and `spec-ambiguity` | `grep -c '^### Q[0-9]'` |
 | `.aew/runs/current` | preflight Check 5 | `cat` |
 | `.status` of another run's `state.json` | preflight Check 5 | `jq -r .status` |
 | `10-summary.md` and `manual-tests.md` | the pull request and the final report | `grep -c` |
@@ -213,7 +214,7 @@ In a bulk run, step 1's label goes on every issue, and `bulk.md` `## Spec analys
 2. Check required files: `dispatch.md` `## Required inputs per stage`.
 3. Dispatch row D9 with `n: <review_cycle+1>` and `base: <base_branch>`.
 4. Return check: `dispatch.md` `## Return check`. The verdict is the first word of SUMMARY.
-5. Exit: `approve` goes to `## Stage: qa`. `changes_required` goes to `routing.md` `## Review loop`. Any other word is an invalid return.
+5. Exit: `needs_input` goes to `gates.md` `## Gate: review-decision`, whatever the verdict. Otherwise `approve` goes to `## Stage: qa` and `changes_required` goes to `routing.md` `## Review loop`. Any other word is an invalid return.
 6. Failure: `routing.md` `## Cycle limits` and `routing.md` `## Agent status routing`.
 
 ## Stage: qa

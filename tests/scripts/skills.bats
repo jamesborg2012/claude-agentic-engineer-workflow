@@ -588,7 +588,7 @@ git-branch.sh')"
     bad="${bad}routing.md Developer blocked does not route to the environment gate"$'\n'
   grep -qE '^The gate ids are .*`environment`' "$g" || bad="${bad}environment is not a listed gate id"$'\n'
   grep -qF '| `environment` | `state.sh status awaiting_input --note "gate:environment 06-dev-report.md"`' "$g" || bad="${bad}no pending-state row for environment"$'\n'
-  grep -qF 'The five `awaiting_input` gates never skip' "$g" || bad="${bad}the environment gate is not counted among the unskippable gates"$'\n'
+  grep -qF 'The six `awaiting_input` gates never skip' "$g" || bad="${bad}the environment gate is not counted among the unskippable gates"$'\n'
   sec=$(awk '/^## Gate: environment$/{f=1; next} /^## /{f=0} f' "$g")
   [ -n "$sec" ] || bad="${bad}gates.md has no Gate: environment section"$'\n'
   grep -qF 'Fixed, continue (recommended)' <<< "$sec" || bad="${bad}environment gate has no continue option"$'\n'
@@ -611,6 +611,29 @@ git-branch.sh')"
   grep -qx '## Environment' "$REPO_ROOT/templates/artefacts/plan.md" || { echo "plan template has no Environment section" >&2; return 1; }
   grep -qF '13. **Environment**' "$f" || { echo "plan mode has no Environment step" >&2; return 1; }
   grep -qF -- '- `- tool: <command> <major>`' "$f" && grep -qF -- '- `- service: docker`' "$f" || { echo "plan mode does not give the check's line forms" >&2; return 1; }
+}
+
+@test "review: a finding only a material spec change can fix goes to the review-decision gate" {
+  local se="$REPO_ROOT/agents/senior-engineer.md" g="$REPO_ROOT/skills/ship/references/gates.md" sec bad=""
+  grep -qx '## Questions for James' "$REPO_ROOT/templates/artefacts/review.md" || bad="${bad}review template has no Questions for James"$'\n'
+  awk '/^### Mode: review$/{f=1; next} /^### /{f=0} f' "$se" | grep -qF '`## Questions for James`' || bad="${bad}review mode does not ask material questions"$'\n'
+  grep -qE '^- review: `ok` for both verdicts, or `needs_input`' "$se" || bad="${bad}review return contract has no needs_input"$'\n'
+  grep -qF 'senior-engineer in review mode (gate `review-decision`)' "$REPO_ROOT/skills/ship/references/routing.md" || bad="${bad}routing does not accept needs_input from review"$'\n'
+  grep -qE '^The gate ids are .*`review-decision`' "$g" || bad="${bad}review-decision is not a listed gate id"$'\n'
+  sec=$(awk '/^## Gate: review-decision$/{f=1; next} /^## /{f=0} f' "$g")
+  [ -n "$sec" ] || bad="${bad}gates.md has no Gate: review-decision section"$'\n'
+  grep -qF 'state.sh bump review_cycle' <<< "$sec" || bad="${bad}the gate does not keep the review artefact by bumping the cycle"$'\n'
+  grep -qF 'as `## Gate: plan-challenge` step 4' <<< "$sec" || bad="${bad}the answer does not go through spec re-analysis"$'\n'
+  grep -qF '`gates.md` `## Gate: review-decision`' "$REPO_ROOT/skills/ship-milestone/references/bulk.md" || bad="${bad}bulk re-analysis does not cover review-decision"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "review: a fix cycle fixes minors, and open minors and nits reach the PR body" {
+  local bad=""
+  grep -qF 'fix the blocker, major and minor findings, and list nits under Deviations' "$REPO_ROOT/agents/developer.md" || bad="${bad}developer fix mode does not fix minors"$'\n'
+  grep -qx '## Follow-ups' "$REPO_ROOT/templates/artefacts/pr-body.md" || bad="${bad}PR body template has no Follow-ups"$'\n'
+  grep -qF 'Follow-ups: every minor and nit finding of the highest-numbered `07-review-<n>.md`' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}doc-writer does not fill Follow-ups"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {

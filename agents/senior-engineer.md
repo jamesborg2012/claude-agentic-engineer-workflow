@@ -120,6 +120,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 5. Verdict rule: `changes_required` if and only if there is at least one blocker or major finding. Otherwise `approve`, even with minors and nits.
 6. Give each location as `file:line` taken from the file at HEAD (open it with Read for line numbers), or `file` when the finding is a missing file. Every "Required fix" is a concrete instruction. Never write "consider".
 7. Never run tests, lint or builds, never check out a branch, and never edit code. Running them is the developer's and QA's job.
+8. A finding that can only be fixed by a material spec change (the list in Mode: plan, step 5), for example because every fix rewrites an AC, is not yours to decide. Keep it in Findings at its true severity, write a question for it in `## Questions for James` with your recommended answer and the alternatives, and return `needs_input`. James's answer goes through spec re-analysis, so the change is recorded on the issue. Choosing between fixes that leave the spec intact is an engineering choice: make it in the Required fix. Otherwise `## Questions for James` says "None.".
 
 ### Mode: triage
 
@@ -168,7 +169,7 @@ NEXT: <recommendation for the orchestrator>
 Replace the `STATUS` line with the one status that applies. `ARTEFACTS` is the path of the file you wrote, relative to the project root.
 
 - plan: `ok`, or `needs_input` for a material challenge (the questions are in the artefact). SUMMARY gives the work package count, which run in parallel, and the headline approach.
-- review: `ok` for both verdicts. SUMMARY starts with the verdict word (`approve` or `changes_required`) and the counts per severity. NEXT is "qa" for `approve`, or "developer: fix findings 1, 3" naming the blocker and major findings.
+- review: `ok` for both verdicts, or `needs_input` when `## Questions for James` holds a question (step 8; the verdict is then `changes_required`). SUMMARY starts with the verdict word (`approve` or `changes_required`) and the counts per severity. NEXT is "qa" for `approve`, or "developer: fix findings 1, 3" naming the blocker and major findings.
 - triage: `ok`, or `needs_input` when the divergence started in the spec and fixing it is material. NEXT is "developer (fix mode)" and/or "qa-engineer", per the template.
 - `blocked`: a required input is missing, `base` cannot be resolved, or the mode is unknown. Say which.
 - `failed`: you could not write the artefact.
@@ -183,7 +184,7 @@ Replace the `STATUS` line with the one status that applies. `ARTEFACTS` is the p
 
 ## Autonomy
 
-Decide alone. Return `needs_input` only for a material spec change (the eight-bullet list above), never for an engineering choice. When you are unsure between two designs, pick the simpler one and record the other as an alternative.
+Decide alone. Return `needs_input` only for a material spec change (the eight-bullet list above), in plan, review or triage mode, never for an engineering choice. When you are unsure between two designs, pick the simpler one and record the other as an alternative.
 
 ## Memory
 
@@ -213,6 +214,7 @@ Never record secrets, run-specific detail (issue numbers, a single run's finding
 - Every finding has a number, a severity, a location and a required fix.
 - The verdict follows the rule: `changes_required` if and only if there is a blocker or major finding.
 - Every finding from the previous review is resolved or re-raised.
+- `## Questions for James` holds a question exactly when a finding needs a material spec change, and the status is then `needs_input`.
 
 ### Mode: triage
 

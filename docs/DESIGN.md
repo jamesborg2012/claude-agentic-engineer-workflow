@@ -511,7 +511,8 @@ Runs on the main thread.
   - file the manual tests and retro items;
   - give the final report.
 - **Gates:**
-  - A material spec change always gets a gate, even with `--auto`. It uses AskUserQuestion with recommended answers.
+  - A material spec change always gets a gate, even with `--auto`. It uses AskUserQuestion with recommended answers. That includes a review finding that can only be fixed by a material spec change: review mode returns `needs_input` with `## Questions for James`, and the `review-decision` gate sends the answer through spec re-analysis and re-runs from the brief, as the triage gate does (#40).
+  - **Review findings by severity (#43).** Blocker and major findings make the verdict `changes_required`. A review fix cycle also fixes minor findings, and lists nits as not addressed. Minor and nit findings still open on the last review go into the PR body's `## Follow-ups`, so nothing a review raises is lost.
   - Plan approval is on by default. `--auto`, or `gates.plan_approval: false`, skips it. James sees a plan summary of 25 lines or fewer plus the file path, with the options approve / request changes / stop.
   - Irreversible or destructive operations always get a gate.
   - A developer blocked by the environment in full mode gets the `environment` gate, even with `--auto`: fix and continue (the re-plan allowance is kept), re-plan, or stop.
