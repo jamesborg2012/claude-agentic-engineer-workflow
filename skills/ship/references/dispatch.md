@@ -36,7 +36,7 @@ base: main
 | D10 | developer, fix | `aew:developer` | `run_dir`, `mode: fix`, `fix_from: <file>`, `n: <k>` | the `fix_from` file | stage entry `develop` (review fix) or `state.sh stage qa --note "fix <k>: developer"` (QA fix), immediately before |
 | D11 | senior-engineer, triage | `aew:senior-engineer` | `run_dir`, `mode: triage`, `n: <k>` | `08-qa-report-<k>.md` | the `bump fix_cycle` of the QA loop |
 | D12 | qa-engineer, phase B | `aew:qa-engineer` | `run_dir`, `phase: B`, `n: <fix_cycle+1>`, optional `triage: <rd>/09-triage-<k>.md` | `02-brief.md`, `04-qa-test-plan.md` | stage entry `qa` (first pass) |
-| D13 | doc-writer | `aew:doc-writer` | `run_dir` | `spec-final.md`, `issue.json`, `state.json` | stage entry `docs` |
+| D13 | doc-writer | `aew:doc-writer` | `run_dir`, `delivered_by: <command>` | `spec-final.md`, `issue.json`, `state.json` | stage entry `docs` |
 
 Field notes, taken from each agent's Inputs:
 
@@ -47,6 +47,7 @@ Field notes, taken from each agent's Inputs:
 - `fix_from` (D10) is a comma-separated list of file names in the run dir, such as `07-review-<k>.md`, `08-qa-report-<k>.md` or `09-triage-<k>.md`. Each must exist.
 - `triage` (D12) is a run-dir path, `<rd>/09-triage-<k>.md`. Send it only when the QA loop sent you.
 - `intro_check_output` (D13, optional) is the stdout of a failed `check-pr-intro.sh`, sent on the one retry from `pr.md` `## Push and pull request` step 2 and absent otherwise. `stacked_on` (D13, optional) is set only when milestone mode stacks the PR on an unmerged issue's branch, and is absent for a single-issue run.
+- `delivered_by` (D13) is the aew command that delivers the run, by `jq -r .mode .aew/runs/<n>/state.json`: `single` → `/aew:ship <n>`; `bulk` → `/aew:ship-milestone <mn> --bulk`, with `<mn>` from the run id `m-<mn>`; `sequential-child` → `/aew:ship-milestone <mn> --sequential`, with `<mn>` from the parent `m-<mn>` that `sequential.md` `## Parent and dependency of a child` step 1 gives. A resumed or `--from` run sends the same value, because it comes from the mode.
 - `base` (D9) is `state.base_branch`.
 - Developer `mode: package` and standards-setter `mode: init` are not in this table: package mode belongs to fan-out, and `init` dispatches its own agent.
 

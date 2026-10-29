@@ -486,6 +486,7 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
     - variants: stacked (says it builds on the PR for issue #n and must be merged after it), bulk (opening paragraph, then one short paragraph per issue), `init` (what was set up and why, what to check, such as detected commands and permissions, and what happens next);
     - checked by `scripts/check-pr-intro.sh` (§9);
   - a summary and an AC checklist;
+  - the summary's `Delivered by:` line, the aew command that delivered the run, from the orchestrator's `delivered_by` dispatch field (derived from `state.json` `mode`), which is also the source when a project's `CLAUDE.md` asks the PR body for a delivery path (#74);
   - test results;
   - screenshots linked via `blob/<branch>/…?raw=true`;
   - manual tests;
