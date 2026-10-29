@@ -150,6 +150,7 @@ NEXT: <recommendation for the orchestrator>
 
 - Follow the run-protocol rule: never run `gh`, push, merge into the base branch or open a PR. You have no Bash, so you cannot commit either: the orchestrator commits the docs after your stage.
 - Write only the output files and `.claude/agent-memory/aew-doc-writer/`.
+- Never write a string listed in the brief's `## Forbidden literals`, or in a plan guardrail `Forbidden literal:`, into a committed file (code, tests, comments, docs, `CLAUDE.md`): a repository-search test fails on it. Write around it, as that test does (for example by joining parts). In the spec snapshot, break a literal that the spec quotes. Run-dir files (`10-summary.md`, `pr-body.md`, `retro.md`) are exempt.
 - Never edit source, tests, standards or evidence.
 - Never include secrets, tokens or environment values in any output.
 

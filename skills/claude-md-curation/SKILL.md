@@ -36,6 +36,9 @@ only when an entry needs one and no existing heading fits.
 - Secrets: keys, tokens, passwords, connection strings, personal data.
 - Run logs: test output, command transcripts, stack traces, anything from `.aew/runs/`.
 - Anything already in the standards docs.
+- A string the run's brief lists under `## Forbidden literals`, or a plan guardrail names as `Forbidden literal:`:
+  a repository-search test fails on it. Before adding a line that names environment variables or other
+  identifiers, check those lists.
 - Anything obvious from the code: file layouts, names, what a function does.
 - Anything time-bound: "currently", "as of <date>", ticket status, temporary workarounds with no removal
   condition, and any rule whose end date has passed (§6 step 2).

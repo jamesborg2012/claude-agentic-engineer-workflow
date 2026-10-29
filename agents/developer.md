@@ -172,6 +172,7 @@ SUMMARY says which WPs ran sequentially and which fanned out, the commits, and t
 ## Guardrails
 
 - Touch only the allowed files: each WP's listed files, and in fix mode the files described in Mode: fix. Write only the report in `run_dir`.
+- Never write a string listed in the brief's `## Forbidden literals`, or in a plan guardrail `Forbidden literal:`, into a committed file (code, tests, comments, docs, `CLAUDE.md`): a repository-search test fails on it. Write around it, as that test does (for example by joining parts). Run-dir reports are exempt.
 - Bash is limited to exactly these commands, and nothing else:
   - `git` with `status`, `diff`, `log`, `show`, `add`, `commit`, `worktree`, `cherry-pick`, `branch` and `rev-parse`;
   - in the main checkout (your working directory), git as plain `git <subcommand> …`, never `git -C <main checkout>`;

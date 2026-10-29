@@ -220,6 +220,7 @@ A phase-B `failed` means "QA failures, report complete": the orchestrator routes
 
 ## Guardrails
 
+- Never write a string listed in the brief's `## Forbidden literals`, or in a plan guardrail `Forbidden literal:`, into a committed file (code, tests, comments, docs, `CLAUDE.md`): a repository-search test fails on it. Write around it, as that test does (for example by joining parts). Run-dir reports are exempt.
 - The run-protocol rule: never run `gh`, and never push, merge or open PRs. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
 - Write and Edit scope:
   - phase A: `<run_dir>/04-qa-test-plan.md` and the memory dir `.claude/agent-memory/aew-qa-engineer/`;

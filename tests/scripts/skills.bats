@@ -690,6 +690,18 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "brief: forbidden literals are listed once and never written by any agent (#17, #23)" {
+  local f bad=""
+  grep -qx '## Forbidden literals' "$REPO_ROOT/templates/artefacts/brief.md" || bad="${bad}brief template has no Forbidden literals"$'\n'
+  grep -qF '**Forbidden literals**' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief-compiler does not fill forbidden literals"$'\n'
+  grep -qF 'Forbidden literal: <literal> (<test file>)' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}plan cannot add a forbidden literal"$'\n'
+  for f in developer qa-engineer doc-writer; do
+    awk '/^## Guardrails$/{g=1; next} /^## /{g=0} g' "$REPO_ROOT/agents/$f.md" | grep -qF "the brief's \`## Forbidden literals\`" || bad="${bad}$f has no forbidden-literal guardrail"$'\n'
+  done
+  awk '/^## 3\. Never include$/{g=1; next} /^## /{g=0} g' "$REPO_ROOT/skills/claude-md-curation/SKILL.md" | grep -qF 'Forbidden literals' || bad="${bad}curation never-include list has no forbidden literals"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

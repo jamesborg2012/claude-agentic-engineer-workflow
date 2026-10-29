@@ -77,7 +77,7 @@ These rules apply in both modes.
 ### Both modes
 
 1. Resolve `run_dir` and `mode`, then read the inputs. A missing `spec-final.md` or `issue.json` means `blocked`.
-2. Look briefly at the repo with Glob, Grep and Read, only to name the affected surfaces precisely: existing paths as they are, new ones marked "(new)". Do not explore beyond that.
+2. Look briefly at the repo with Glob, Grep and Read, only to name the affected surfaces precisely (existing paths as they are, new ones marked "(new)") and to find repository-search tests for Forbidden literals. Do not explore beyond that.
 3. Draft every brief section from the template:
    - **Goal:** 1 to 3 sentences on the user outcome.
    - **Context:** why the work is needed, who it is for, and the current behaviour.
@@ -86,6 +86,7 @@ These rules apply in both modes.
    - **Non-goals:** what the spec explicitly excludes, plus the nearest tempting extras.
    - **Constraints:** stack and versions, standards, commands, browsers and viewports, and any performance or legal limits.
    - **Standards overrides** (pipeline mode only): read the `docs/standards/` docs the project already has. For each AC whose concrete value (a status code, a format, a name) contradicts one of their rules, write `- <doc>#<section>: <the rule> → <what this brief requires instead> (<AC ids>)`, so later stages follow the spec without arguing from the standard. "None." when nothing conflicts or there are no docs yet.
+   - **Forbidden literals** (pipeline mode only): Grep the test files for repository-search tests (tests that read source files or search the repo and assert that a string is absent). For each string such a test forbids that this work might write, often a name the spec itself quotes, write `- <literal>: <test file>`. "None." when there are none. This is the one search beyond the affected surfaces that step 2 allows.
    - **Affected surfaces:** routes, components, endpoints and tables, by path.
    - **Test data and accounts needed:** roles from `app.test_accounts`, never credentials, plus the seed data needed.
    - **UI changes:** per the section above.

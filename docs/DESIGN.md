@@ -297,6 +297,7 @@ The orchestrator reads return blocks and only reads full artefacts when a gate o
 - Non-goals
 - Constraints
 - Standards overrides: each AC whose value contradicts a `docs/standards/` rule, as `<doc>#<section>: <rule> → <what the brief requires> (<AC ids>)`. The standards-setter carries them into `03-standards.md`, and the planner, developer and reviewer follow the override instead of the rule (#7).
+- Forbidden literals: strings an existing repository-search test fails on that the work might write, as `<literal>: <test file>`. The plan can add more as `Forbidden literal:` guardrails, and the developer, qa-engineer and doc-writer (with its CLAUDE.md curation) never write them into a committed file (#17, #23).
 - Affected surfaces
 - Test data and accounts needed
 - UI changes: yes/no

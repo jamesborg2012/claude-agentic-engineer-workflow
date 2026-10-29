@@ -42,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reviewer instead of the standard (#7).
 - Brief `## Spec criteria map`: each spec criterion and the brief ACs it became, so a criterion split into
   several ACs still traces back; the spec snapshot's traceability table gains a Spec criterion column (#22).
+- Brief `## Forbidden literals`: strings an existing repository-search test fails on, found by the brief-compiler
+  (the plan can add more as guardrails). The developer, qa-engineer and doc-writer, and the CLAUDE.md curation
+  rules, never write them into a committed file, replacing a one-off NEXT line and agent memory (#17, #23).
 
 ### Changed
 

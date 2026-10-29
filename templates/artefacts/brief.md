@@ -33,6 +33,10 @@ Source: spec-final.md (v<n>)
 
 <!-- "None." or one line per AC whose concrete value contradicts a rule in docs/standards/: "- <doc>#<section>: <the rule> → <what this brief requires instead> (<AC ids>)". The brief wins over the standard. -->
 
+## Forbidden literals
+
+<!-- "None." or one line per string an existing repository-search test fails on, which this work might write: "- <literal>: <test file>". No agent writes one into any committed file (code, tests, comments, docs, CLAUDE.md); write around it, as the test itself does. -->
+
 ## Affected surfaces
 
 ## Test data and accounts needed
