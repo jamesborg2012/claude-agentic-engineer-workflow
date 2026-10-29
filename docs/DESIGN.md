@@ -430,7 +430,7 @@ It lists every project file it opened in the plan's `## Files read` section.
 
 **Phase B: execute.** Runs after the review approves.
 
-- Implements the automated acceptance tests in the project's frameworks. UI tests are `@playwright/test` specs in `ui.e2e_dir`.
+- Implements the automated acceptance tests in the project's frameworks. UI tests are `@playwright/test` specs in `ui.e2e_dir`. Every test title, at every level, starts `TC-<n>: `, and the report's Results table names each TC's test file, which the spec snapshot's traceability uses (#8, #30). The developer's own unit tests come from the plan and are named by behaviour.
 - Starts the app per config and waits for `ready_check`.
 - Runs everything, and captures screenshots at key states for each viewport.
 - Runs an axe scan on every changed page. Serious or critical violations fail; moderate ones are reported. `ui.axe_standard` names a conformance target: a WCAG level expands to the cumulative axe tags up to and including it (`wcag22aa` → `wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa`); any other value is one tag.

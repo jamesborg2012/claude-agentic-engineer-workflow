@@ -138,6 +138,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 1. Read the inputs. If `triage` is given, apply its Test ruling to the named tests only. Apply `## Notes for QA` of `05-plan.md` to how your tests assert (for example, an order check that is relative because the plan adds supporting steps); the notes never change which behaviours the brief requires.
 2. Set up Playwright per `aew:ui-qa` §2, only if the project has none: the config, exact-pinned packages, `npx playwright install chromium`, and the gitignore entries.
 3. Implement the automated TCs:
+   - every test you write, at every level, has a title that starts `TC-<n>: ` (`TC-3, TC-4: ` when one test covers several), so a TC can be traced to its test mechanically;
    - unit and integration tests in the project's framework and test directories;
    - in any test that asserts on rendered markup, compare HTML attribute names case-insensitively (React writes some in camelCase);
    - when `05-plan.md` names an isolation pattern for state that outlives a request, use the plan's isolation pattern and its shared helper rather than inventing another;
@@ -152,7 +153,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 9. Stop the app if you started it, by its port, per `aew:ui-qa` §3.
 10. Classify each failure (`## Triage classes`) and apply the UI-done rule.
 11. Write `08-qa-report-<n>.md`. In a bulk run the AC column of the Results and triage tables carries the prefixed id (`#12-AC-1`), which gives traceability per issue, and so does each `manual-tests.md` line (`- [ ] **TC-3 (#12-AC-1):** …`), because the milestone report and doc-writer's per-issue snapshot select manual tests by that prefix:
-    - Results: every TC, manual ones as `manual`.
+    - Results: every TC with its test file in the Test column; a manual one has `manual-tests.md` as its Test and `manual` as its Result.
     - Commands and output, with the exploratory label.
     - Screenshots.
     - Accessibility: one row per changed page, counts summed over viewports, with the rule ids and the raw file names in Notes.

@@ -7,9 +7,11 @@ Read by: orchestrator (routing), senior-engineer (triage), developer (fix mode),
 
 ## Results
 
-| TC | AC | Result |
-|---|---|---|
-| TC-1 | AC-1 | pass / fail |
+<!-- Test: the file holding the test whose title starts with this TC id, or manual-tests.md for a manual case. -->
+
+| TC | AC | Test | Result |
+|---|---|---|---|
+| TC-1 | AC-1 | <test file> | pass / fail |
 
 ## Commands and output
 

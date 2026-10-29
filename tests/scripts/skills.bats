@@ -737,6 +737,14 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "every QA test title carries its TC id, and the report names each TC's test file (#8, #30)" {
+  local bad=""
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF 'at every level, has a title that starts `TC-<n>: `' || bad="${bad}QA titles do not carry TC ids at every level"$'\n'
+  grep -qF '| TC | AC | Test | Result |' "$REPO_ROOT/templates/artefacts/qa-report.md" || bad="${bad}QA report Results has no Test column"$'\n'
+  grep -qF "its Test from the passing QA report's Results" "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}snapshot does not take the test file from the QA report"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
