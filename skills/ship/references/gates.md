@@ -15,7 +15,7 @@ The gate ids are `spec`, `plan-challenge`, `triage`, `spec-ambiguity`, `plan-app
 | `triage` | `state.sh status awaiting_input --note "gate:triage 09-triage-<k>.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Root cause` and `## Where the divergence started` of `09-triage-<k>.md` |
 | `spec-ambiguity` | `state.sh status awaiting_input --note "gate:spec-ambiguity 08-qa-report-<k>.md"` | `gh-labels.sh stage <n> awaiting-input` | the triage table and the `### TC-<n>:` entries classed `spec_ambiguity` |
 | `plan-approval` | `state.sh status awaiting_plan_approval --note "gate:plan-approval 05-plan.md"` | `gh-labels.sh stage <n> awaiting-approval` | `05-plan.md` in full |
-| `environment` | `state.sh status awaiting_input --note "gate:environment 06-dev-report.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Deviations` and the return block of `06-dev-report.md` |
+| `environment` | `state.sh status awaiting_input --note "gate:environment 06-dev-report.md"`, or `--note "gate:environment check-env"` after a failed check | `gh-labels.sh stage <n> awaiting-input` | `## Deviations` and the return block of `06-dev-report.md`, or the `FAIL:` lines of `check-env.sh <rd>/05-plan.md` |
 
 The pending gate is read back from `history` with:
 
@@ -87,7 +87,7 @@ Entered from `SKILL.md` `## Stage: plan` step 5 when `auto` is false and the pla
 
 1. Set pending: `state.sh status awaiting_plan_approval --note "gate:plan-approval 05-plan.md"`, then `gh-labels.sh stage <n> awaiting-approval`.
 2. Read `05-plan.md` in full (the only full read).
-3. Write a summary of 25 lines or fewer: the headline approach, the work packages (and which run in parallel), the challenges resolved, the risks (every `Owner hand-off:` line verbatim, because the developer cannot write those files), and whether every AC is mapped. Ask one question whose question text is that summary, then a blank line, then the path `.aew/runs/<id>/05-plan.md` on its own line, then a blank line, then `Approve the plan for #<n>?`, with the options `Approve`, `Request changes` and `Stop`. The summary goes inside the question text, not only in a message before it, because the question is what the user sees at the gate: a gate asked without the summary and the path is a defect. Free text counts as Request changes, with the text as the notes. `Request changes` without text gets one follow-up question for the notes (answered through "Other"). If nothing comes back, the gate stays pending (`SKILL.md` `## Gate pending`).
+3. Write a summary of 25 lines or fewer: the headline approach, the work packages (and which run in parallel), the challenges resolved, the risks (every `Owner hand-off:` line verbatim, because the developer cannot write those files), the environment (run `check-env.sh <rd>/05-plan.md` and give its `FAIL:` lines, or "environment checks pass"), and whether every AC is mapped. Ask one question whose question text is that summary, then a blank line, then the path `.aew/runs/<id>/05-plan.md` on its own line, then a blank line, then `Approve the plan for #<n>?`, with the options `Approve`, `Request changes` and `Stop`. The summary goes inside the question text, not only in a message before it, because the question is what the user sees at the gate: a gate asked without the summary and the path is a defect. Free text counts as Request changes, with the text as the notes. `Request changes` without text gets one follow-up question for the notes (answered through "Other"). If nothing comes back, the gate stays pending (`SKILL.md` `## Gate pending`).
 4. Apply:
    - Approve: go to `SKILL.md` `## Stage: develop`.
    - Request changes: go to `SKILL.md` `## Stage: plan` with the note `plan revision: request changes` and `notes:` set to the answer (dispatch row D7 only; QA phase A is not re-run). Then return to this gate.
@@ -95,15 +95,21 @@ Entered from `SKILL.md` `## Stage: plan` step 5 when `auto` is false and the pla
 
 ## Gate: environment
 
-Entered from `routing.md` `## Developer blocked` when the developer in full mode blocks with `Block cause: environment`: the plan is sound, but something outside it (a service, a tool, a credential, a guarded file) needs James.
+Entered in two ways. Each source keeps its own note, so `resume` re-asks it the same way.
 
-1. Set pending: `state.sh status awaiting_input --note "gate:environment 06-dev-report.md"`, then `gh-labels.sh stage <n> awaiting-input`.
-2. Read: `awk '/^## Deviations$/{f=1;next} /^## |^STATUS:/{f=0} f' <rd>/06-dev-report.md`, and the SUMMARY line of `grep -v '^$' <rd>/06-dev-report.md | tail -n 4`.
-3. Ask one question: `#<n>: the developer is blocked by the environment: <SUMMARY>. Put it right, then choose.`, with the options `Fixed, continue (recommended)`, `Re-plan` and `Stop`. Free text counts as `Fixed, continue`, and the text goes in its note.
+- **Developer** (note `gate:environment 06-dev-report.md`): from `routing.md` `## Developer blocked`, when the developer in full mode blocks with `Block cause: environment`. The plan is sound, but something outside it (a service, a tool, a credential, a guarded file) needs James.
+- **Check** (note `gate:environment check-env`): from `SKILL.md` `## Stage: develop` step 3, when `check-env.sh` finds a requirement of the plan's `## Environment` or an `Owner hand-off:` unmet before the developer starts.
+
+1. Set pending: `state.sh status awaiting_input --note "<the source's note>"`, then `gh-labels.sh stage <n> awaiting-input`.
+2. Read.
+   - Developer: `awk '/^## Deviations$/{f=1;next} /^## |^STATUS:/{f=0} f' <rd>/06-dev-report.md`, and the SUMMARY line of `grep -v '^$' <rd>/06-dev-report.md | tail -n 4`. The problem is that SUMMARY.
+   - Check: run `check-env.sh <rd>/05-plan.md`. The problems are its `FAIL:` lines. If it now exits 0 (James fixed it before a resume), apply `Fixed, continue` without asking.
+3. Ask one question: `#<n>: the developer is blocked by the environment: <the problems>. Put it right, then choose.`, with the options `Fixed, continue (recommended)`, then `Re-plan` (developer) or `Continue without the check` (check), then `Stop`. Free text counts as `Fixed, continue`, and the text goes in its note.
 4. Apply:
-   - Fixed, continue: `SKILL.md` `## Stage: develop` with the note `environment fixed: continue` (and ` / <free text>` when given). The plan is unchanged, so develop dispatches D8 again: the developer skips the integrated work packages, salvages a blocked worktree and picks up an unfinished sequential one. This never consumes the re-plan allowance, because it writes no `developer blocked: re-plan` note. Another environment block asks this gate again.
-   - Re-plan: `routing.md` `## Developer blocked` step 3 (the allowance check, then the re-plan).
-   - Stop: `SKILL.md` `## Blocked path` with the reason `developer blocked on the environment: <SUMMARY>`.
+   - Fixed, continue: `SKILL.md` `## Stage: develop` with the note `environment fixed: continue` (and ` / <free text>` when given). The plan is unchanged, so develop runs the environment check again and dispatches D8: the developer skips the integrated work packages, salvages a blocked worktree and picks up an unfinished sequential one. This never consumes the re-plan allowance, because it writes no `developer blocked: re-plan` note. A check or developer that still finds a problem asks this gate again.
+   - Continue without the check (check only): `SKILL.md` `## Stage: develop` with the note `environment checked: continue`, which skips the check once. Use it when the plan's requirement is wrong; if the environment really is missing something, the developer blocks and this gate asks again.
+   - Re-plan (developer only): `routing.md` `## Developer blocked` step 3 (the allowance check, then the re-plan).
+   - Stop: `SKILL.md` `## Blocked path` with the reason `developer blocked on the environment: <the problems>`.
 
 ## Recording a spec revision
 

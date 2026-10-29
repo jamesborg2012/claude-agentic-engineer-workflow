@@ -75,8 +75,9 @@ The counters name the artefacts: review n is `07-review-<review_cycle+1>.md`, QA
 
 ## Script failures
 
-A plugin script that exits non-zero after the run has started goes to the blocked path. The reason is `<script> <subcommand> failed: <first stderr line>`. Three exceptions:
+A plugin script that exits non-zero after the run has started goes to the blocked path. The reason is `<script> <subcommand> failed: <first stderr line>`. Four exceptions:
 
 - A fetch failure or a closed issue during run start: the run is `failed` and `current` is cleared (Step 3).
 - `gh-retro.sh`: warn only, and carry on.
+- `check-env.sh` exit 1: a check failed, which is the `environment` gate (`SKILL.md` `## Stage: develop`) or a line in the plan-approval summary, not a script failure.
 - `gh-labels.sh` when a label is missing: the blocked path, with "run `/aew:init`" added to the reason.

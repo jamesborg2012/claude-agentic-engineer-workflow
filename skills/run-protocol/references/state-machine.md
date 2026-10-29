@@ -54,7 +54,7 @@ stateDiagram-v2
     awaiting_plan_approval --> failed: stop
 
     develop --> review: ok
-    develop --> awaiting_input: blocked by the environment (full mode), gate environment
+    develop --> awaiting_input: blocked by the environment (full mode), or check-env.sh fails before D8, gate environment
     awaiting_input --> develop: environment fixed, continue (re-plan allowance kept)
     awaiting_input --> parallel_planning: environment gate answered re-plan (first in the run)
     develop --> parallel_planning: blocked on the plan (first in the run), senior-engineer re-plans with notes, plan gate unless auto

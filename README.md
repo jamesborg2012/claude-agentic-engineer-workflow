@@ -227,7 +227,7 @@ Gates, each a question put to you in the main session:
 | `triage` | QA triage needs a decision about where a failure started | No |
 | `spec-ambiguity` | QA finds the spec ambiguous about intended behaviour | No |
 | `plan-approval` | The plan is ready: approve it, request changes or stop | Yes (also off when `gates.plan_approval` is `false` in the config) |
-| `environment` | The developer is blocked by something outside the plan, such as a stopped service, a missing tool or a guarded file: fix it and continue, re-plan, or stop | No |
+| `environment` | The environment check before development, or the developer, finds something outside the plan missing, such as a stopped service, a wrong runtime version or a guarded file: fix it and continue, or stop | No |
 
 Each question lists the recommended answer first. If a gate cannot be asked, for example in a
 headless run, the run stays pending and prints how to answer it with `/aew:resume`. When the spec is
@@ -412,6 +412,10 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
   check. Set `agentRules: false` in `next.config.ts`.
 - **`npx tsc --noEmit` fails on a fresh Next.js 16 checkout (`Cannot find name 'LayoutProps'`):** the route
   types are generated into `.next/` by a build or dev run; run `npm run build` first.
+- **The `environment` gate lists `FAIL:` lines before development:** the plan's `## Environment` section names
+  what the work needs (for example `- tool: node 24`, `- service: docker`), and `check-env.sh` found it
+  missing. Install or start it, then answer `Fixed, continue`. If the plan's requirement is wrong, answer
+  `Continue without the check`.
 - **The developer is blocked by `aew guard: blocked a write to …/.env.test (env file)`:** aew refuses to edit
   `.env*`, `.npmrc` and other secret files. If the file is committed and holds no secrets, add its path to
   `guard.allow_paths` in `.aew/config.json` and resume; otherwise create it yourself.

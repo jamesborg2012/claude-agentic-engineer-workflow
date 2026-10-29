@@ -338,7 +338,8 @@ Template 1 is `.claude/settings.local.json`:
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/gh-retro.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/git-branch.sh *)",
   "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.sh *)",
-  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-pr-intro.sh *)"
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-pr-intro.sh *)",
+  "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-env.sh *)"
 ] } }
 ```
 

@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `guard.allow_paths` in `.aew/config.json`: committed files with no secrets (such as `.env.test` or `.npmrc`)
   that the edit guard would otherwise refuse, as exact repo-relative paths that also match inside run worktrees.
   `.git/` is never allowed (#39, #45).
+- Environment check before development: the plan's new `## Environment` section lists what develop needs from
+  the machine (`- tool: <command> [<major>]`, `- service: docker`), and `scripts/check-env.sh` checks those lines
+  and the plan's `Owner hand-off:` files. Its result is in the plan-approval summary, and it runs again before
+  every full-mode developer dispatch, so `--auto` runs are covered; a failure goes to the `environment` gate
+  (fixed, continue / continue without the check / stop). Init pre-approves the script (#44, #50).
 
 ### Changed
 
