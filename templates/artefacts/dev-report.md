@@ -26,9 +26,13 @@ Block cause: none / plan / environment
 | <lint command> | pass |
 | <test_unit command> | pass (<n> tests) |
 
+## Tests first
+
+<!-- One line per WP (fix mode: per root cause) with the ACs its new tests cover: "- WP-1 (AC-1, AC-2): <test command narrowed to the new tests>: <n> failed before the change, passed after". A WP with no failing-first run says so with the reason (no planned unit tests, or the tests cover behaviour that already exists). QA phase B cites these lines, because it never runs its tests against the old code. -->
+
 ## Deviations
 
-<!-- "None." or each deviation from the plan, with the reason. A plan step that is impossible or clearly wrong stops the WP: STATUS: blocked. -->
+<!-- "None." only when every planned step and command ran. Otherwise each deviation from the plan, with the reason, a planned command or step that was skipped or could not run included ("bin/check: not run, <reason>"). A plan step that is impossible or clearly wrong stops the WP: STATUS: blocked. -->
 
 ## Notes for QA
 

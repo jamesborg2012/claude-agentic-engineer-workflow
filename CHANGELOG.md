@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installs track the `stable` branch, which each release moves to its tag, so a new release arrives with
   auto-update or `claude plugin marketplace update` plus `claude plugin update`, instead of removing and
   re-adding a tag-pinned marketplace. Pinning a release tag still works.
+- The dev report has a `## Tests first` section: the failing run of each work package's (or fix's) new
+  tests, with the ACs they cover. QA phase B cites those lines under **Failing first** in its report, because
+  it never runs its tests against the old code, so the failing-first evidence is in one place (#75).
+- A planned command or step the developer skipped or could not run is listed under Deviations with the
+  reason; "None." now means every planned step ran (#73).
 
 ## [0.2.0] - 2026-10-29
 

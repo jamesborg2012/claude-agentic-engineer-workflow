@@ -409,11 +409,11 @@ No code beyond short illustrative signatures.
   Otherwise it works sequentially.
 
   The developer creates each worktree itself from the feature-branch HEAD (`git worktree add -b aew/<run-id>/wp-<n> <run_dir>/worktrees/WP-<n> HEAD`) and dispatches the sub-developers without `isolation` (§3). It integrates each work package's single commit with `git cherry-pick` in WP-number order, removes the worktrees and WP branches, and only then reruns the checks.
-- **Deviations.** If a plan step is impossible or clearly wrong, it stops that work package and returns `STATUS: blocked` with the reason. The orchestrator routes this to the senior engineer. It never diverges silently.
+- **Deviations.** If a plan step is impossible or clearly wrong, it stops that work package and returns `STATUS: blocked` with the reason. The orchestrator routes this to the senior engineer. It never diverges silently: a planned command or step it skipped or could not run is listed under Deviations with the reason, and "None." means every planned step ran (#73).
 - **Environment blocks.** The report's `Block cause:` line tells a plan block from an environment block: a stopped service or daemon, a missing tool or wrong runtime version, a missing credential, a guarded file or no network. In full mode an environment block pauses at the `environment` gate (fix and continue, re-plan, or stop) instead of spending the run's one re-plan, and a sequential work package it interrupted is left uncommitted and picked up by the next full-mode dispatch (#51).
 - **Fix mode.** Takes the triage instructions or QA's failing tests, fixes them, then reruns those tests and the full unit suite.
 - Uses the frontend-design skill on UI work packages.
-- **Output:** code, tests, and `06-dev-report.md` (work packages done, files changed, commands run with results, deviations, notes for QA).
+- **Output:** code, tests, and `06-dev-report.md` (work packages done, files changed, commands run with results, tests first (the failing run of each work package's new tests, #75), deviations, notes for QA).
 
 ### 8.6 qa-engineer (Sonnet, medium)
 
@@ -437,7 +437,7 @@ It lists every project file it opened in the plan's `## Files read` section.
 - Does exploratory checks of the changed UI with Playwright MCP.
 - Writes `08-qa-report-<n>.md` with:
   - a results table (TC → AC → pass/fail);
-  - commands and output excerpts;
+  - commands and output excerpts, with the dev report's tests-first lines cited under **Failing first**, because QA never runs its tests against the old code (#75);
   - a screenshot index;
   - accessibility results;
   - failures, each with a triage class.

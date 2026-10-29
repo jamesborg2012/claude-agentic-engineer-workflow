@@ -15,7 +15,7 @@ Read by: orchestrator (routing), senior-engineer (triage), developer (fix mode),
 
 ## Commands and output
 
-<!-- Each command run, with a short excerpt of its output. -->
+<!-- Each command run, with a short excerpt of its output. Then **Failing first**: each "## Tests first" line of the dev reports, naming its file, and "- none recorded: <AC ids>" for the ACs no line covers. -->
 
 ## Screenshots
 
