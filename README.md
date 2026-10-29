@@ -414,14 +414,8 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
 - **Next.js 16 writes an untracked `AGENTS.md` when the dev server starts:** it then fails aew's clean-tree
   check. Set `agentRules: false` in `next.config.ts`.
 - **`npx tsc --noEmit` fails on a fresh Next.js 16 checkout (`Cannot find name 'LayoutProps'`):** the route
-  types are generated into `.next/` by a build or dev run; run `npm run build` first.
-- **The `environment` gate lists `FAIL:` lines before development:** the plan's `## Environment` section names
-  what the work needs (for example `- tool: node 24`, `- service: docker`), and `check-env.sh` found it
-  missing. Install or start it, then answer `Fixed, continue`. If the plan's requirement is wrong, answer
-  `Continue without the check`.
-- **The developer is blocked by `aew guard: blocked a write to …/.env.test (env file)`:** aew refuses to edit
-  `.env*`, `.npmrc` and other secret files. If the file is committed and holds no secrets, add its path to
-  `guard.allow_paths` in `.aew/config.json` and resume; otherwise create it yourself.
+  types are generated into `.next/` by `next typegen`, a build or a dev run. Init now infers
+  `npx next typegen && npx tsc --noEmit` for Next.js 16; for an older config, set `commands.typecheck` to that.
 - **Stacked pull requests from a sequential milestone:** merge them in order, each with a merge commit (not
   squash). Deleting each merged branch lets GitHub retarget the next PR to the default branch; its
   `Closes #n` then closes the issue on merge.

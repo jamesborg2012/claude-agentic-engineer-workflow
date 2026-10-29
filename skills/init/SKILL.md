@@ -153,7 +153,8 @@ Then build a discovery table (source, field and value, certain or inferred); §5
 |---|---|---|
 | `package.json` scripts, in each stack path that has one | Each script maps to `<pm> run <script>`: `dev` is dev, `build` is build, `lint` is lint, `format` and `format:check` are format, `typecheck` and `type-check` are typecheck, `test` and `test:unit` are test_unit, `test:e2e` and `e2e` are test_e2e, `seed` and `db:seed` are seed | certain |
 | Lock file (package manager, the same rule as `${CLAUDE_PLUGIN_ROOT}/skills/ui-qa/SKILL.md` §2) | `pnpm-lock.yaml` is pnpm, `yarn.lock` is yarn, `bun.lock` or `bun.lockb` is bun, otherwise npm. `install` is `npm ci` with a `package-lock.json`, otherwise `<pm> install` | certain when a lock file names the manager, inferred with no lock file |
-| `tsconfig.json` and no typecheck script | typecheck `npx tsc --noEmit` | inferred |
+| `tsconfig.json`, no typecheck script and a `nextjs` stack at major 16 or later | typecheck `npx next typegen && npx tsc --noEmit`: Next.js 16 generates route types such as `LayoutProps` into `.next/`, so plain `tsc` fails on a fresh checkout | inferred |
+| `tsconfig.json` and no typecheck script, otherwise | typecheck `npx tsc --noEmit` | inferred |
 | `@playwright/test` in a `package.json` and no e2e script | test_e2e `npx playwright test` | certain |
 | `composer.json` scripts | `test` is test_unit `composer test`, `lint` is lint, `format` is format, `analyse` and `phpstan` are typecheck; install is `composer install` | certain |
 | `artisan` | test_unit `php artisan test` when there is no composer test script; seed `php artisan db:seed`; app start `php artisan serve`, `base_url` `http://127.0.0.1:8000`, `env_type` `native` | inferred |

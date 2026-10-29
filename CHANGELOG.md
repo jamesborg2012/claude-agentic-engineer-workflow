@@ -99,6 +99,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project repo (#36).
 - `/aew:prompt` no longer leaves agent-memory edits uncommitted on the default branch: the spec-analyser reads
   but writes no memory in a prompt-mode run (#34).
+- Init infers `npx next typegen && npx tsc --noEmit` as the typecheck for Next.js 16 or later, whose route types
+  plain `tsc` cannot find on a fresh checkout, and turns a command joined by `&&` into one permission rule per
+  part (#35).
 
 ## [0.1.0] - 2026-10-27
 

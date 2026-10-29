@@ -11,7 +11,7 @@ Added to the portable list (`.claude/settings.json`):
   gets `Bash(npx playwright test *)` and `Bash(npx playwright install chromium)`.
 - A command becomes a rule only if it is one simple command: no `&`, `|`, `;`, `>`, `<`, `*`, `$(`,
   backtick or newline, and it doesn't start with `cd `, `sh `, `bash `, `env ` or a `NAME=` assignment.
-  Anything else is listed as not pre-approved.
+  Anything else is listed as not pre-approved. The one exception: a command made of simple commands joined by ` && ` becomes one rule per part, by the same form (for example `Bash(npx next typegen *)` and `Bash(npx tsc --noEmit *)`), because a compound command is allowed only when every part matches a rule.
 - `dev` and `app.start_command` get no rule (QA starts the app through ui-qa §3).
 - `commands.seed` gets no rule, because it may reset data.
 
