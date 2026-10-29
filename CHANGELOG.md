@@ -60,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - developer: a look-alike Unicode fixture is an escape in a form the edit tooling keeps (`\u{212A}`), its test
     asserts the code point, and `grep -n '[^ -~]' <file>` must show no raw character before the report calls
     it an escape (#31).
+  - standards: every generated or updated doc's testing conventions carry the same look-alike fixture rule,
+    whatever the stack (#32).
 
 ### Changed
 

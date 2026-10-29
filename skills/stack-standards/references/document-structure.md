@@ -43,6 +43,13 @@ Every doc uses these level-2 headings, once each, in this order, and no other le
 | `## Documentation and comment standards` | What to document, comment style, docblocks, changelog expectations. |
 | `## Anti-patterns` | Common mistakes in this stack, each with the correct alternative. |
 
+Every generated or updated doc's `## Testing conventions` also carries this rule, whatever the stack, because a
+security test that depends on one code point passes for the wrong reason once an editor normalises it:
+
+```markdown
+- **[convention]** A fixture whose meaning depends on one code point (a Kelvin sign, a non-breaking space, a look-alike letter) is written as an escape, never the raw character, and its test asserts the code point; `grep -n '[^ -~]' <file>` lists any raw one.
+```
+
 ## Rules
 
 Each rule is a bullet that starts with its marker:

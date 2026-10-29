@@ -750,6 +750,11 @@ git-branch.sh')"
     { echo "developer has no non-ASCII read-back for fixtures" >&2; return 1; }
 }
 
+@test "standards: every generated doc's testing conventions cover look-alike fixtures (#32)" {
+  grep -qF 'is written as an escape, never the raw character, and its test asserts the code point' "$REPO_ROOT/skills/stack-standards/references/document-structure.md" ||
+    { echo "document structure has no look-alike fixture rule" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
