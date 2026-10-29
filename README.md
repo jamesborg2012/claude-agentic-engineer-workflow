@@ -12,19 +12,19 @@ milestones, an interrupted run resumed, and prompt mode. The record is
 
 ## Install
 
-This repo is both the plugin and a personal marketplace, `jamesborg-plugins`. Install a release from
-GitHub, pinned to its tag:
+This repo is both the plugin and a personal marketplace, `jamesborg-plugins`. Install it from GitHub's
+`stable` branch, which always points at the latest release tag:
 
 ```bash
-claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.2.0
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#stable
 claude plugin install aew@jamesborg-plugins --scope user
 ```
 
-`#aew--v0.2.0` pins the marketplace to that release tag. Claude Code copies aew into its plugin cache
-(`claude plugin list --json` shows `installPath` `~/.claude/plugins/cache/jamesborg-plugins/aew/0.2.0`), so
-every project runs the released version. The repo is private: the clone uses the git credentials already on
-your machine (an SSH key that GitHub accepts, otherwise HTTPS with your `gh auth login` credentials) and never
-prompts.
+`stable` moves only when a release is cut, so you never get unreleased work. Claude Code copies aew into
+its plugin cache (`claude plugin list --json` shows `installPath`
+`~/.claude/plugins/cache/jamesborg-plugins/aew/<version>`), so every project runs the released version. The
+repo is private: the clone uses the git credentials already on your machine (an SSH key that GitHub accepts,
+otherwise HTTPS with your `gh auth login` credentials) and never prompts.
 
 The install pulls in the three dependencies below. On a machine where Claude Code has never run an
 interactive session, `claude-plugins-official` isn't registered yet, and the install warns
@@ -38,28 +38,51 @@ touching your own config, use a throwaway config directory:
 ```bash
 export CLAUDE_CONFIG_DIR="$(mktemp -d)"
 claude plugin marketplace add anthropics/claude-plugins-official
-claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.2.0
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#stable
 claude plugin install aew@jamesborg-plugins --scope user   # "(+ 3 dependencies: superpowers, context7, frontend-design)"
 claude plugin list --json | jq -r '.[].id'                 # aew, context7, frontend-design, superpowers
 unset CLAUDE_CONFIG_DIR
 ```
 
-**Upgrade to a new release.** A pinned marketplace keeps its tag, so add it again with the new one (removing
-the marketplace also uninstalls aew; its dependencies stay):
+**Get new releases.** Either turn on auto-update once, or update by hand:
+
+- **Auto-update:** in a session, open `/plugin`, go to **Marketplaces**, select `jamesborg-plugins` and choose
+  **Enable auto-update**. Claude Code then refreshes it in the background after a session starts. It's off by
+  default, and the background check can't prompt, so your git credentials must work unattended: an SSH key
+  loaded in your agent, or `gh auth login` followed by `gh auth setup-git`.
+- **By hand:** refresh the marketplace first, because `claude plugin update` alone reports that aew is already
+  at the latest version:
+
+  ```bash
+  claude plugin marketplace update jamesborg-plugins
+  claude plugin update aew@jamesborg-plugins
+  ```
+
+Either way, restart Claude Code to load the new version. The cached path includes the version, so then re-run
+`/aew:init` in each project and accept the permission rules: its `.claude/settings.local.json` names the
+plugin's scripts and folder by that path, and headless runs need the new one. Init adds the new rules and
+keeps the old, harmless ones.
+
+**Pin an exact release instead.** Add the marketplace with a release tag, such as `#aew--v0.2.0`, in place of
+`#stable`. A tag never moves, so moving to another release (or to `stable`) means removing the marketplace and
+adding it again; removing it also uninstalls aew, while its dependencies stay:
 
 ```bash
 claude plugin marketplace remove jamesborg-plugins
-claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v<new version>
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#stable
 claude plugin install aew@jamesborg-plugins --scope user
 ```
 
-The cached path includes the version, so re-run `/aew:init` in each project afterwards and accept the
-permission rules: its `.claude/settings.local.json` names the plugin's scripts and folder by that path, and
-headless runs need the new one. Init adds the new rules and keeps the old, harmless ones.
+**Every release bumps `version` and moves `stable`.** Updates are keyed on `version` in
+`.claude-plugin/plugin.json`: a release that keeps the old version is never picked up by an installed copy
+(`claude plugin update` reports it is already at the latest version). After the release PR is merged, tag
+the merge commit and move `stable` to it:
 
-**Every release bumps `version`.** Updates are keyed on `version` in `.claude-plugin/plugin.json`: a release
-that keeps the old version is never picked up by an installed copy (`claude plugin update` reports it is
-already at the latest version).
+```bash
+git tag -a aew--v<version> <merge commit> -m "aew <version>: <summary>"
+git push origin aew--v<version>
+git push origin 'aew--v<version>^{commit}:refs/heads/stable'
+```
 
 **Working on aew itself.** Install from your checkout instead, with
 `claude plugin marketplace add /path/to/claude-agentic-engineer-workflow`. A relative-path plugin in a
