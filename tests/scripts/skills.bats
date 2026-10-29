@@ -648,6 +648,11 @@ git-branch.sh')"
     { echo "plan Risks step does not build code mitigations in" >&2; return 1; }
 }
 
+@test "plan: an AC met by a tool setting gets a test of its effect, not of its presence (#41)" {
+  awk '/^14\. \*\*Tool assumptions\*\*/{f=1; next} /^[0-9]+\. /{f=0} f' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'a unit test of the effect' ||
+    { echo "plan step 14 has no setting-effect rule" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

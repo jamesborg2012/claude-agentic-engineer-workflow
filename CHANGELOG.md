@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     quotes (#42).
   - a risk mitigation the code can carry (a fallback handler, a retry) goes into a work package's goal in the
     first pass instead of being left as a QA check (#19).
+  - an AC met by a tool setting is checked against the installed tool version and gets a unit test of the
+    setting's effect, not of its presence (#41).
 
 ### Changed
 
