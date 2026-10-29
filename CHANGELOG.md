@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   auto-update or `claude plugin marketplace update` plus `claude plugin update`, instead of removing and
   re-adding a tag-pinned marketplace. Pinning a release tag still works.
 
+### Fixed
+
+- The branch slug drops a leading `[NN]` spec prefix from the issue title, so a `{spec}-{issue}-{slug}`
+  branch no longer repeats the spec number (`01-38-catch-…`, not `01-38-01-catch-…`) and the prefix no
+  longer uses up slug characters. Spec snapshot names follow the same rule (#76).
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

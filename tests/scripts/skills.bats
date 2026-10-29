@@ -986,3 +986,19 @@ git-branch.sh')"
   [ "$n" -eq 4 ] || bad="${bad}want 4 files under skills/ship-milestone, found $n"$'\n'
   report_offenders "pipeline copy in ship-milestone (AC-25)" "$bad"
 }
+
+@test "ship: the 3.7 slug drops a leading [NN] spec prefix from the title (#76)" {
+  local filter t want got bad=""
+  filter=$(grep -E '^- 3\.7 The slug' "$REPO_ROOT/skills/ship/SKILL.md" | sed -E "s/.*jq -r '(.*)' \.aew\/runs.*/\1/; s/<n>/38/g")
+  [ -n "$filter" ] || { echo "no jq filter found in ship 3.7" >&2; return 1; }
+  while IFS='|' read -r t want; do
+    got=$(jq -nr --arg t "$t" "{title: \$t} | $filter") || { bad="${bad}jq failed on: $t"$'\n'; continue; }
+    [ "$got" = "$want" ] || bad="${bad}${t} -> ${got} (want ${want})"$'\n'
+  done <<'CASES'
+[01] Catch db.query through namespace imports|catch-db-query-through-namespace-imports
+  [12]  Add a page|add-a-page
+Add [01] in the middle|add-01-in-the-middle
+[01]|issue-38
+CASES
+  report_offenders "3.7 slugs" "$bad"
+}
