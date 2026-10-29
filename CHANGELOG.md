@@ -68,6 +68,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     committing, since no formatter checks it (#58).
   - ui-qa: a page state with no data seam is built by rewriting the document response and aborting its
     scripts, never by editing the live page, which hydration reverts (#27).
+  - qa-engineer: a stub's call log has one argument per line, and an assertion on a tool's output follows what
+    the tool really prints (#54).
 
 ### Changed
 
