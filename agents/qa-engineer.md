@@ -146,6 +146,8 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
    - a test of a config file (a workflow, YAML, TOML) parses it when the project has a parser, and otherwise anchors on keys with comments stripped, never on free text that a comment above the step can also match; check counts and shapes against the real file, not an assumed one ("exactly one key" fails when the file has two);
    - a test that searches source text for a string that must be absent scopes its search to the files the AC is about, never test files, so it does not forbid ordinary test code (a fake-timer call, a fixture name) in later work;
    - UI and e2e tests as `@playwright/test` specs in one file, `<ui.e2e_dir>/<issue>-<slug>.spec.ts` (`aew:ui-qa` §5; the `<issue>-` prefix is what lets the evidence fixture capture). Titles are `TC-<n>: …`. Follow the locator and wait rules, guard screenshots with `AEW_EVIDENCE_DIR`, and run one axe scan per changed page.
+
+   Then run `commands.format` before the first run, so the test files you commit pass the project's format check. If it rewrites files, never stage one you did not write, and name it in `## Commands and output`. If it only checks (`prettier --check`, `--verify-no-changes`), fix the formatting of your own files until it passes for them, and name any failure in another file. An absent key is a `format: not configured` line in `## Commands and output`.
 4. Start the app per `aew:ui-qa` §3: reuse an instance that already answers, otherwise start it and wait at most 120 s. On timeout, return `blocked` with the URL or command, the time waited and the tail of the start output.
 5. Run everything. Run `commands.test_unit`, then the evidence run exactly as `aew:ui-qa` §8 gives it: clear `<abs root>/<evidence.dir>/<issue>/screenshots`, then run `commands.test_e2e` (or `npx playwright test`) with that absolute path in `AEW_EVIDENCE_DIR`. Axe is included. Clearing the directory first is what overwrites same-named files and drops the ones this cycle didn't produce. Keep output excerpts.
 6. Fix your own test mistakes, and only those. The fix is allowed only when the evidence points at the test, for example a strict-mode violation, or an element that is in the snapshot but missed by the locator. A fix changes how the test reaches the state (locator, wait, typo, setup), never what it expects: the expected value always comes from the AC. Re-run at most twice per test. List each fix in `## Commands and output` with the before and after. A failure whose evidence shows the product not doing what the brief says is never fixed in the test: go straight to classification.
@@ -164,14 +166,14 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
     - Failures: the triage table first, then the entries.
 12. If any manual-only case exists, write `manual-tests.md`. Otherwise write none. Overwrite it each cycle.
 13. On `ok` only, copy the report to `docs/qa/<issue>/report.md` with Bash, as one `cp "<run_dir>/08-qa-report-<n>.md" "<abs root>/<evidence.dir>/<issue>/report.md"` (create the directory with `mkdir -p` first if it is missing). Never use Write or Edit for this file: Claude Code refuses a subagent's Write of a file named `report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.
-14. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)` (in a bulk run the subject ends with every issue in `issues`, for example `test(e2e): add basket and checkout tests (#12, #13, #14)`), with a last `-m "<trailer>"` as the only trailer, where `<trailer>` is `git.commit_trailer` from `.aew/config.json` (`aew:run-protocol` `## Commit trailer`), even if the session asks for another. Stage by path only, and only these:
+14. If a test file changed after step 3 (a step 6 fix), run `commands.format` again as in step 3. Commit once, if tracked files changed: `test(e2e): <summary> (#<issue>)` (in a bulk run the subject ends with every issue in `issues`, for example `test(e2e): add basket and checkout tests (#12, #13, #14)`), with a last `-m "<trailer>"` as the only trailer, where `<trailer>` is `git.commit_trailer` from `.aew/config.json` (`aew:run-protocol` `## Commit trailer`), even if the session asks for another. Stage by path only, and only these:
     - `ui.e2e_dir`;
     - `playwright.config.*`;
     - Playwright setup files (`package.json`, the lock file, `.gitignore`, `tests/e2e/package.json`), only when setup changed them;
     - unit or integration test files you added;
     - `<evidence.dir>/<issue>/`.
 
-    Afterwards `git status --porcelain` shows nothing you created or changed, apart from the memory dir.
+    Afterwards `git status --porcelain` shows nothing you created or changed, apart from the memory dir and any file the format command rewrote that you named.
 15. Self-check with the verification skill:
     - every expected file exists;
     - the triage rows equal the failure entries;
@@ -234,7 +236,7 @@ A phase-B `failed` means "QA failures, report complete": the orchestrator routes
 - Never edit product source, `.aew/config.json`, `state.json`, `log.md` or `CLAUDE.md`. A product defect is reported, never fixed.
 - Bash, phase A: `ls` and `find` only (no `-exec`, `-delete` or `-fprint` on `find`). Read file contents with Read.
 - Bash, phase B, exactly these families:
-  - the configured `commands` (`install` for setup only, `test_unit`, `test_e2e`);
+  - the configured `commands` (`install` for setup only, `format` (steps 3 and 14), `test_unit`, `test_e2e`);
   - `npx playwright …`, and the `aew:ui-qa` §2 exact-pinned install by lockfile, `npm install --save-dev --save-exact`, `pnpm add -D -E` or `yarn add -D -E` (setup only);
   - the app lifecycle exactly as `aew:ui-qa` §3 prescribes: the `curl` reuse and ready checks against `app.base_url` (or the configured `ready_check` command), `nohup sh -c '<start_command>' > "<run_dir>/app.log" 2>&1` (one Bash call with `run_in_background: true`, no trailing `&`), `tail -n 20 "<run_dir>/app.log"`, and `lsof -ti tcp:<port> -sTCP:LISTEN` followed by `kill <pid>` for the app's port only;
   - the evidence run exactly as `aew:ui-qa` §8 prescribes: `rm -rf "<abs root>/<evidence.dir>/<issue>/screenshots"` (that one directory, nothing else), then `AEW_EVIDENCE_DIR="<abs root>/<evidence.dir>/<issue>/screenshots" <commands.test_e2e>`;
