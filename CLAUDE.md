@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `aew` is a Claude Code plugin (and its own personal marketplace, `jamesborg-plugins`) that delivers
 GitHub issues end to end through a spec-driven, multi-agent pipeline. It was built in stages from the
 prompts in `docs/build-prompts/` (01 scaffold → 07 e2e validation), each run in a fresh session on the
-committed output of the previous one, and released as 0.1.0 after the end-to-end validation.
+committed output of the previous one, and released as 0.1.0 after the end-to-end validation. Its retro and
+run issues were then worked through in five waves (PRs #61 to #70) and released as 0.2.0.
 
 - `docs/DESIGN.md` is the source of truth. If a build prompt and DESIGN.md disagree, DESIGN.md wins
   and the conflict is flagged. If the current Claude Code docs contradict DESIGN.md §3/§11, follow the
@@ -91,3 +92,4 @@ Key contracts every component must respect (full detail in `skills/run-protocol/
 - 2026-10-26 · feature/plain-english-pr-intro · Plain-English introduction on every PR (build prompt 05b): `check-pr-intro.sh`, the template section, doc-writer rules and retry, the ship and init check that never blocks a PR, DESIGN §8.7/§9/§10 · [prompt](docs/build-prompts/05b-plain-english-pr-intro.md) · [plan](docs/superpowers/plans/2026-10-26-light-plain-english-pr-intro.md)
 - 2026-10-26 · feature/milestone-mode · Milestone mode (build prompt 06): `/aew:ship-milestone` (bulk and sequential), `gh-milestone.sh select`, `state.sh index`, resume and status for milestone runs, bulk inputs for brief-compiler, qa-engineer and doc-writer, and the paid runs M1 to Q3 recorded in the smoke README section 10 · [spec](docs/superpowers/specs/2026-10-26-milestone-mode.md) · [plan](docs/superpowers/plans/2026-10-26-milestone-mode.md)
 - 2026-10-27 · feature/e2e-validation · End-to-end validation on real GitHub and the 0.1.0 release (build prompt 07): real user-scope install, a private sandbox, init and S1 to S8 (S9 skipped: no Docker), 28 fix commits (13 found by the runs, 3 from the Phase B review, 9 retro items, 3 from the final review), retro triage (12 fixed, 18 open), finalised README, tag aew--v0.1.0 · [spec](docs/superpowers/specs/2026-10-26-e2e-validation.md) · [plan](docs/superpowers/plans/2026-10-26-e2e-validation.md) · [record](tests/e2e-validation.md)
+- 2026-10-29 · PRs #61 to #70 · The 0.1.0 retro and run issues in five waves: run blockers (worktree salvage, `guard.allow_paths`, the `environment` gate and `check-env.sh`), review decisions and follow-ups, plan hardening, brief/plan/QA hand-off fields, agent prompt fixes, then `{spec}` branches and `git.commit_trailer`; released as 0.2.0 · [changelog](CHANGELOG.md)

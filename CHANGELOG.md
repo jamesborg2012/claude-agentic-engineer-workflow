@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-29
+
 ### Added
 
 - `guard.allow_paths` in `.aew/config.json`: committed files with no secrets (such as `.env.test` or `.npmrc`)

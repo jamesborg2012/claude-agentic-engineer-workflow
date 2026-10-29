@@ -16,12 +16,12 @@ This repo is both the plugin and a personal marketplace, `jamesborg-plugins`. In
 GitHub, pinned to its tag:
 
 ```bash
-claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.1.0
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.2.0
 claude plugin install aew@jamesborg-plugins --scope user
 ```
 
-`#aew--v0.1.0` pins the marketplace to that release tag. Claude Code copies aew into its plugin cache
-(`claude plugin list --json` shows `installPath` `~/.claude/plugins/cache/jamesborg-plugins/aew/0.1.0`), so
+`#aew--v0.2.0` pins the marketplace to that release tag. Claude Code copies aew into its plugin cache
+(`claude plugin list --json` shows `installPath` `~/.claude/plugins/cache/jamesborg-plugins/aew/0.2.0`), so
 every project runs the released version. The repo is private: the clone uses the git credentials already on
 your machine (an SSH key that GitHub accepts, otherwise HTTPS with your `gh auth login` credentials) and never
 prompts.
@@ -38,7 +38,7 @@ touching your own config, use a throwaway config directory:
 ```bash
 export CLAUDE_CONFIG_DIR="$(mktemp -d)"
 claude plugin marketplace add anthropics/claude-plugins-official
-claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.1.0
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.2.0
 claude plugin install aew@jamesborg-plugins --scope user   # "(+ 3 dependencies: superpowers, context7, frontend-design)"
 claude plugin list --json | jq -r '.[].id'                 # aew, context7, frontend-design, superpowers
 unset CLAUDE_CONFIG_DIR
