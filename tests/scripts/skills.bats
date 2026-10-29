@@ -546,6 +546,15 @@ git-branch.sh')"
   grep -qE '^4\. Run the full unit suite.*build' "$f" || { echo "developer fix mode does not run the build" >&2; return 1; }
 }
 
+@test "developer: leftover clean-up salvages uncommitted work before removing a worktree" {
+  local step
+  step=$(awk '/^### Mode: full$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/developer.md" | awk '/^2\. Clear leftovers/{f=1; print; next} /^3\. /{f=0} f')
+  [ -n "$step" ] || { echo "developer full mode has no leftover clean-up step" >&2; return 1; }
+  grep -qF 'salvage blocked attempt' <<< "$step" || { echo "leftover clean-up does not commit the uncommitted work" >&2; return 1; }
+  grep -qF 'wp-<n>-salvage-<k>' <<< "$step" || { echo "leftover clean-up does not keep the attempt on a salvage branch" >&2; return 1; }
+  ! grep -qF 'remove it (`git worktree remove --force' <<< "$step" || { echo "leftover clean-up still force-removes first" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

@@ -84,7 +84,12 @@ A plan step that is impossible or clearly wrong stops the WP with `STATUS: block
 ### Mode: full
 
 1. Read the WP graph from `05-plan.md`. If `depends_on` has a cycle, return `blocked`.
-2. Clear leftovers. If a worktree or branch `aew/<run-id>/wp-<n>` exists from an earlier attempt, check its report first. Only if `06-dev-report-WP<n>.md` exists with `STATUS: blocked` or `STATUS: failed`, remove it (`git worktree remove --force <path>`, then `git branch -D <branch>`) and record it under Deviations: the revised plan supersedes that recorded attempt. Never remove any other leftover (no WP report, or one saying `ok`): return `blocked` naming its path and branch.
+2. Clear leftovers. If a worktree or branch `aew/<run-id>/wp-<n>` exists from an earlier attempt, check its report first. Only if `06-dev-report-WP<n>.md` exists with `STATUS: blocked` or `STATUS: failed`, clear it, keeping its work, because a blocked attempt can hold finished files that were never committed:
+   1. If the worktree exists, list its uncommitted work with `git -C <path> status --porcelain --untracked-files=all`, ignoring paths under `.claude/agent-memory/`. If anything is listed, stage exactly those paths with `git -C <path> add <explicit paths>` and commit them there as `chore(wp-<n>): salvage blocked attempt (#<issue>)`, with the trailer from Every work package, step 8. Then run `git worktree remove <path>`. Use `--force` only if the plain remove refused and that status now lists nothing outside `.claude/agent-memory/`.
+   2. If `git log --format=%H HEAD..<branch>` lists any commit, rename the branch with `git branch -m <branch> aew/<run-id>/wp-<n>-salvage-<k>`, where `<k>` is the lowest number from 1 that `git branch --list` shows is free. Otherwise delete it with `git branch -D <branch>`.
+   3. Record it under Deviations: the revised plan supersedes that recorded attempt. Name the salvage branch if there is one, so its files can be read with `git show <salvage branch>:<file>`.
+
+   Never remove any other leftover (no WP report, or one saying `ok`): return `blocked` naming its path and branch.
 3. Skip the work packages that are already integrated. If `06-dev-report.md` exists with `Mode: full`, each WP it lists whose sha appears in the output of `git log --format=%H <default_branch>..HEAD` counts as integrated. It keeps its row for your report and is never re-implemented. If the revised plan's block for such a WP lists different files from `git show --name-only --format= <sha>`, return `blocked` and name the WP. No other report marks a WP as done.
 4. Repeat the following until every WP is done or one is blocked.
    1. R is the set of unfinished WPs whose `depends_on` are all integrated.

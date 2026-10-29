@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   re-run after an upgrade and the rule that every release bumps `version`; the local-folder install is now the
   route for working on aew itself.
 
+### Fixed
+
+- Developer leftover clean-up no longer deletes a blocked work package's uncommitted files: it commits them in
+  the worktree, removes the worktree without `--force`, and keeps the attempt on an
+  `aew/<run-id>/wp-<n>-salvage-<k>` branch named in the dev report (#46).
+
 ## [0.1.0] - 2026-10-27
 
 ### Added
