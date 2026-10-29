@@ -765,6 +765,11 @@ git-branch.sh')"
     { echo "developer has no prose read-back rule" >&2; return 1; }
 }
 
+@test "ui-qa: a state with no data seam is built by rewriting the response, not by editing the live page (#27)" {
+  awk '/^## 5\. Writing specs$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ui-qa/SKILL.md" | grep -qF 'document response with `page.route` and abort the page'"'"'s scripts' ||
+    { echo "ui-qa has no response-rewrite rule" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

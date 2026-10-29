@@ -111,6 +111,19 @@ reporter (it can open a browser).
 - Page objects only when more than three tests share a page: `<e2e_dir>/pages/<page>.ts`.
 - Test data: create what the test needs inside the test, or use `commands.seed` when the plan names seed data.
   Never rely on existing data the brief and plan don't mention.
+- A state the app gives you no seam for (a populated list on a page with no seed or API to fill it): rewrite the
+  document response with `page.route` and abort the page's scripts, so hydration cannot put the original back.
+  Never edit the live page after load (`page.evaluate` on the DOM): hydration reverts it and the check flakes.
+
+  ```ts
+  await page.route('**/*.js', (route) => route.abort());
+  await page.route('/basket', async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace('<ul class="items"></ul>', '<ul class="items"><li>Tea</li></ul>');
+    await route.fulfill({ response, body });
+  });
+  await page.goto('/basket');
+  ```
 - Viewport-specific TCs: when the test plan lists a TC for one viewport only, skip it elsewhere with a reason
   (`test.skip(test.info().project.name !== 'mobile', 'TC-4 is mobile-only in the test plan')`). That is not a
   UI-done violation. Any other skip, `fixme` or `only` is.
