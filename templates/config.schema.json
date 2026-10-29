@@ -173,7 +173,7 @@
       },
       "properties": {
         "branch_pattern": {
-          "description": "Branch name for a single-issue run. Placeholders: {issue}, {slug}.",
+          "description": "Branch name for a single-issue run. Placeholders: {issue}, {slug}, and {spec}, the number in a leading [NN] of the issue title (for example {spec}-{issue}-{slug} gives 01-3-database-foundation).",
           "type": "string",
           "default": "feat/{issue}-{slug}"
         },

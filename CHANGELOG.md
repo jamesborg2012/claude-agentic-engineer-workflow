@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the plan's `Owner hand-off:` files. Its result is in the plan-approval summary, and it runs again before
   every full-mode developer dispatch, so `--auto` runs are covered; a failure goes to the `environment` gate
   (fixed, continue / continue without the check / stop). Init pre-approves the script (#44, #50).
+- `{spec}` placeholder in `git.branch_pattern`: the number in a leading `[NN]` of the issue title, so a project's
+  `NN-<issue#>-short-name` convention is `{spec}-{issue}-{slug}`. Init proposes a `git.branch_pattern` from the
+  convention `CLAUDE.md` or `CONTRIBUTING.md` states or the recent branch names follow (#52, #56).
 - `review-decision` gate: a review finding that can only be fixed by a material spec change (for example an AC
   that must be rewritten) is put to James as a question in the review's new `## Questions for James`. The
   answer goes through spec re-analysis, so the revision is recorded on the issue, and the run continues from

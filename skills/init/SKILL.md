@@ -167,6 +167,7 @@ Then build a discovery table (source, field and value, certain or inferred); §5
 | no app at all | `env_type` `none`, `base_url` `http://localhost`, empty `start_command` and `ready_check` | inferred |
 | `project` | the root `package.json` `name`, else the `composer.json` `name` after the `/`, else the first `.csproj` basename, else the directory name | certain when found in a manifest |
 | `default_branch` | from §2 | certain, or inferred when §2 marked it uncertain |
+| `git.branch_pattern` | a branch convention that `CLAUDE.md` or `CONTRIBUTING.md` states, else one that the recent branch names all follow (the first 20 lines of `git branch -a --sort=-committerdate --format='%(refname:short)'`), written with `{issue}`, `{slug}` and `{spec}` (the number in a leading `[NN]` of the issue title): for example `NN-<issue#>-short-name` is `{spec}-{issue}-{slug}`. With no convention, leave it out, so the default `feat/{issue}-{slug}` applies | inferred |
 | `retro.repo` | `jamesborg2012/claude-agentic-engineer-workflow` | inferred |
 
 Commands not found are left out (the schema has no required command keys). To read a stack path's files

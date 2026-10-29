@@ -188,6 +188,46 @@ remote_ref_count() { git --git-dir="$REMOTE" for-each-ref | grep -c '' || true; 
   assert_equal "$(branch_count)" "1"
 }
 
+# issue_title <run-id> <title>: writes the run's issue.json, as the fetch does before the branch.
+issue_title() {
+  mkdir -p "$PROJECT/.aew/runs/$1"
+  jq -n --arg t "$2" '{number: 1, title: $t}' > "$PROJECT/.aew/runs/$1/issue.json"
+}
+
+@test "create: {spec} is the number in a leading [NN] of the issue title, zeros kept" {
+  use_config '{"project":"p","default_branch":"main","git":{"branch_pattern":"{spec}-{issue}-{slug}"}}'
+  issue_title 3 '[01] Database foundation: Docker Postgres'
+  gb create 3 database-foundation
+  assert_success
+  assert_equal "$output" "01-3-database-foundation"
+}
+
+@test "create: {spec} with no leading [NN] in the title is refused, naming the title" {
+  use_config '{"project":"p","default_branch":"main","git":{"branch_pattern":"{spec}-{issue}-{slug}"}}'
+  issue_title 3 'Database foundation [01]'
+  gb create 3 database-foundation
+  assert_failure 1
+  assert_contains "$stderr" "{spec}"
+  assert_contains "$stderr" "Database foundation [01]"
+  assert_equal "$(branch_count)" "1"
+}
+
+@test "create: {spec} without the run's issue.json is refused" {
+  use_config '{"project":"p","default_branch":"main","git":{"branch_pattern":"{spec}-{issue}-{slug}"}}'
+  gb create 3 database-foundation
+  assert_failure 1
+  assert_contains "$stderr" "issue.json"
+  assert_equal "$(branch_count)" "1"
+}
+
+@test "create: a pattern without {spec} never reads issue.json" {
+  use_config '{"project":"p","default_branch":"main","git":{"branch_pattern":"feat/{issue}-{slug}"}}'
+  mkdir -p "$PROJECT/.aew/runs/3" && printf 'not json' > "$PROJECT/.aew/runs/3/issue.json"
+  gb create 3 database-foundation
+  assert_success
+  assert_equal "$output" "feat/3-database-foundation"
+}
+
 @test "create: {issue} in a milestone pattern is refused" {
   use_config '{"project":"p","default_branch":"main","git":{"milestone_branch_pattern":"feat/{issue}-{slug}"}}'
   gb create m-3 sprint

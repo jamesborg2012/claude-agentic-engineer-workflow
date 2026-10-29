@@ -156,7 +156,7 @@ Skills with side effects set `disable-model-invocation: true`.
   - `axe`: `true`
   - `axe_standard`: `"wcag22aa"`
   - `e2e_dir`: `"tests/e2e"`
-- `git`: `{ branch_pattern: "feat/{issue}-{slug}", milestone_branch_pattern: "feat/m{milestone}-{slug}", commit_convention: "conventional" }`
+- `git`: `{ branch_pattern: "feat/{issue}-{slug}", milestone_branch_pattern: "feat/m{milestone}-{slug}", commit_convention: "conventional" }`. `branch_pattern` also takes `{spec}`, the number in a leading `[NN]` of the issue title, and init proposes a pattern from the project's stated or observed branch convention (#52, #56).
 - `gates`: `{ plan_approval: true }`
 - `guard`: `{ allow_paths: [] }`: committed, non-secret files the edit guard would refuse (for example `.env.test`, `.npmrc`), as repo-relative paths (§11)
 - `limits`: `{ max_fix_cycles: 3, max_review_cycles: 2, max_parallel_developers: 4 }`

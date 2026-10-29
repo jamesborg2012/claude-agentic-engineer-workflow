@@ -338,7 +338,7 @@ Example: [`templates/config.example.json`](templates/config.example.json).
 | `ui.axe` | boolean | `true` | Run an axe-core scan on every changed page |
 | `ui.axe_standard` | string | `wcag22aa` | WCAG target; a level expands to every axe tag up to it |
 | `ui.e2e_dir` | string | `tests/e2e` | Directory for committed Playwright specs |
-| `git.branch_pattern` | string | `feat/{issue}-{slug}` | Branch name for a single-issue run |
+| `git.branch_pattern` | string | `feat/{issue}-{slug}` | Branch name for a single-issue run: `{issue}`, `{slug}`, and `{spec}`, the number in a leading `[NN]` of the issue title (`{spec}-{issue}-{slug}` gives `01-3-database-foundation`); init proposes one from the project's convention |
 | `git.milestone_branch_pattern` | string | `feat/m{milestone}-{slug}` | Branch name for a bulk milestone run |
 | `git.commit_convention` | string | `conventional` | Commit message convention |
 | `gates.plan_approval` | boolean | `true` | Ask for plan approval before development (`--auto` also skips it); material spec changes are always gated |

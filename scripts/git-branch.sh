@@ -8,8 +8,10 @@
 # Subcommands:
 #   create <run-id> <slug> [--base <branch>]
 #       Create and switch to the run branch, then print its name. The name
-#       comes from git.branch_pattern ({issue}, {slug}) for a numeric run id,
-#       or git.milestone_branch_pattern ({milestone}, {slug}) for m-<n>.
+#       comes from git.branch_pattern ({issue}, {slug}, {spec}) for a numeric
+#       run id, or git.milestone_branch_pattern ({milestone}, {slug}) for m-<n>.
+#       {spec} is the number in a leading [NN] of the issue title, read from
+#       the run's issue.json only when the pattern uses it (zeros kept: 01).
 #       The slug must be lower-case kebab-case. The branch starts at --base
 #       (default: default_branch) and has no upstream. Refused on a dirty
 #       tree (untracked files count) or when the branch already exists.
@@ -30,8 +32,18 @@ case "${1:-}" in
     ;;
 esac
 
+# spec_of <run-id>: the number in a leading [NN] of the run's issue title.
+spec_of() {
+  local f title re='^[[:space:]]*\[([0-9]+)\]'
+  f="$(run_dir "$1")/issue.json" || exit 1
+  [ -f "$f" ] || die "branch pattern uses {spec}, but $f is missing (the issue is fetched before the branch)"
+  title=$(jq -r '.title // ""' "$f") || die "cannot read the issue title from $f"
+  [[ $title =~ $re ]] || die "branch pattern uses {spec}, but the issue title has no leading [NN]: $title"
+  printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
 cmd_create() {
-  local id="" slug="" base="" have_pos=0 pat val b st default re
+  local id="" slug="" base="" have_pos=0 pat val b st default re spec
   while [ $# -gt 0 ]; do
     case "$1" in
       --base)
@@ -69,6 +81,12 @@ cmd_create() {
     *)
       pat=$(config_get git.branch_pattern) || exit 1
       b=${pat//"{issue}"/$id}
+      case "$b" in
+        *"{spec}"*)
+          spec=$(spec_of "$id") || exit 1
+          b=${b//"{spec}"/$spec}
+          ;;
+      esac
       ;;
   esac
   b=${b//"{slug}"/$slug}

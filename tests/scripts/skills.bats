@@ -801,6 +801,11 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "init: proposes git.branch_pattern from the project's branch convention (#56)" {
+  grep -E '^\| `git\.branch_pattern` \|' "$REPO_ROOT/skills/init/SKILL.md" | grep -qF '`{spec}-{issue}-{slug}`' ||
+    { echo "init has no branch-convention row" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
