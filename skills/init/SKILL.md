@@ -453,8 +453,9 @@ if [ -f .claude/settings.local.json ] && ! git ls-files --error-unmatch .claude/
 
 Every changed path must be one of Init's files, or stop, list the strangers and commit nothing. An
 `ignored …` line is not a change: don't force-add it, report it in §13. With changes, `git add -- <path>`
-each path (never `git add -A` or `git add .`), then `git commit -m "chore: set up aew" -m "Co-Authored-By: Claude <noreply@anthropic.com>"` (no issue
-ref; that trailer only). Then decide the push and the PR.
+each path (never `git add -A` or `git add .`), then `git commit -m "chore: set up aew" -m "<trailer>"` (no issue
+ref; that trailer only), where `<trailer>` is the commit trailer of `aew:run-protocol` `## Commit trailer`, read
+from the config just written with the `jq` command that section gives. Then decide the push and the PR.
 
 ```sh
 if git rev-parse --verify refs/remotes/origin/chore/aew-init > /dev/null 2>&1; then

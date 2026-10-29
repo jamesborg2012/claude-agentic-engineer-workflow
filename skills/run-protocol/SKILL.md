@@ -137,6 +137,14 @@ A test that needs a real GitHub event (a pull request, a review, a workflow run)
 `manual-tests.md` line `[needs GitHub]`, so the plan and the reports refer to that TC instead of re-explaining
 why, and James is asked once, at the end of the run, for all of them.
 
+## Commit trailer
+
+Every commit aew makes, by the orchestrator or an agent, ends with exactly one trailer: `git.commit_trailer` from
+`.aew/config.json`, or `Co-Authored-By: Claude <noreply@anthropic.com>` when the key is absent. Pass it as the last
+`-m "<trailer>"` of `git commit`. It replaces any attribution line the session suggests, so every aew commit in a
+project carries the same line; a project that wants another line sets the key. Agents read it from the config with
+Read; the orchestrator reads it with `jq -r '.git.commit_trailer // "Co-Authored-By: Claude <noreply@anthropic.com>"' .aew/config.json`.
+
 ## File naming
 
 - Run artefacts: a two-digit prefix gives pipeline order (`01-`…`10-`). The names are fixed; don't invent new ones.

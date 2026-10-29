@@ -833,9 +833,14 @@ git-branch.sh')"
   awk '/^## Retry$/{f=1; next} /^## /{f=0} f' "$f" | grep -q 'under the maximum' || { echo "retry length target is not relative to the maximum" >&2; return 1; }
 }
 
-@test "prompt template: commits carry the plain Claude trailer" {
-  awk '/^## Git and PR$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/templates/artefacts/prompt.md" |
-    grep -qF 'Co-Authored-By: Claude <noreply@anthropic.com>' || { echo "prompt template has no plain trailer rule" >&2; return 1; }
+@test "commit trailer: one rule in run-protocol, read from git.commit_trailer everywhere else (#53)" {
+  local hits bad=""
+  grep -qx '## Commit trailer' "$REPO_ROOT/skills/run-protocol/SKILL.md" || bad="${bad}run-protocol has no Commit trailer section"$'\n'
+  [ "$(jq -r '.properties.git.properties.commit_trailer.default' "$REPO_ROOT/templates/config.schema.json")" = 'Co-Authored-By: Claude <noreply@anthropic.com>' ] || bad="${bad}schema default is not the plain trailer"$'\n'
+  hits=$(grep -rlF 'noreply@anthropic.com' "$REPO_ROOT/agents" "$REPO_ROOT/skills" "$REPO_ROOT/templates/artefacts" | sed "s|$REPO_ROOT/||" | sort | tr '\n' ' ')
+  [ "$hits" = "skills/run-protocol/SKILL.md " ] || bad="${bad}trailer literal outside run-protocol: $hits"$'\n'
+  grep -qF '<commit trailer>' "$REPO_ROOT/templates/artefacts/prompt.md" || bad="${bad}prompt template does not take the configured trailer"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
 @test "retro fixes from prompt 07 stay in their prompts" {

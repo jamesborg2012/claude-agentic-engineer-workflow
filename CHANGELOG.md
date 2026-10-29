@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `{spec}` placeholder in `git.branch_pattern`: the number in a leading `[NN]` of the issue title, so a project's
   `NN-<issue#>-short-name` convention is `{spec}-{issue}-{slug}`. Init proposes a `git.branch_pattern` from the
   convention `CLAUDE.md` or `CONTRIBUTING.md` states or the recent branch names follow (#52, #56).
+- `git.commit_trailer`: the one trailer every aew commit ends with, defaulting to the plain
+  `Co-Authored-By: Claude <noreply@anthropic.com>`. The rule now lives once, in the run-protocol skill's
+  `## Commit trailer`, instead of five hard-coded copies, and prompt mode's `prompt.md` uses the configured line
+  (#53).
 - `review-decision` gate: a review finding that can only be fixed by a material spec change (for example an AC
   that must be rewritten) is put to James as a question in the review's new `## Questions for James`. The
   answer goes through spec re-analysis, so the revision is recorded on the issue, and the run continues from

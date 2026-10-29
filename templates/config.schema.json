@@ -169,7 +169,8 @@
       "default": {
         "branch_pattern": "feat/{issue}-{slug}",
         "milestone_branch_pattern": "feat/m{milestone}-{slug}",
-        "commit_convention": "conventional"
+        "commit_convention": "conventional",
+        "commit_trailer": "Co-Authored-By: Claude <noreply@anthropic.com>"
       },
       "properties": {
         "branch_pattern": {
@@ -186,6 +187,12 @@
           "description": "Commit message convention.",
           "type": "string",
           "default": "conventional"
+        },
+        "commit_trailer": {
+          "description": "The one trailer every commit aew makes ends with. It replaces any attribution line the session suggests.",
+          "type": "string",
+          "minLength": 1,
+          "default": "Co-Authored-By: Claude <noreply@anthropic.com>"
         }
       }
     },

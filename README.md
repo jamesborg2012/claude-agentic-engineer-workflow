@@ -341,6 +341,7 @@ Example: [`templates/config.example.json`](templates/config.example.json).
 | `git.branch_pattern` | string | `feat/{issue}-{slug}` | Branch name for a single-issue run: `{issue}`, `{slug}`, and `{spec}`, the number in a leading `[NN]` of the issue title (`{spec}-{issue}-{slug}` gives `01-3-database-foundation`); init proposes one from the project's convention |
 | `git.milestone_branch_pattern` | string | `feat/m{milestone}-{slug}` | Branch name for a bulk milestone run |
 | `git.commit_convention` | string | `conventional` | Commit message convention |
+| `git.commit_trailer` | string | `Co-Authored-By: Claude <noreply@anthropic.com>` | The one trailer every aew commit ends with, whatever attribution line the session suggests |
 | `gates.plan_approval` | boolean | `true` | Ask for plan approval before development (`--auto` also skips it); material spec changes are always gated |
 | `guard.allow_paths[]` | array | `[]` | Committed files with no secrets that the edit guard would otherwise refuse, such as `.env.test` or `.npmrc`, as paths relative to the repo root (matched exactly; never `.git/`) |
 | `limits.max_fix_cycles` | integer | `3` | QA fix cycles before the run is blocked |

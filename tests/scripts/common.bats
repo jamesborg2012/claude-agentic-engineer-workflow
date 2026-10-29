@@ -110,7 +110,7 @@ setup() {
   assert_equal "$output" "feat/{issue}-{slug}"
   run_lib common.sh config_get git
   assert_success
-  assert_equal "$output" '{"branch_pattern":"feat/{issue}-{slug}","milestone_branch_pattern":"feat/m{milestone}-{slug}","commit_convention":"conventional"}'
+  assert_equal "$output" '{"branch_pattern":"feat/{issue}-{slug}","milestone_branch_pattern":"feat/m{milestone}-{slug}","commit_convention":"conventional","commit_trailer":"Co-Authored-By: Claude <noreply@anthropic.com>"}'
 }
 
 @test "config_get falls back to an object-level default when the leaf has none" {
