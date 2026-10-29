@@ -372,6 +372,8 @@ The orchestrator passes the mode.
 - risks;
 - an AC→WP traceability matrix.
 
+Because the senior engineer cannot run anything, plan mode also hardens the plan's assumptions (#42, #19, #41, #47, #48, #15): a tool behaviour the plan relies on is confirmed with context7 or proved by a small test at the start of its work package, and listed as an `Unverified:` risk that the plan gate quotes; a mitigation the code can carry is built in the first pass, not left to QA; an AC met by a tool setting gets a test of the effect; a pinned version is one the plan confirmed, with `@latest` as the fallback; a health check probes what the code uses; and tests of persistent state share one named isolation pattern with QA.
+
 **Revision notes.** An optional `notes` dispatch field carries James's change requests from the plan gate, or the developer's `blocked` reason. The senior engineer reads the existing `05-plan.md`, rewrites it, and ends `## Approach` with `Revision notes:`, one line per note saying what changed or why not. A note that needs a material spec change becomes a challenge (`needs_input`).
 
 No code beyond short illustrative signatures.
