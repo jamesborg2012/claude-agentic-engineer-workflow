@@ -1042,6 +1042,16 @@ CASES
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "doc-writer gets delivered_by from D13 and states it instead of inferring it (#74)" {
+  local bad="" d="$REPO_ROOT/skills/ship/references/dispatch.md" w="$REPO_ROOT/agents/doc-writer.md"
+  grep -E '^\| D13 \|' "$d" | grep -qF '`delivered_by: <command>`' || bad="${bad}D13 does not send delivered_by"$'\n'
+  grep -E '^- `delivered_by` \(D13\)' "$d" | grep -qF '`sequential-child` → `/aew:ship-milestone <mn> --sequential`' || bad="${bad}dispatch.md has no delivered_by mapping"$'\n'
+  awk '/^### Dispatch fields$/{f=1; next} /^### /{f=0} f' "$w" | grep -qF '`delivered_by`' || bad="${bad}doc-writer does not list delivered_by"$'\n'
+  grep -E '^   - Delivered by:' "$w" | grep -qF 'never infer it' || bad="${bad}doc-writer step 4 has no delivered_by rule"$'\n'
+  grep -qx 'Delivered by: <command>' "$REPO_ROOT/templates/artefacts/summary.md" || bad="${bad}summary template has no Delivered by line"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "qa-engineer: phase B formats its test files before the first run and before committing (#79)" {
   local bad="" f="$REPO_ROOT/agents/qa-engineer.md"
   awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$f" | grep -qF 'run `commands.format` before the first run' || bad="${bad}QA phase B does not format before the first run"$'\n'

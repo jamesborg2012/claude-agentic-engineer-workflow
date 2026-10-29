@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The doc-writer gets a `delivered_by` dispatch field, the aew command that delivered the run
+  (`/aew:ship <n>`, `/aew:ship-milestone <m> --bulk` or `--sequential`), derived from the run's mode. It
+  goes on the summary's new `Delivered by:` line, and is the source when a project asks its PR bodies for a
+  delivery path, so the doc-writer no longer infers it (#74).
+
 ### Changed
 
 - Installs track the `stable` branch, which each release moves to its tag, so a new release arrives with

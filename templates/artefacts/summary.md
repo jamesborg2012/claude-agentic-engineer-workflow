@@ -5,6 +5,8 @@ Read by: orchestrator (final report)
 -->
 # Summary: #<issue> <title>
 
+Delivered by: <command>
+
 ## Summary
 
 ## Acceptance criteria
