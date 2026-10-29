@@ -368,6 +368,7 @@ The orchestrator passes the mode.
   - don't touch unrelated files;
   - no public API changes unless specified;
 - the unit tests the developer is expected to write per work package;
+- the environment develop needs (runtimes with their major version, commands on PATH, a running Docker), in line forms `scripts/check-env.sh` checks (§9);
 - risks;
 - an AC→WP traceability matrix.
 
@@ -514,6 +515,7 @@ Runs on the main thread.
   - Plan approval is on by default. `--auto`, or `gates.plan_approval: false`, skips it. James sees a plan summary of 25 lines or fewer plus the file path, with the options approve / request changes / stop.
   - Irreversible or destructive operations always get a gate.
   - A developer blocked by the environment in full mode gets the `environment` gate, even with `--auto`: fix and continue (the re-plan allowance is kept), re-plan, or stop.
+  - **Environment check (#44, #50).** `scripts/check-env.sh <05-plan.md>` checks the plan's `## Environment` lines (`- tool: <command> [<major>]`, `- service: docker`) and its `Owner hand-off:` files (they must exist or be in `guard.allow_paths`). Its `FAIL:` lines go into the plan-approval summary, and it runs again before every D8 dispatch, so `--auto` runs are covered: a failure is the `environment` gate (fixed, continue / continue without the check / stop).
   - **Unanswered gate.** When AskUserQuestion is unavailable (headless runs with `--permission-prompts none`), refused or answered empty, the gate stays pending: state and label are already set, ship prints the questions (or the plan summary and path) and `Answer with /aew:resume <id>`, and stops; nothing after the gate runs. `init` instead uses its recommended defaults and writes no settings.
 - **Every completed run ends in a PR:** single-issue runs, bulk milestone runs, each sequential-milestone child and `init`. Blocked runs open none and keep their behaviour: a report comment, the blocked label, and a stop. A resumed or re-run run updates the existing PR and rewrites its `## In plain English` section to match the final state, never appending a second one. Issue bodies and comments carry no such introduction.
 - **Resume:** reads `state.json`, verifies the branch and working tree, and continues from the recorded stage. `resume` reads `ship`'s files with Read and enters at the recorded stage's section.

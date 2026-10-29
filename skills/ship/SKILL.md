@@ -13,7 +13,7 @@ This is the main-thread orchestrator for one issue. It is the only part of aew t
 
 The plugin root is `${CLAUDE_PLUGIN_ROOT}`.
 
-- The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Call each one by its absolute path, written out in the command, because the Bash tool has no `CLAUDE_PLUGIN_ROOT` variable. In this file and the references, a bare `state.sh …` (or `gh-issue.sh …`, `gh-labels.sh …`, `git-branch.sh …`, `gh-pr.sh …`, `gh-retro.sh …`, `check-pr-intro.sh …`) means that absolute path.
+- The scripts live in `${CLAUDE_PLUGIN_ROOT}/scripts/`. Call each one by its absolute path, written out in the command, because the Bash tool has no `CLAUDE_PLUGIN_ROOT` variable. In this file and the references, a bare `state.sh …` (or `gh-issue.sh …`, `gh-labels.sh …`, `git-branch.sh …`, `gh-pr.sh …`, `gh-retro.sh …`, `check-pr-intro.sh …`, `check-env.sh …`) means that absolute path.
 - Never write a `<placeholder>` inside a `${CLAUDE_PLUGIN_ROOT}/…` path.
 - The references are read with Read and are not substituted: read every literal `${CLAUDE_PLUGIN_ROOT}` in them as the root above.
 - A skill that reads this file with Read (`resume`, `prompt`) states the root itself, and the same rule applies to this file.
@@ -64,6 +64,7 @@ Read each value fresh before each use.
 | The `### TC-<n>:` entries classed `spec_ambiguity` | gate `spec-ambiguity` | bounded section read |
 | The `Block cause:` line of `06-dev-report.md` | a full-mode developer `blocked` (`routing.md`) | `grep -m1 '^Block cause:'` |
 | `## Deviations` and the return block of `06-dev-report.md` | gate `environment` | bounded section read, and `grep -v '^$' <file> \| tail -n 4` |
+| The `FAIL:` lines of `check-env.sh .aew/runs/<id>/05-plan.md` | the plan-approval summary, develop entry, gate `environment` | the script's stdout |
 | `state.json` | any decision | `state.sh get <field>`, or `jq` for `history` notes |
 | `.aew/config.json` fields | limits, gates, `default_branch` | `jq` |
 | `spec-changes.json` | recording a spec revision | `jq` counts, and a render to a file only |
@@ -200,10 +201,11 @@ In a bulk run, step 1's label goes on every issue, and `bulk.md` `## Spec analys
 
 1. Entry: `state.sh stage develop` (note `--from`, `resume`, or the reason that sent you here), then `gh-labels.sh stage <n> building`. This write is the one the developer gate needs: dispatch straight after it.
 2. Choose the mode. Fix mode needs `review_cycle` k of at least 1 and `test .aew/runs/<id>/07-review-<k>.md -nt .aew/runs/<id>/05-plan.md && echo newer || echo older` to print `newer`: dispatch row D10 with `fix_from: 07-review-<k>.md` and `n: <k>`. Otherwise dispatch row D8 (`mode: full`). Check required files first (`dispatch.md` `## Required inputs per stage`).
-3. Dispatch the row chosen.
-4. Return check: `dispatch.md` `## Return check`, which includes every `06-dev-report*.md` the developer names.
-5. Exit: `ok` goes to `## Stage: review`. `blocked` goes to `routing.md` `## Developer blocked`.
-6. Failure: `routing.md` `## Agent status routing`.
+3. Environment check, D8 only. Skip it when `jq -r '.history | last | .note // ""' .aew/runs/<id>/state.json` prints `environment checked: continue` (James chose to go on without it). Otherwise run `check-env.sh .aew/runs/<id>/05-plan.md`. Exit 0: go on. Exit 1: `gates.md` `## Gate: environment`, with its `FAIL:` lines as the problems. Any other exit: `routing.md` `## Script failures`.
+4. Dispatch the row chosen.
+5. Return check: `dispatch.md` `## Return check`, which includes every `06-dev-report*.md` the developer names.
+6. Exit: `ok` goes to `## Stage: review`. `blocked` goes to `routing.md` `## Developer blocked`.
+7. Failure: `routing.md` `## Agent status routing`.
 
 ## Stage: review
 

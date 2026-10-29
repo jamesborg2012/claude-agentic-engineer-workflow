@@ -596,6 +596,23 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "ship: check-env.sh runs before D8 and at the plan gate, and a failure is the environment gate" {
+  local s="$REPO_ROOT/skills/ship" sec bad=""
+  sec=$(awk '/^## Stage: develop$/{f=1; next} /^## /{f=0} f' "$s/SKILL.md")
+  grep -qE '^3\. Environment check, D8 only\..*`check-env\.sh \.aew/runs/<id>/05-plan\.md`.*`gates\.md` `## Gate: environment`' <<< "$sec" || bad="${bad}develop does not run check-env.sh before D8"$'\n'
+  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$s/references/gates.md" | grep -qF 'run `check-env.sh <rd>/05-plan.md`' || bad="${bad}plan-approval summary has no environment check"$'\n'
+  awk '/^## Gate: environment$/{f=1; next} /^## /{f=0} f' "$s/references/gates.md" | grep -qF '`gate:environment check-env`' || bad="${bad}environment gate has no check source"$'\n'
+  grep -qF '"Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-env.sh *)"' "$REPO_ROOT/skills/init/SKILL.md" || bad="${bad}init does not pre-approve check-env.sh"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "senior-engineer: the plan's Environment lines use only the forms check-env.sh reads" {
+  local f="$REPO_ROOT/agents/senior-engineer.md"
+  grep -qx '## Environment' "$REPO_ROOT/templates/artefacts/plan.md" || { echo "plan template has no Environment section" >&2; return 1; }
+  grep -qF '13. **Environment**' "$f" || { echo "plan mode has no Environment step" >&2; return 1; }
+  grep -qF -- '- `- tool: <command> <major>`' "$f" && grep -qF -- '- `- service: docker`' "$f" || { echo "plan mode does not give the check's line forms" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

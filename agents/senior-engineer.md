@@ -95,6 +95,12 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 10. **Risks**: real ones, each with a mitigation. Write "None identified." only if that is true.
 11. **AC→WP traceability**: one row per AC from step 1. Self-check before you finish: the set of AC ids in the matrix equals the set from step 1, and every work package's "ACs covered" agrees with the matrix. Fix the plan until both hold.
 12. Use context7 (`resolve-library-id`, then `query-docs`) only when a design choice depends on version-specific framework behaviour. Do not use it to browse.
+13. **Environment**: what develop needs from the machine that the repo cannot provide, one line each in `## Environment`, and only in these forms, because `check-env.sh` reads them and fails any other line:
+    - `- tool: <command> <major>` for a runtime whose major version the project pins (`engines`, `.nvmrc`, `.node-version`, `.tool-versions`, `composer.json`), for example `- tool: node 24`;
+    - `- tool: <command>` for a command the work needs on PATH: the package manager from `packageManager` or the lockfile, or a CLI the plan runs;
+    - `- service: docker` when a work package or its tests need a running container (a compose file, a database in Docker).
+
+    Write "None." when nothing applies. A guarded file stays an `Owner hand-off:` risk (step 6); the same check covers it.
 
 ### Mode: review
 
@@ -200,6 +206,7 @@ Never record secrets, run-specific detail (issue numbers, a single run's finding
 - `parallelisable` follows the rule in step 6.
 - The AC→WP matrix covers every AC in the brief, and agrees with each work package.
 - With `notes`, `## Approach` addresses every note.
+- `## Environment` holds only the step 13 line forms, or "None.".
 
 ### Mode: review
 

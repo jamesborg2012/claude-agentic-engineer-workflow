@@ -50,6 +50,13 @@ Read by: orchestrator (plan gate summary), developer, senior-engineer (review, t
 |---|---|
 | WP-1 | <behaviour under test> |
 
+## Environment
+
+<!-- What develop needs from the machine, one line each, or "None.". Only these forms, because scripts/check-env.sh checks them before the plan gate and when develop starts:
+- tool: <command> <major>
+- tool: <command>
+- service: docker -->
+
 ## Risks
 
 ## AC→WP traceability
