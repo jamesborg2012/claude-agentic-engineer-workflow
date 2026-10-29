@@ -70,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     scripts, never by editing the live page, which hydration reverts (#27).
   - qa-engineer: a stub's call log has one argument per line, and an assertion on a tool's output follows what
     the tool really prints (#54).
+  - qa-engineer: a test of a config file parses it, or anchors on keys with comments stripped, never on free
+    text a comment can match (#57).
 
 ### Changed
 
