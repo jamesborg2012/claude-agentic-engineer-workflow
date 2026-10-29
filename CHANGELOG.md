@@ -56,6 +56,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which the doc-writer applies (through the CLAUDE.md curation rules) instead of a NEXT line (#18).
 - Every QA test, at every level, has a title starting `TC-<n>: `, and the QA report's Results table gains a Test
   column with each TC's test file, which the spec snapshot's traceability table uses (#8, #30).
+- Agent prompt fixes from the retro:
+  - developer: a look-alike Unicode fixture is an escape in a form the edit tooling keeps (`\u{212A}`), its test
+    asserts the code point, and `grep -n '[^ -~]' <file>` must show no raw character before the report calls
+    it an escape (#31).
+  - standards: every generated or updated doc's testing conventions carry the same look-alike fixture rule,
+    whatever the stack (#32).
+  - developer fix mode: a fix that changes escaping is tested on the string the code generates (the SQL, the
+    pattern), with a test that fails on the old behaviour (#49).
+  - developer: prose added to a config file, doc or spec is re-read against the same file's values before
+    committing, since no formatter checks it (#58).
+  - ui-qa: a page state with no data seam is built by rewriting the document response and aborting its
+    scripts, never by editing the live page, which hydration reverts (#27).
+  - qa-engineer: a stub's call log has one argument per line, and an assertion on a tool's output follows what
+    the tool really prints (#54).
+  - qa-engineer: a test of a config file parses it, or anchors on keys with comments stripped, never on free
+    text a comment can match (#57).
 
 ### Changed
 
