@@ -338,9 +338,10 @@ Example: [`templates/config.example.json`](templates/config.example.json).
 | `ui.axe` | boolean | `true` | Run an axe-core scan on every changed page |
 | `ui.axe_standard` | string | `wcag22aa` | WCAG target; a level expands to every axe tag up to it |
 | `ui.e2e_dir` | string | `tests/e2e` | Directory for committed Playwright specs |
-| `git.branch_pattern` | string | `feat/{issue}-{slug}` | Branch name for a single-issue run |
+| `git.branch_pattern` | string | `feat/{issue}-{slug}` | Branch name for a single-issue run: `{issue}`, `{slug}`, and `{spec}`, the number in a leading `[NN]` of the issue title (`{spec}-{issue}-{slug}` gives `01-3-database-foundation`); init proposes one from the project's convention |
 | `git.milestone_branch_pattern` | string | `feat/m{milestone}-{slug}` | Branch name for a bulk milestone run |
 | `git.commit_convention` | string | `conventional` | Commit message convention |
+| `git.commit_trailer` | string | `Co-Authored-By: Claude <noreply@anthropic.com>` | The one trailer every aew commit ends with, whatever attribution line the session suggests |
 | `gates.plan_approval` | boolean | `true` | Ask for plan approval before development (`--auto` also skips it); material spec changes are always gated |
 | `guard.allow_paths[]` | array | `[]` | Committed files with no secrets that the edit guard would otherwise refuse, such as `.env.test` or `.npmrc`, as paths relative to the repo root (matched exactly; never `.git/`) |
 | `limits.max_fix_cycles` | integer | `3` | QA fix cycles before the run is blocked |
@@ -414,14 +415,8 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
 - **Next.js 16 writes an untracked `AGENTS.md` when the dev server starts:** it then fails aew's clean-tree
   check. Set `agentRules: false` in `next.config.ts`.
 - **`npx tsc --noEmit` fails on a fresh Next.js 16 checkout (`Cannot find name 'LayoutProps'`):** the route
-  types are generated into `.next/` by a build or dev run; run `npm run build` first.
-- **The `environment` gate lists `FAIL:` lines before development:** the plan's `## Environment` section names
-  what the work needs (for example `- tool: node 24`, `- service: docker`), and `check-env.sh` found it
-  missing. Install or start it, then answer `Fixed, continue`. If the plan's requirement is wrong, answer
-  `Continue without the check`.
-- **The developer is blocked by `aew guard: blocked a write to …/.env.test (env file)`:** aew refuses to edit
-  `.env*`, `.npmrc` and other secret files. If the file is committed and holds no secrets, add its path to
-  `guard.allow_paths` in `.aew/config.json` and resume; otherwise create it yourself.
+  types are generated into `.next/` by `next typegen`, a build or a dev run. Init now infers
+  `npx next typegen && npx tsc --noEmit` for Next.js 16; for an older config, set `commands.typecheck` to that.
 - **Stacked pull requests from a sequential milestone:** merge them in order, each with a merge commit (not
   squash). Deleting each merged branch lets GitHub retarget the next PR to the default branch; its
   `Closes #n` then closes the issue on merge.
@@ -429,8 +424,9 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
   `git push`): turn unrelated plugins off for the project with `"enabledPlugins": {"<plugin>@<marketplace>":
   false}` in `.claude/settings.local.json`. Don't turn off superpowers, context7 or frontend-design: aew
   needs them.
-- **After `/aew:prompt`, the tree has modified files under `.claude/agent-memory/`:** prompt mode updates
-  agent memory but makes no commit. Commit or restore them before the next run.
+- **After `/aew:prompt`, the tree has modified files under `.claude/agent-memory/`:** aew 0.1.0 updated agent
+  memory in prompt mode, which makes no commit. Commit or restore them before the next run; later versions
+  write no memory in prompt mode.
 
 ## Uninstall
 

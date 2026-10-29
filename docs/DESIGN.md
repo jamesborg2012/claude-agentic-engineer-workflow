@@ -156,7 +156,7 @@ Skills with side effects set `disable-model-invocation: true`.
   - `axe`: `true`
   - `axe_standard`: `"wcag22aa"`
   - `e2e_dir`: `"tests/e2e"`
-- `git`: `{ branch_pattern: "feat/{issue}-{slug}", milestone_branch_pattern: "feat/m{milestone}-{slug}", commit_convention: "conventional" }`
+- `git`: `{ branch_pattern: "feat/{issue}-{slug}", milestone_branch_pattern: "feat/m{milestone}-{slug}", commit_convention: "conventional", commit_trailer: "Co-Authored-By: Claude <noreply@anthropic.com>" }`. `branch_pattern` also takes `{spec}`, the number in a leading `[NN]` of the issue title, and init proposes a pattern from the project's stated or observed branch convention (#52, #56).
 - `gates`: `{ plan_approval: true }`
 - `guard`: `{ allow_paths: [] }`: committed, non-secret files the edit guard would refuse (for example `.env.test`, `.npmrc`), as repo-relative paths (§11)
 - `limits`: `{ max_fix_cycles: 3, max_review_cycles: 2, max_parallel_developers: 4 }`
@@ -304,7 +304,7 @@ The orchestrator reads return blocks and only reads full artefacts when a gate o
 - Definition of Done
 - Open risks
 
-**Prompt mode.** Writes `prompt.md`, a single self-contained prompt for a plain Claude Code session with no plugin installed. It contains:
+**Prompt mode.** Writes `prompt.md`, a single self-contained prompt for a plain Claude Code session with no plugin installed. The run makes no commit, so the spec-analyser writes no agent memory in it (#34). It contains:
 
 - role and context;
 - the brief inline;
@@ -398,7 +398,7 @@ No code beyond short illustrative signatures.
 - Implements the plan's work packages in dependency order.
 - Follows the standards docs strictly. Uses TDD (per superpowers) for unit tests.
 - Before finishing each work package, runs lint, format, typecheck and unit tests from config. After the last work package, and in fix mode, it also runs the build from config once on the feature branch: no other stage builds the project (recorded deviation, prompt 07: S3's summary flagged that the build had never run).
-- Commits per work package using conventional commits, with `(#issue)`. Every commit aew makes (agents and orchestrator) ends with the one trailer `Co-Authored-By: Claude <noreply@anthropic.com>`, with no model name, whatever attribution line the session asks for (James's decision, 2026-10-26).
+- Commits per work package using conventional commits, with `(#issue)`. Every commit aew makes (agents and orchestrator) ends with one trailer, `git.commit_trailer`, whatever attribution line the session asks for. Its default is `Co-Authored-By: Claude <noreply@anthropic.com>`, with no model name (James's decision, 2026-10-26), and a project can set its own. The rule lives in one place, the run-protocol skill's `## Commit trailer` (#53).
 - Code is readable, simple and documented: doc comments on public functions, and comments that explain why rather than what.
 - **Fan-out.** If at least two work packages are marked parallelisable and own disjoint files, it spawns sub-developers:
   - the same agent type, in "package mode", one work package each;

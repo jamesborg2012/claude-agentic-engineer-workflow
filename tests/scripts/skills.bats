@@ -780,6 +780,32 @@ git-branch.sh')"
     { echo "QA has no config-file matching rule" >&2; return 1; }
 }
 
+@test "final reports name retro.repo for retro items, never the project repo (#36)" {
+  local f bad=""
+  for f in skills/ship/references/final-report.md skills/ship-milestone/SKILL.md; do
+    grep -qF 'Retro items filed: <count> in <retro.repo> (' "$REPO_ROOT/$f" || bad="${bad}$f does not name retro.repo"$'\n'
+  done
+  grep -qF "jq -r '.retro.repo' .aew/config.json" "$REPO_ROOT/skills/ship/references/final-report.md" || bad="${bad}final-report does not say where retro.repo comes from"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "spec-analyser: a prompt-mode run writes no agent memory (#34)" {
+  awk '/^## Memory$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/agents/spec-analyser.md" | grep -qF 'write no memory' ||
+    { echo "spec-analyser still writes memory in prompt mode" >&2; return 1; }
+}
+
+@test "init: Next.js 16 gets typegen before tsc, and an && command becomes one rule per part (#35)" {
+  local bad=""
+  grep -qF 'typecheck `npx next typegen && npx tsc --noEmit`' "$REPO_ROOT/skills/init/SKILL.md" || bad="${bad}init does not infer typegen for Next.js 16"$'\n'
+  grep -qF 'joined by ` && ` becomes one rule per part' "$REPO_ROOT/skills/init/references/permissions.md" || bad="${bad}permissions do not split && commands"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "init: proposes git.branch_pattern from the project's branch convention (#56)" {
+  grep -E '^\| `git\.branch_pattern` \|' "$REPO_ROOT/skills/init/SKILL.md" | grep -qF '`{spec}-{issue}-{slug}`' ||
+    { echo "init has no branch-convention row" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
@@ -807,9 +833,14 @@ git-branch.sh')"
   awk '/^## Retry$/{f=1; next} /^## /{f=0} f' "$f" | grep -q 'under the maximum' || { echo "retry length target is not relative to the maximum" >&2; return 1; }
 }
 
-@test "prompt template: commits carry the plain Claude trailer" {
-  awk '/^## Git and PR$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/templates/artefacts/prompt.md" |
-    grep -qF 'Co-Authored-By: Claude <noreply@anthropic.com>' || { echo "prompt template has no plain trailer rule" >&2; return 1; }
+@test "commit trailer: one rule in run-protocol, read from git.commit_trailer everywhere else (#53)" {
+  local hits bad=""
+  grep -qx '## Commit trailer' "$REPO_ROOT/skills/run-protocol/SKILL.md" || bad="${bad}run-protocol has no Commit trailer section"$'\n'
+  [ "$(jq -r '.properties.git.properties.commit_trailer.default' "$REPO_ROOT/templates/config.schema.json")" = 'Co-Authored-By: Claude <noreply@anthropic.com>' ] || bad="${bad}schema default is not the plain trailer"$'\n'
+  hits=$(grep -rlF 'noreply@anthropic.com' "$REPO_ROOT/agents" "$REPO_ROOT/skills" "$REPO_ROOT/templates/artefacts" | sed "s|$REPO_ROOT/||" | sort | tr '\n' ' ')
+  [ "$hits" = "skills/run-protocol/SKILL.md " ] || bad="${bad}trailer literal outside run-protocol: $hits"$'\n'
+  grep -qF '<commit trailer>' "$REPO_ROOT/templates/artefacts/prompt.md" || bad="${bad}prompt template does not take the configured trailer"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
 @test "retro fixes from prompt 07 stay in their prompts" {

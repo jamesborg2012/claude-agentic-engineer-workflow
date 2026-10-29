@@ -153,7 +153,8 @@ Then build a discovery table (source, field and value, certain or inferred); §5
 |---|---|---|
 | `package.json` scripts, in each stack path that has one | Each script maps to `<pm> run <script>`: `dev` is dev, `build` is build, `lint` is lint, `format` and `format:check` are format, `typecheck` and `type-check` are typecheck, `test` and `test:unit` are test_unit, `test:e2e` and `e2e` are test_e2e, `seed` and `db:seed` are seed | certain |
 | Lock file (package manager, the same rule as `${CLAUDE_PLUGIN_ROOT}/skills/ui-qa/SKILL.md` §2) | `pnpm-lock.yaml` is pnpm, `yarn.lock` is yarn, `bun.lock` or `bun.lockb` is bun, otherwise npm. `install` is `npm ci` with a `package-lock.json`, otherwise `<pm> install` | certain when a lock file names the manager, inferred with no lock file |
-| `tsconfig.json` and no typecheck script | typecheck `npx tsc --noEmit` | inferred |
+| `tsconfig.json`, no typecheck script and a `nextjs` stack at major 16 or later | typecheck `npx next typegen && npx tsc --noEmit`: Next.js 16 generates route types such as `LayoutProps` into `.next/`, so plain `tsc` fails on a fresh checkout | inferred |
+| `tsconfig.json` and no typecheck script, otherwise | typecheck `npx tsc --noEmit` | inferred |
 | `@playwright/test` in a `package.json` and no e2e script | test_e2e `npx playwright test` | certain |
 | `composer.json` scripts | `test` is test_unit `composer test`, `lint` is lint, `format` is format, `analyse` and `phpstan` are typecheck; install is `composer install` | certain |
 | `artisan` | test_unit `php artisan test` when there is no composer test script; seed `php artisan db:seed`; app start `php artisan serve`, `base_url` `http://127.0.0.1:8000`, `env_type` `native` | inferred |
@@ -166,6 +167,7 @@ Then build a discovery table (source, field and value, certain or inferred); §5
 | no app at all | `env_type` `none`, `base_url` `http://localhost`, empty `start_command` and `ready_check` | inferred |
 | `project` | the root `package.json` `name`, else the `composer.json` `name` after the `/`, else the first `.csproj` basename, else the directory name | certain when found in a manifest |
 | `default_branch` | from §2 | certain, or inferred when §2 marked it uncertain |
+| `git.branch_pattern` | a branch convention that `CLAUDE.md` or `CONTRIBUTING.md` states, else one that the recent branch names all follow (the first 20 lines of `git branch -a --sort=-committerdate --format='%(refname:short)'`), written with `{issue}`, `{slug}` and `{spec}` (the number in a leading `[NN]` of the issue title): for example `NN-<issue#>-short-name` is `{spec}-{issue}-{slug}`. With no convention, leave it out, so the default `feat/{issue}-{slug}` applies | inferred |
 | `retro.repo` | `jamesborg2012/claude-agentic-engineer-workflow` | inferred |
 
 Commands not found are left out (the schema has no required command keys). To read a stack path's files
@@ -451,8 +453,9 @@ if [ -f .claude/settings.local.json ] && ! git ls-files --error-unmatch .claude/
 
 Every changed path must be one of Init's files, or stop, list the strangers and commit nothing. An
 `ignored …` line is not a change: don't force-add it, report it in §13. With changes, `git add -- <path>`
-each path (never `git add -A` or `git add .`), then `git commit -m "chore: set up aew" -m "Co-Authored-By: Claude <noreply@anthropic.com>"` (no issue
-ref; that trailer only). Then decide the push and the PR.
+each path (never `git add -A` or `git add .`), then `git commit -m "chore: set up aew" -m "<trailer>"` (no issue
+ref; that trailer only), where `<trailer>` is the commit trailer of `aew:run-protocol` `## Commit trailer`, read
+from the config just written with the `jq` command that section gives. Then decide the push and the PR.
 
 ```sh
 if git rev-parse --verify refs/remotes/origin/chore/aew-init > /dev/null 2>&1; then

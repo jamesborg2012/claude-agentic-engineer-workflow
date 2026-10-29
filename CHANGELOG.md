@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the plan's `Owner hand-off:` files. Its result is in the plan-approval summary, and it runs again before
   every full-mode developer dispatch, so `--auto` runs are covered; a failure goes to the `environment` gate
   (fixed, continue / continue without the check / stop). Init pre-approves the script (#44, #50).
+- `{spec}` placeholder in `git.branch_pattern`: the number in a leading `[NN]` of the issue title, so a project's
+  `NN-<issue#>-short-name` convention is `{spec}-{issue}-{slug}`. Init proposes a `git.branch_pattern` from the
+  convention `CLAUDE.md` or `CONTRIBUTING.md` states or the recent branch names follow (#52, #56).
+- `git.commit_trailer`: the one trailer every aew commit ends with, defaulting to the plain
+  `Co-Authored-By: Claude <noreply@anthropic.com>`. The rule now lives once, in the run-protocol skill's
+  `## Commit trailer`, instead of five hard-coded copies, and prompt mode's `prompt.md` uses the configured line
+  (#53).
 - `review-decision` gate: a review finding that can only be fixed by a material spec change (for example an AC
   that must be rewritten) is put to James as a question in the review's new `## Questions for James`. The
   answer goes through spec re-analysis, so the revision is recorded on the issue, and the run continues from
@@ -95,6 +102,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   environment blocks, and a full-mode environment block pauses at a new `environment` gate (fixed, continue /
   re-plan / stop) that never skips, even with `--auto`. A sequential work package it interrupted is left
   uncommitted and picked up by the next full-mode dispatch (#51).
+- The ship and milestone final reports name `retro.repo` for retro items; a milestone report had named the
+  project repo (#36).
+- `/aew:prompt` no longer leaves agent-memory edits uncommitted on the default branch: the spec-analyser reads
+  but writes no memory in a prompt-mode run (#34).
+- Init infers `npx next typegen && npx tsc --noEmit` as the typecheck for Next.js 16 or later, whose route types
+  plain `tsc` cannot find on a fresh checkout, and turns a command joined by `&&` into one permission rule per
+  part (#35).
 
 ## [0.1.0] - 2026-10-27
 

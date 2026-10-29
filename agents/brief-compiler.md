@@ -116,8 +116,9 @@ These rules apply in both modes.
    - the second sentence of `## Role and context`: what the session needs to know that it cannot infer from the repo, taken from the brief's Context;
    - commands, from `commands`, set ones only. If none are set, write "the project's lint, format, typecheck and unit test commands";
    - viewports and axe standard, from `ui` (defaults included), written for a reader, for example "desktop 1440x900, mobile 390x844" and "WCAG 2.2 AA" for `wcag22aa`;
-   - branch: `git.branch_pattern` with `{issue}` and `{slug}` filled in (the slug is the issue title in lower-case kebab-case);
-   - default branch, from `default_branch`.
+   - branch: `git.branch_pattern` with `{issue}`, `{slug}` and `{spec}` filled in (the slug is the issue title in lower-case kebab-case; `{spec}` is the number in a leading `[NN]` of the title, zeros kept);
+   - default branch, from `default_branch`;
+   - commit trailer, from `git.commit_trailer`, or the default in the `aew:run-protocol` skill's `## Commit trailer` when it is absent.
 6. Under `## Brief`, inline the full brief with `###` sub-headings in this order: Goal, Context, Acceptance criteria, Non-goals, Constraints, Affected surfaces, Test data and accounts needed, `UI changes: yes` or `UI changes: no`, Open risks. Every AC appears with its id and tags.
 7. Under `## Standards`:
    - Handle each profile in `stacks` on its own.
@@ -128,7 +129,7 @@ These rules apply in both modes.
 9. **Self-contained check.** The file is pasted into a fresh session with no plugin installed, so Grep it for each of these and fix every hit:
    - `aew` (case-insensitive), `.aew/`, `/aew:`, `run-protocol`, `CLAUDE_PLUGIN_ROOT`, `superpowers`;
    - `<!--`, and the run-dir artefact names `spec-final.md`, `02-brief.md`, `01-spec-analysis.md`;
-   - leftover template placeholders: `<project>`, `<stack>`, `<commands>`, `<viewports>`, `<standard>`, `<branch>`, `<default branch>`, `<issue>`, `<title>`. Literal markup the brief needs, such as `<footer>`, is content, not a placeholder.
+   - leftover template placeholders: `<project>`, `<stack>`, `<commands>`, `<viewports>`, `<standard>`, `<branch>`, `<default branch>`, `<commit trailer>`, `<issue>`, `<title>`. Literal markup the brief needs, such as `<footer>`, is content, not a placeholder.
 
    The file must not tell the session to read anything that exists only in the run dir. Also confirm that every AC is present.
 

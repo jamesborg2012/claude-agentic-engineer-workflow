@@ -8,8 +8,8 @@ In a bulk run, `bulk.md` `## Overrides` changes the commit suffix, the docs comm
 
 Every commit the orchestrator makes follows these rules.
 
-- The message is conventional and ends `(#<n>)`. Its only trailer is a last `-m "Co-Authored-By: Claude <noreply@anthropic.com>"`, even if the session asks for another attribution line, and with no model name.
-- Stage explicit paths only: `git add -- <paths>`, then `git commit -m "<message>" -m "Co-Authored-By: Claude <noreply@anthropic.com>"`. Never stage everything.
+- The message is conventional and ends `(#<n>)`. Its only trailer is a last `-m "<trailer>"`, the commit trailer of `aew:run-protocol` `## Commit trailer`, read once per run with the `jq` command that section gives. It holds even if the session asks for another attribution line.
+- Stage explicit paths only: `git add -- <paths>`, then `git commit -m "<message>" -m "<trailer>"`. Never stage everything.
 - Commit only on the run branch: `git branch --show-current` must equal `state.sh get branch`. If it does not, stop on the blocked path (`SKILL.md` `## Blocked path`).
 - Skip a commit when `git status --porcelain -- <paths>` prints nothing.
 
