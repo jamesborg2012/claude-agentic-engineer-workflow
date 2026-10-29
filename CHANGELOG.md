@@ -64,6 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     whatever the stack (#32).
   - developer fix mode: a fix that changes escaping is tested on the string the code generates (the SQL, the
     pattern), with a test that fails on the old behaviour (#49).
+  - developer: prose added to a config file, doc or spec is re-read against the same file's values before
+    committing, since no formatter checks it (#58).
 
 ### Changed
 
