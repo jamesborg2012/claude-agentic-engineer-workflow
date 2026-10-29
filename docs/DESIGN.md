@@ -403,6 +403,7 @@ No code beyond short illustrative signatures.
 
   The developer creates each worktree itself from the feature-branch HEAD (`git worktree add -b aew/<run-id>/wp-<n> <run_dir>/worktrees/WP-<n> HEAD`) and dispatches the sub-developers without `isolation` (§3). It integrates each work package's single commit with `git cherry-pick` in WP-number order, removes the worktrees and WP branches, and only then reruns the checks.
 - **Deviations.** If a plan step is impossible or clearly wrong, it stops that work package and returns `STATUS: blocked` with the reason. The orchestrator routes this to the senior engineer. It never diverges silently.
+- **Environment blocks.** The report's `Block cause:` line tells a plan block from an environment block: a stopped service or daemon, a missing tool or wrong runtime version, a missing credential, a guarded file or no network. In full mode an environment block pauses at the `environment` gate (fix and continue, re-plan, or stop) instead of spending the run's one re-plan, and a sequential work package it interrupted is left uncommitted and picked up by the next full-mode dispatch (#51).
 - **Fix mode.** Takes the triage instructions or QA's failing tests, fixes them, then reruns those tests and the full unit suite.
 - Uses the frontend-design skill on UI work packages.
 - **Output:** code, tests, and `06-dev-report.md` (work packages done, files changed, commands run with results, deviations, notes for QA).
@@ -512,6 +513,7 @@ Runs on the main thread.
   - A material spec change always gets a gate, even with `--auto`. It uses AskUserQuestion with recommended answers.
   - Plan approval is on by default. `--auto`, or `gates.plan_approval: false`, skips it. James sees a plan summary of 25 lines or fewer plus the file path, with the options approve / request changes / stop.
   - Irreversible or destructive operations always get a gate.
+  - A developer blocked by the environment in full mode gets the `environment` gate, even with `--auto`: fix and continue (the re-plan allowance is kept), re-plan, or stop.
   - **Unanswered gate.** When AskUserQuestion is unavailable (headless runs with `--permission-prompts none`), refused or answered empty, the gate stays pending: state and label are already set, ship prints the questions (or the plan summary and path) and `Answer with /aew:resume <id>`, and stops; nothing after the gate runs. `init` instead uses its recommended defaults and writes no settings.
 - **Every completed run ends in a PR:** single-issue runs, bulk milestone runs, each sequential-milestone child and `init`. Blocked runs open none and keep their behaviour: a report comment, the blocked label, and a stop. A resumed or re-run run updates the existing PR and rewrites its `## In plain English` section to match the final state, never appending a second one. Issue bodies and comments carry no such introduction.
 - **Resume:** reads `state.json`, verifies the branch and working tree, and continues from the recorded stage. `resume` reads `ship`'s files with Read and enters at the recorded stage's section.

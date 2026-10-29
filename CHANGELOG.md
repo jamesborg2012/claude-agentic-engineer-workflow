@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `guard.allow_paths` lacks as an `Owner hand-off:` risk instead of giving it to a work package, and the
   plan-approval summary quotes it. The guard's deny message no longer names James; it points to
   `guard.allow_paths`. Shell writes to guarded files are recorded as a known limit of the Bash guard (#39).
+- A developer blocked by its environment (a stopped service, a missing tool, a credential, a guarded file) no
+  longer spends the run's one re-plan. The dev report's new `Block cause:` line tells plan blocks from
+  environment blocks, and a full-mode environment block pauses at a new `environment` gate (fixed, continue /
+  re-plan / stop) that never skips, even with `--auto`. A sequential work package it interrupted is left
+  uncommitted and picked up by the next full-mode dispatch (#51).
 
 ## [0.1.0] - 2026-10-27
 

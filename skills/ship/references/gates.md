@@ -6,7 +6,7 @@ Each `## Gate: <id>` section has four steps: set pending, read, ask, apply the a
 
 ## Gate ids and pending state
 
-The gate ids are `spec`, `plan-challenge`, `triage`, `spec-ambiguity` and `plan-approval`. A gate writes its pending status and label first, so `resume` can find it.
+The gate ids are `spec`, `plan-challenge`, `triage`, `spec-ambiguity`, `plan-approval` and `environment`. A gate writes its pending status and label first, so `resume` can find it.
 
 | Gate | Status write | Label write | Bounded read (step 2) |
 |---|---|---|---|
@@ -15,6 +15,7 @@ The gate ids are `spec`, `plan-challenge`, `triage`, `spec-ambiguity` and `plan-
 | `triage` | `state.sh status awaiting_input --note "gate:triage 09-triage-<k>.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Root cause` and `## Where the divergence started` of `09-triage-<k>.md` |
 | `spec-ambiguity` | `state.sh status awaiting_input --note "gate:spec-ambiguity 08-qa-report-<k>.md"` | `gh-labels.sh stage <n> awaiting-input` | the triage table and the `### TC-<n>:` entries classed `spec_ambiguity` |
 | `plan-approval` | `state.sh status awaiting_plan_approval --note "gate:plan-approval 05-plan.md"` | `gh-labels.sh stage <n> awaiting-approval` | `05-plan.md` in full |
+| `environment` | `state.sh status awaiting_input --note "gate:environment 06-dev-report.md"` | `gh-labels.sh stage <n> awaiting-input` | `## Deviations` and the return block of `06-dev-report.md` |
 
 The pending gate is read back from `history` with:
 
@@ -26,7 +27,7 @@ In prompt mode (`/aew:prompt`), skip every `gh-labels.sh stage` call in this fil
 
 `jq -r 'if ([.history[] | select(.note == "prompt")] | length) > 0 and .branch == null then "prompt" else "ship" end' .aew/runs/<id>/state.json`
 
-The four `awaiting_input` gates never skip, even with `--auto`. Only `plan-approval` is skippable (`auto` is true, or the plan gate is `off`).
+The five `awaiting_input` gates never skip, even with `--auto`. Only `plan-approval` is skippable (`auto` is true, or the plan gate is `off`).
 
 In a bulk run (`bulk.md` `## Overrides`), the `spec` gate is per issue: `<rd>` is `.aew/runs/<id>/issues/<k>`, `<n>` is `k`, the note is `gate:spec issues/<k>/01-spec-analysis.md`, its label goes on that issue only, and its step 4 returns to `bulk.md` `## Spec analysis`. Every other gate's label goes on every issue, and step 4 of `plan-challenge`, `triage` and `spec-ambiguity` is `bulk.md` `## Re-analysis`.
 
@@ -91,6 +92,18 @@ Entered from `SKILL.md` `## Stage: plan` step 5 when `auto` is false and the pla
    - Approve: go to `SKILL.md` `## Stage: develop`.
    - Request changes: go to `SKILL.md` `## Stage: plan` with the note `plan revision: request changes` and `notes:` set to the answer (dispatch row D7 only; QA phase A is not re-run). Then return to this gate.
    - Stop: `state.sh status failed --note "stopped at the plan gate"`, then `state.sh current clear`, then `SKILL.md` `## Final report` (outcome `failed`). The stage label stays `awaiting-approval`, because the label set has none for `failed`; the final report says so.
+
+## Gate: environment
+
+Entered from `routing.md` `## Developer blocked` when the developer in full mode blocks with `Block cause: environment`: the plan is sound, but something outside it (a service, a tool, a credential, a guarded file) needs James.
+
+1. Set pending: `state.sh status awaiting_input --note "gate:environment 06-dev-report.md"`, then `gh-labels.sh stage <n> awaiting-input`.
+2. Read: `awk '/^## Deviations$/{f=1;next} /^## |^STATUS:/{f=0} f' <rd>/06-dev-report.md`, and the SUMMARY line of `grep -v '^$' <rd>/06-dev-report.md | tail -n 4`.
+3. Ask one question: `#<n>: the developer is blocked by the environment: <SUMMARY>. Put it right, then choose.`, with the options `Fixed, continue (recommended)`, `Re-plan` and `Stop`. Free text counts as `Fixed, continue`, and the text goes in its note.
+4. Apply:
+   - Fixed, continue: `SKILL.md` `## Stage: develop` with the note `environment fixed: continue` (and ` / <free text>` when given). The plan is unchanged, so develop dispatches D8 again: the developer skips the integrated work packages, salvages a blocked worktree and picks up an unfinished sequential one. This never consumes the re-plan allowance, because it writes no `developer blocked: re-plan` note. Another environment block asks this gate again.
+   - Re-plan: `routing.md` `## Developer blocked` step 3 (the allowance check, then the re-plan).
+   - Stop: `SKILL.md` `## Blocked path` with the reason `developer blocked on the environment: <SUMMARY>`.
 
 ## Recording a spec revision
 

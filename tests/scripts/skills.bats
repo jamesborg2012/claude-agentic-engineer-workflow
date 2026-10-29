@@ -573,6 +573,29 @@ git-branch.sh')"
     { echo "plan-approval summary does not quote owner hand-offs" >&2; return 1; }
 }
 
+@test "developer: a block names its cause, and an environment block can be picked up in place" {
+  local f="$REPO_ROOT/agents/developer.md" bad=""
+  grep -qx 'Block cause: none / plan / environment' "$REPO_ROOT/templates/artefacts/dev-report.md" || bad="${bad}dev-report template has no Block cause line"$'\n'
+  grep -qF 'The `Block cause:` line holds exactly one of' "$f" || bad="${bad}developer does not define Block cause"$'\n'
+  grep -qF 'left uncommitted: WP-<n>' "$f" || bad="${bad}a sequential environment block does not record its unfinished WP"$'\n'
+  awk '/^Step 0, for every mode:$/{f=1; next} /^## /{f=0} f' "$f" | grep -qF 'left uncommitted: WP-<n>' || bad="${bad}Step 0 does not allow picking up the unfinished WP"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "ship: an environment block in full mode goes to the environment gate, not a re-plan" {
+  local g="$REPO_ROOT/skills/ship/references/gates.md" sec bad=""
+  awk '/^## Developer blocked$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/routing.md" | grep -qF '`gates.md` `## Gate: environment`' ||
+    bad="${bad}routing.md Developer blocked does not route to the environment gate"$'\n'
+  grep -qE '^The gate ids are .*`environment`' "$g" || bad="${bad}environment is not a listed gate id"$'\n'
+  grep -qF '| `environment` | `state.sh status awaiting_input --note "gate:environment 06-dev-report.md"`' "$g" || bad="${bad}no pending-state row for environment"$'\n'
+  grep -qF 'The five `awaiting_input` gates never skip' "$g" || bad="${bad}the environment gate is not counted among the unskippable gates"$'\n'
+  sec=$(awk '/^## Gate: environment$/{f=1; next} /^## /{f=0} f' "$g")
+  [ -n "$sec" ] || bad="${bad}gates.md has no Gate: environment section"$'\n'
+  grep -qF 'Fixed, continue (recommended)' <<< "$sec" || bad="${bad}environment gate has no continue option"$'\n'
+  grep -qF 'never consumes the re-plan' <<< "$sec" || bad="${bad}continue does not keep the re-plan allowance"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

@@ -62,6 +62,8 @@ Read each value fresh before each use.
 | `## Root cause` and `## Where the divergence started` of `09-triage-<k>.md` | gate `triage` | bounded section read |
 | The triage table of `08-qa-report-<k>.md`, and of `<k-1>` | the QA loop (repeat check) | bounded section read (`routing.md`) |
 | The `### TC-<n>:` entries classed `spec_ambiguity` | gate `spec-ambiguity` | bounded section read |
+| The `Block cause:` line of `06-dev-report.md` | a full-mode developer `blocked` (`routing.md`) | `grep -m1 '^Block cause:'` |
+| `## Deviations` and the return block of `06-dev-report.md` | gate `environment` | bounded section read, and `grep -v '^$' <file> \| tail -n 4` |
 | `state.json` | any decision | `state.sh get <field>`, or `jq` for `history` notes |
 | `.aew/config.json` fields | limits, gates, `default_branch` | `jq` |
 | `spec-changes.json` | recording a spec revision | `jq` counts, and a render to a file only |

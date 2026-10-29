@@ -7,6 +7,8 @@ Read by: senior-engineer (review), qa-engineer (phase B), orchestrator (routing)
 
 Mode: package / fix (cycle <n>) / full
 
+Block cause: none / plan / environment
+
 ## Work packages done
 
 | WP | Status | Commit |
