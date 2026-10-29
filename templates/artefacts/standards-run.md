@@ -1,7 +1,7 @@
 <!--
 Artefact: .aew/runs/<run-id>/03-standards.md
 Written by: standards-setter
-Read by: senior-engineer (plan, review), developer, qa-engineer (phase A)
+Read by: senior-engineer (plan, review), developer, qa-engineer (phase A). Standards overrides beat the sections they name.
 Says which standards docs, and which sections of them, apply to this brief. The docs themselves live in docs/standards/.
 -->
 # Standards for this run: #<issue> <title>
@@ -17,6 +17,10 @@ Says which standards docs, and which sections of them, apply to this brief. The 
 | Doc | Section | Why it applies |
 |---|---|---|
 | docs/standards/<profile>.md | <section> | <AC or surface it affects> |
+
+## Standards overrides
+
+<!-- "None." or one line per rule the brief overrides: the brief's own list, plus any conflict found between a selected section and an AC. "- <doc>#<section>: <the rule> → <what this brief requires instead> (<AC ids>)". -->
 
 <!-- Return block (DESIGN §7.5). -->
 STATUS: ok | needs_input | blocked | failed

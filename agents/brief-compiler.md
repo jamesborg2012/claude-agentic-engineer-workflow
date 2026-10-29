@@ -77,13 +77,16 @@ These rules apply in both modes.
 ### Both modes
 
 1. Resolve `run_dir` and `mode`, then read the inputs. A missing `spec-final.md` or `issue.json` means `blocked`.
-2. Look briefly at the repo with Glob, Grep and Read, only to name the affected surfaces precisely: existing paths as they are, new ones marked "(new)". Do not explore beyond that.
+2. Look briefly at the repo with Glob, Grep and Read, only to name the affected surfaces precisely (existing paths as they are, new ones marked "(new)") and to find repository-search tests for Forbidden literals. Do not explore beyond that.
 3. Draft every brief section from the template:
    - **Goal:** 1 to 3 sentences on the user outcome.
    - **Context:** why the work is needed, who it is for, and the current behaviour.
    - **Acceptance criteria:** per the rules above.
+   - **Spec criteria map** (pipeline mode only): one row per spec criterion, `| spec criterion <N> | AC-<a>, AC-<b> |`, naming the brief ACs it became, so a criterion split into several ACs still traces back. An AC that comes from elsewhere (an edge case from the analysis, a constraint) gets a row naming that source. In a bulk run the first column names the issue too (`#12 spec criterion 3`).
    - **Non-goals:** what the spec explicitly excludes, plus the nearest tempting extras.
    - **Constraints:** stack and versions, standards, commands, browsers and viewports, and any performance or legal limits.
+   - **Standards overrides** (pipeline mode only): read the `docs/standards/` docs the project already has. For each AC whose concrete value (a status code, a format, a name) contradicts one of their rules, write `- <doc>#<section>: <the rule> → <what this brief requires instead> (<AC ids>)`, so later stages follow the spec without arguing from the standard. "None." when nothing conflicts or there are no docs yet.
+   - **Forbidden literals** (pipeline mode only): Grep the test files for repository-search tests (tests that read source files or search the repo and assert that a string is absent). For each string such a test forbids that this work might write, often a name the spec itself quotes, write `- <literal>: <test file>`. "None." when there are none. This is the one search beyond the affected surfaces that step 2 allows.
    - **Affected surfaces:** routes, components, endpoints and tables, by path.
    - **Test data and accounts needed:** roles from `app.test_accounts`, never credentials, plus the seed data needed.
    - **UI changes:** per the section above.
@@ -101,6 +104,7 @@ These rules apply in both modes.
    - Grep the ACs for the vague-word list.
    - In a bulk run, the set of AC prefixes equals `issues`, and numbering is consecutive within each prefix.
    - AC numbering is consecutive, and every AC has a tag.
+   - Every AC appears in exactly one row of the spec criteria map, and every numbered spec criterion has a row.
    - Every template heading is present, in order, with the UI heading resolved to `yes` or `no`.
    - No template placeholder remains (`<issue>`, `<title>`, `<n>` and the like). Literal markup the brief needs, such as `<footer>`, is content, not a placeholder.
 

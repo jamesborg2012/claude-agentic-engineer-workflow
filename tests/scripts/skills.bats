@@ -670,6 +670,45 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "brief: standards overrides are recorded once and followed downstream (#7)" {
+  local bad=""
+  grep -qx '## Standards overrides' "$REPO_ROOT/templates/artefacts/brief.md" || bad="${bad}brief template has no Standards overrides"$'\n'
+  grep -qx '## Standards overrides' "$REPO_ROOT/templates/artefacts/standards-run.md" || bad="${bad}standards-run template has no Standards overrides"$'\n'
+  grep -qF '**Standards overrides**' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief-compiler does not fill overrides"$'\n'
+  grep -qF '"Standards overrides":' "$REPO_ROOT/agents/standards-setter.md" || bad="${bad}standards-setter does not carry overrides"$'\n'
+  grep -qF '`## Standards overrides` of `03-standards.md`' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}review and plan do not follow overrides"$'\n'
+  grep -qF '`## Standards overrides` of `03-standards.md`' "$REPO_ROOT/agents/developer.md" || bad="${bad}developer does not follow overrides"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "brief: a spec criteria map traces every AC to its spec criterion, into the snapshot (#22)" {
+  local bad=""
+  grep -qx '## Spec criteria map' "$REPO_ROOT/templates/artefacts/brief.md" || bad="${bad}brief template has no Spec criteria map"$'\n'
+  grep -qF '**Spec criteria map**' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief-compiler does not fill the map"$'\n'
+  grep -qF 'AC appears in exactly one row of the spec criteria map' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief self-check does not check the map"$'\n'
+  grep -qF '`| Spec criterion | AC | TC | Test | Result |`' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}snapshot traceability does not show the spec criterion"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "brief: forbidden literals are listed once and never written by any agent (#17, #23)" {
+  local f bad=""
+  grep -qx '## Forbidden literals' "$REPO_ROOT/templates/artefacts/brief.md" || bad="${bad}brief template has no Forbidden literals"$'\n'
+  grep -qF '**Forbidden literals**' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief-compiler does not fill forbidden literals"$'\n'
+  grep -qF 'Forbidden literal: <literal> (<test file>)' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}plan cannot add a forbidden literal"$'\n'
+  for f in developer qa-engineer doc-writer; do
+    awk '/^## Guardrails$/{g=1; next} /^## /{g=0} g' "$REPO_ROOT/agents/$f.md" | grep -qF "the brief's \`## Forbidden literals\`" || bad="${bad}$f has no forbidden-literal guardrail"$'\n'
+  done
+  awk '/^## 3\. Never include$/{g=1; next} /^## /{g=0} g' "$REPO_ROOT/skills/claude-md-curation/SKILL.md" | grep -qF 'Forbidden literals' || bad="${bad}curation never-include list has no forbidden literals"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "repository-search tests stay narrow, and a needed literal narrows the guard (#16)" {
+  local bad=""
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF 'never test files' || bad="${bad}QA has no narrow-search rule"$'\n'
+  grep -qF 'plan narrowing that guard test' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}plan does not narrow a guard the work must cross"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

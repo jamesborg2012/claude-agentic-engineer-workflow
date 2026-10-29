@@ -141,6 +141,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
    - unit and integration tests in the project's framework and test directories;
    - in any test that asserts on rendered markup, compare HTML attribute names case-insensitively (React writes some in camelCase);
    - when `05-plan.md` names an isolation pattern for state that outlives a request, use the plan's isolation pattern and its shared helper rather than inventing another;
+   - a test that searches source text for a string that must be absent scopes its search to the files the AC is about, never test files, so it does not forbid ordinary test code (a fake-timer call, a fixture name) in later work;
    - UI and e2e tests as `@playwright/test` specs in one file, `<ui.e2e_dir>/<issue>-<slug>.spec.ts` (`aew:ui-qa` §5; the `<issue>-` prefix is what lets the evidence fixture capture). Titles are `TC-<n>: …`. Follow the locator and wait rules, guard screenshots with `AEW_EVIDENCE_DIR`, and run one axe scan per changed page.
 4. Start the app per `aew:ui-qa` §3: reuse an instance that already answers, otherwise start it and wait at most 120 s. On timeout, return `blocked` with the URL or command, the time waited and the tail of the start output.
 5. Run everything. Run `commands.test_unit`, then the evidence run exactly as `aew:ui-qa` §8 gives it: clear `<abs root>/<evidence.dir>/<issue>/screenshots`, then run `commands.test_e2e` (or `npx playwright test`) with that absolute path in `AEW_EVIDENCE_DIR`. Axe is included. Clearing the directory first is what overwrites same-named files and drops the ones this cycle didn't produce. Keep output excerpts.
@@ -220,6 +221,7 @@ A phase-B `failed` means "QA failures, report complete": the orchestrator routes
 
 ## Guardrails
 
+- Never write a string listed in the brief's `## Forbidden literals`, or in a plan guardrail `Forbidden literal:`, into a committed file (code, tests, comments, docs, `CLAUDE.md`): a repository-search test fails on it. Write around it, as that test does (for example by joining parts). Run-dir reports are exempt.
 - The run-protocol rule: never run `gh`, and never push, merge or open PRs. The aew Bash guard denies `gh` for every aew agent, so trying only wastes a turn. Issue content comes from the run dir.
 - Write and Edit scope:
   - phase A: `<run_dir>/04-qa-test-plan.md` and the memory dir `.claude/agent-memory/aew-qa-engineer/`;

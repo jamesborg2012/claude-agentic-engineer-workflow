@@ -17,9 +17,25 @@ Source: spec-final.md (v<n>)
 
 - **AC-1** [UI] Given <context>, when <action>, then <outcome>.
 
+## Spec criteria map
+
+<!-- Every brief AC in exactly one row, so a split criterion traces back to the spec. An AC that comes from somewhere other than a numbered criterion names its source (an edge case, a constraint). -->
+
+| Spec criterion | Brief ACs |
+|---|---|
+| spec criterion 1 | AC-1, AC-2 |
+
 ## Non-goals
 
 ## Constraints
+
+## Standards overrides
+
+<!-- "None." or one line per AC whose concrete value contradicts a rule in docs/standards/: "- <doc>#<section>: <the rule> → <what this brief requires instead> (<AC ids>)". The brief wins over the standard. -->
+
+## Forbidden literals
+
+<!-- "None." or one line per string an existing repository-search test fails on, which this work might write: "- <literal>: <test file>". No agent writes one into any committed file (code, tests, comments, docs, CLAUDE.md); write around it, as the test itself does. -->
 
 ## Affected surfaces
 
