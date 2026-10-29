@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     setting's effect, not of its presence (#41).
   - a pinned tool or companion-package version is one the plan has confirmed, with `@latest` as the named
     fallback and the version used recorded by the developer (#47).
+  - a container health check names its probe and tests what the code uses (TCP or a real query), never a socket
+    or process check (#48).
 
 ### Changed
 

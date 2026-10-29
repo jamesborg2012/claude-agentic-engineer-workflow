@@ -658,6 +658,11 @@ git-branch.sh')"
     { echo "plan step 14 has no version fallback rule" >&2; return 1; }
 }
 
+@test "plan: a health check probes what the code uses, never a socket (#48)" {
+  awk '/^14\. \*\*Tool assumptions\*\*/{f=1; next} /^[0-9]+\. /{f=0} f' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'never a socket or process check' ||
+    { echo "plan step 14 has no readiness-probe rule" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
