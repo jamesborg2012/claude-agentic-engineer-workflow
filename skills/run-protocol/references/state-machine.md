@@ -54,8 +54,11 @@ stateDiagram-v2
     awaiting_plan_approval --> failed: stop
 
     develop --> review: ok
-    develop --> parallel_planning: blocked (first in the run), senior-engineer re-plans with notes, plan gate unless auto
-    develop --> blocked: blocked a second time in the run, or blocked in fix mode
+    develop --> awaiting_input: blocked by the environment (full mode), gate environment
+    awaiting_input --> develop: environment fixed, continue (re-plan allowance kept)
+    awaiting_input --> parallel_planning: environment gate answered re-plan (first in the run)
+    develop --> parallel_planning: blocked on the plan (first in the run), senior-engineer re-plans with notes, plan gate unless auto
+    develop --> blocked: blocked on the plan a second time in the run, or blocked in fix mode
 
     state review_verdict <<choice>>
     review --> review_verdict

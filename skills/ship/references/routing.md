@@ -39,8 +39,9 @@ Reached on `changes_required` from `<rd>/07-review-<r>.md`, where r = review_cyc
 ## Developer blocked
 
 1. Fix mode (a review fix or a QA fix): the blocked path.
-2. Full mode: run `jq '[.history[] | select(.note == "developer blocked: re-plan")] | length' <rd>/state.json`. At 1 or more, the blocked path.
-3. Otherwise `SKILL.md` `## Stage: plan` with the note `developer blocked: re-plan`, dispatching D7 only, with `notes: developer blocked: <the developer's SUMMARY> / <the dev report path from ARTEFACTS>`. Then the plan gate (unless auto or the gate is off), then develop. The re-plan rewrites `05-plan.md`, so the next develop is full mode.
+2. Full mode: run `grep -m1 '^Block cause:' <rd>/06-dev-report.md`. `Block cause: environment` goes to `gates.md` `## Gate: environment`: the plan is sound, so a re-plan would spend the allowance on nothing. Any other line, or none, continues at step 3.
+3. Run `jq '[.history[] | select(.note == "developer blocked: re-plan")] | length' <rd>/state.json`. At 1 or more, the blocked path.
+4. Otherwise `SKILL.md` `## Stage: plan` with the note `developer blocked: re-plan`, dispatching D7 only, with `notes: developer blocked: <the developer's SUMMARY> / <the dev report path from ARTEFACTS>`. Then the plan gate (unless auto or the gate is off), then develop. The re-plan rewrites `05-plan.md`, so the next develop is full mode.
 
 The note is how the once-per-run limit survives a resume: it is read from `history`, never from memory.
 

@@ -51,7 +51,7 @@ Read `03-standards.md` for its doc paths and the sections that apply. Never chec
 
 ### Templates
 
-The report starts from `${CLAUDE_PLUGIN_ROOT}/templates/artefacts/dev-report.md`. Read the template, start from it, keep every heading and its order, replace every `<placeholder>`, delete the instruction comments, and end with the return block. The `Mode:` line holds exactly one of `Mode: full`, `Mode: package` or `Mode: fix (cycle <n>)`.
+The report starts from `${CLAUDE_PLUGIN_ROOT}/templates/artefacts/dev-report.md`. Read the template, start from it, keep every heading and its order, replace every `<placeholder>`, delete the instruction comments, and end with the return block. The `Mode:` line holds exactly one of `Mode: full`, `Mode: package` or `Mode: fix (cycle <n>)`. The `Block cause:` line holds exactly one of `Block cause: none` (any status but `blocked`), `Block cause: plan` or `Block cause: environment` (see Return contract).
 
 ## Process
 
@@ -60,6 +60,7 @@ Step 0, for every mode:
 1. Resolve the dispatch fields. An unknown mode, or a missing field with no fallback, is `blocked`.
 2. Check the preconditions.
    - Full and fix: `git rev-parse --abbrev-ref HEAD` must equal `state.json` `branch` when that is set, and must never be the config `default_branch` (`main` when absent). `git status --porcelain --untracked-files=all` must be empty, ignoring lines whose path starts with `.claude/agent-memory/` (other agents' memory, committed by the orchestrator at the docs stage). Otherwise return `blocked` and name the problem. Worktrees are created from HEAD, so uncommitted work would be missing from them.
+   - Full mode only, one exception: uncommitted changes are an unfinished work package to pick up, not a block, when the existing `06-dev-report.md` has `Mode: full`, `Block cause: environment` and a `left uncommitted: WP-<n>` line under Deviations, and every changed path is one of WP-<n>'s files in `05-plan.md`. Run that WP first, sequentially (Mode: full, step 5), starting from its changes, and record `picked up WP-<n>` under Deviations. Anything else uncommitted is still `blocked`.
    - Package: `git -C <worktree> rev-parse --abbrev-ref HEAD` must equal `branch`, and `git -C <worktree> status --porcelain` must be empty.
 3. Read the required inputs for the mode.
 4. Take the issue number from the brief's H1 (`# Brief: #<n> …`). In a bulk run, a WP belongs to the issue whose prefixed AC ids it covers (`#12-AC-1` gives `#12`).
@@ -97,7 +98,7 @@ A plan step that is impossible or clearly wrong stops the WP with `STATUS: block
    3. If W has at least 2 WPs, fan them out (step 6). Otherwise run the lowest-numbered WP in R sequentially in the main checkout (step 5).
 
    Example: two leaf WPs with disjoint files fan out together. A WP that shares a file with another runs on its own. A single ready WP runs sequentially.
-5. Sequential WP: apply "Every work package" in the main checkout.
+5. Sequential WP: apply "Every work package" in the main checkout. If it blocks on the environment (Return contract), leave its changes uncommitted and write `left uncommitted: WP-<n>: <paths>` under Deviations, so that a re-dispatch after the owner puts the environment right picks it up (Step 0).
 6. Wave: write down the base sha with `git rev-parse HEAD`. Create each worktree with exactly `git worktree add -b aew/<run-id>/wp-<n> <run_dir>/worktrees/WP-<n> HEAD`. Then dispatch every package Agent call in one message, with the prompt `run_dir: <abs run dir>, mode: package, wp: WP-<n>, worktree: <abs path>, branch: aew/<run-id>/wp-<n>` and no `isolation`. Wait for all of them. Never set `isolation` on an Agent call: built-in isolation branches from the default branch and would lose the earlier WPs.
 7. Integrate each WP of the wave in WP-number order.
    1. Its report `06-dev-report-WP<n>.md` says `STATUS: ok`.
@@ -160,6 +161,9 @@ Replace the `STATUS` line with the one status that applies. `ARTEFACTS` names th
 
 - `ok`: every WP in scope is done and the checks pass. NEXT: full is "senior-engineer review"; package is "parent: integrate WP-<n>"; fix is "qa-engineer phase B (cycle <n+1>)" when `fix_from` named a QA report or triage, or "senior-engineer review" for a review.
 - `blocked`: a precondition failed, a field or input is missing, a plan step is wrong or impossible, a file outside the allowed set is needed, a pick conflicted, the checks are red and you cannot fix them within the allowed files, or a QA test looks wrong. Say which in SUMMARY. In full mode the finished WPs are integrated first.
+  - Set `Block cause: environment` when the plan is sound but something you may not change stops you and the owner can put it right: a service or daemon that is not running (Docker, a database), a missing tool or runtime or the wrong version on PATH, a missing credential or environment variable, a write the aew edit guard refused, or no network. SUMMARY names what to put right. Set `Block cause: plan` for every other block.
+  - In full mode, a sub-developer's `environment` carries into your report, unless another WP blocked on the plan.
+  - Only full mode's cause is routed on: `environment` pauses the run for the owner, `plan` goes to a re-plan.
 - `failed`: git or the file system errored in a way unrelated to the plan, or the report could not be written.
 - `needs_input` is never used. Engineering choices are yours, and spec questions go through the senior engineer via a `blocked` return.
 
