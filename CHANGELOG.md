@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A planned command or step the developer skipped or could not run is listed under Deviations with the
   reason; "None." now means every planned step ran (#73).
 
+### Fixed
+
+- The branch slug drops a leading `[NN]` spec prefix from the issue title, so a `{spec}-{issue}-{slug}`
+  branch no longer repeats the spec number (`01-38-catch-…`, not `01-38-01-catch-…`) and the prefix no
+  longer uses up slug characters. Spec snapshot names follow the same rule (#76).
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

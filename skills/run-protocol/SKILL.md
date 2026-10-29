@@ -156,4 +156,4 @@ Read; the orchestrator reads it with `jq -r '.git.commit_trailer // "Co-Authored
 - Specs: `docs/specs/<issue>-<slug>.md`. Standards: `docs/standards/<profile>.md` plus `README.md`.
 - Evidence: `docs/qa/<issue>/report.md`, `docs/qa/<issue>/screenshots/<TC>-<viewport>.jpg`.
 - Branches: `git.branch_pattern` (`feat/{issue}-{slug}`), or `git.milestone_branch_pattern` for bulk runs.
-- Slugs: lower-case kebab-case taken from the issue title.
+- Slugs: lower-case kebab-case taken from the issue title, without a leading `[NN]` spec prefix.
