@@ -230,7 +230,7 @@ In a bulk run, step 1's label goes on every issue, and `bulk.md` `## Spec analys
 
 1. Entry: `state.sh stage docs`, then `gh-labels.sh stage <n> documenting`.
 2. Check required files: `dispatch.md` `## Required inputs per stage`.
-3. Dispatch row D13. A `sequential-child` run adds `stacked_on: <dep>` when `sequential.md` `## Parent and dependency of a child` gives a dependency.
+3. Dispatch row D13, with `delivered_by` as `dispatch.md` gives it. A `sequential-child` run adds `stacked_on: <dep>` when `sequential.md` `## Parent and dependency of a child` gives a dependency.
 4. Return check: `dispatch.md` `## Return check`.
 5. Exit: `ok` runs `pr.md` `## Docs and memory commits`, then `## Stage: pr`.
 6. Failure: `routing.md` `## Agent status routing`.
