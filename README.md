@@ -335,6 +335,7 @@ Example: [`templates/config.example.json`](templates/config.example.json).
 | `git.milestone_branch_pattern` | string | `feat/m{milestone}-{slug}` | Branch name for a bulk milestone run |
 | `git.commit_convention` | string | `conventional` | Commit message convention |
 | `gates.plan_approval` | boolean | `true` | Ask for plan approval before development (`--auto` also skips it); material spec changes are always gated |
+| `guard.allow_paths[]` | array | `[]` | Committed files with no secrets that the edit guard would otherwise refuse, such as `.env.test` or `.npmrc`, as paths relative to the repo root (matched exactly; never `.git/`) |
 | `limits.max_fix_cycles` | integer | `3` | QA fix cycles before the run is blocked |
 | `limits.max_review_cycles` | integer | `2` | Review cycles before the run is blocked |
 | `limits.max_parallel_developers` | integer | `4` | Sub-developers that may run at once |
@@ -407,6 +408,9 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
   check. Set `agentRules: false` in `next.config.ts`.
 - **`npx tsc --noEmit` fails on a fresh Next.js 16 checkout (`Cannot find name 'LayoutProps'`):** the route
   types are generated into `.next/` by a build or dev run; run `npm run build` first.
+- **The developer is blocked by `aew guard: blocked a write to …/.env.test (env file)`:** aew refuses to edit
+  `.env*`, `.npmrc` and other secret files. If the file is committed and holds no secrets, add its path to
+  `guard.allow_paths` in `.aew/config.json` and resume; otherwise create it yourself.
 - **Stacked pull requests from a sequential milestone:** merge them in order, each with a merge commit (not
   squash). Deleting each merged branch lets GitHub retarget the next PR to the default branch; its
   `Closes #n` then closes the issue on merge.

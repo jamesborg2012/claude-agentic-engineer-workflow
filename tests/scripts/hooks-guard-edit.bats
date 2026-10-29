@@ -58,7 +58,66 @@ edit_payload() {
   reason=$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$output")
   [[ "$reason" == "aew guard: blocked a write to "* ]]
   [[ "$reason" == *"$PROJECT/.env"* ]]
-  [[ "$reason" == *"ask James"* ]]
+  [[ "$reason" == *"guard.allow_paths"* ]]
+  [[ "$reason" != *James* ]]
+}
+
+# allow <paths-json>: sets guard.allow_paths in the project's config.
+allow() {
+  jq --argjson a "$1" '.guard.allow_paths = $a' "$REPO_ROOT/templates/config.example.json" > "$PROJECT/.aew/config.json"
+}
+
+# decision <tool> <absolute-path>: prints deny, or allow when the hook is silent.
+decision() {
+  run_hook guard-edit.sh "$(edit_payload "$1" "$2")"
+  [ "$status" -eq 0 ] || return 1
+  if [ -z "$output" ]; then echo allow; else jq -r '.hookSpecificOutput.permissionDecision' <<<"$output"; fi
+}
+
+@test "guard.allow_paths: a listed path is allowed for Edit and Write, including in a new directory" {
+  allow '[".env.test", ".npmrc", "config/certs/test.pem"]'
+  local tool p
+  for tool in Edit Write; do
+    for p in .env.test .npmrc config/certs/test.pem; do
+      [ "$(decision "$tool" "$PROJECT/$p")" = allow ] || { echo "$tool $p not allowed" >&2; return 1; }
+    done
+  done
+}
+
+@test "guard.allow_paths: matching is exact, project-relative and case-sensitive" {
+  allow '[".env.test", "apps/web/.npmrc"]'
+  [ "$(decision Write "$PROJECT/sub/.env.test")" = deny ]
+  [ "$(decision Write "$PROJECT/.npmrc")" = deny ]
+  [ "$(decision Write "$PROJECT/.ENV.TEST")" = deny ]
+  [ "$(decision Write "$PROJECT/.env.local")" = deny ]
+  [ "$(decision Write "$PROJECT/apps/web/.npmrc")" = allow ]
+}
+
+@test "guard.allow_paths: a listed path is allowed inside a linked worktree of the run" {
+  allow '[".env.test"]'
+  local wt="$PROJECT/.aew/runs/1/worktrees/WP-3"
+  git worktree add -q -b aew/1/wp-3 "$wt" HEAD
+  [ "$(decision Write "$wt/.env.test")" = allow ]
+  [ "$(decision Write "$wt/.env")" = deny ]
+}
+
+@test "guard.allow_paths: a logical path through a symlinked parent still matches" {
+  allow '[".env.test"]'
+  ln -s "$PROJECT" "$BATS_TEST_TMPDIR/link"
+  [ "$(decision Write "$BATS_TEST_TMPDIR/link/.env.test")" = allow ]
+}
+
+@test "guard.allow_paths: git internals are never allowed, and their reason has no allowlist hint" {
+  allow '[".git/config", ".git/hooks/pre-commit"]'
+  run_hook guard-edit.sh "$(edit_payload Edit "$PROJECT/.git/config")"
+  [ "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$output")" = deny ]
+  [[ "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$output")" != *"allow_paths"* ]]
+  [ "$(decision Write "$PROJECT/.git/hooks/pre-commit")" = deny ]
+}
+
+@test "guard.allow_paths: an unreadable config keeps the deny" {
+  write_config '{ not json'
+  [ "$(decision Write "$PROJECT/.env.test")" = deny ]
 }
 
 @test "a missing tool_input.file_path is allowed" {

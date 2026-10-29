@@ -41,7 +41,9 @@
 # Limits: a heuristic safety net, not a sandbox. It does not look inside
 # `bash -c`, `sh -c`, `eval`, $(...) or backticks, aliases, functions or
 # xargs, does not parse `sudo`/`env`/`exec` options that take a value, and
-# does not resolve `git -C "$dir"` or `gh api` calls. Quoted text containing
+# does not resolve `git -C "$dir"` or `gh api` calls. It does not track write
+# targets, so a redirect, tee, cp, mv or sed -i into a file the edit guard
+# protects (.env*, .npmrc, ...) is not caught. Quoted text containing
 # ; | & or && is split too, and heredoc lines are scanned as commands, so
 # false positives are possible.
 # The agent gh rule matches the gh command itself, so an agent calling the
