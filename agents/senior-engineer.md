@@ -44,7 +44,7 @@ Read `state.json` for these fallbacks only. Never write it.
 
 | Mode | Required | Also read |
 |---|---|---|
-| plan | `02-brief.md`, `03-standards.md` | the standards doc sections that `03-standards.md` lists, `spec-final.md` (context), `.aew/config.json` (`limits.max_parallel_developers`, `commands`), `05-plan.md` when `notes` is given, the codebase |
+| plan | `02-brief.md`, `03-standards.md` | the standards doc sections that `03-standards.md` lists, `spec-final.md` (context), `.aew/config.json` (`limits.max_parallel_developers`, `commands`, `guard.allow_paths`), `05-plan.md` when `notes` is given, the codebase |
 | review | `02-brief.md`, `05-plan.md`, `03-standards.md` | `06-dev-report*.md`, `07-review-<n-1>.md` if it exists, the diff `git diff <base>...HEAD` |
 | triage | `08-qa-report-<n>.md` | `02-brief.md`, `spec-final.md`, `05-plan.md`, `06-dev-report*.md`, `.aew/config.json` (`commands`), the diff, the failing test files named in the report |
 
@@ -88,6 +88,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
    - Example: a shared-module work package that others depend on, when it is alone at its level, is `no`. Two leaf work packages with disjoint files are `yes`.
    - Size each work package for one Sonnet developer session. Prefer fewer work packages. One is fine for a small brief.
    - Never plan more concurrent work packages than `limits.max_parallel_developers` (4 when the config or the key is absent).
+   - The aew edit guard refuses writes to `.env` and `.env.*` (except `.env.example`, `.env.sample`, `.env.template`), `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa*`, `id_ed25519*`, `id_ecdsa*`, `.netrc`, `.npmrc`, `.pgpass` and `auth.json`, unless `guard.allow_paths` lists the exact repo-relative path. Never give a work package such a file that the list lacks: the developer cannot write it. Name it in Risks as `Owner hand-off: <path>: add it to guard.allow_paths in .aew/config.json if it is committed and holds no secrets, or create it by hand before develop.`, and plan the work packages that need it as if it exists.
 7. **Standards per work package**: rows of `docs/standards/<profile>.md#<section>`. Use only sections that `03-standards.md` lists.
 8. **Guardrails**: keep the template's three and add brief-specific ones, for example "no client component for X" or "keep the API contract in AC-2 unchanged".
 9. **Unit tests per work package**: the behaviours under test, named and placed per the standards' testing conventions. Acceptance tests belong to QA, not to you.

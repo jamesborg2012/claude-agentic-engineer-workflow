@@ -202,6 +202,26 @@
         }
       }
     },
+    "guard": {
+      "description": "Edit guard settings.",
+      "type": "object",
+      "additionalProperties": false,
+      "default": { "allow_paths": [] },
+      "properties": {
+        "allow_paths": {
+          "description": "Committed files with no secrets that the edit guard would otherwise refuse, such as .env.test or .npmrc. Each is a path relative to the repo root, matched exactly and case-sensitively, in the main checkout and in run worktrees. Paths under .git/ are never allowed.",
+          "type": "array",
+          "uniqueItems": true,
+          "default": [],
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^/]",
+            "not": { "pattern": "(^|/)\\.\\.?(/|$)" }
+          }
+        }
+      }
+    },
     "limits": {
       "description": "Cycle and concurrency limits. Exceeding a cycle limit sets the run to blocked.",
       "type": "object",

@@ -41,6 +41,7 @@
     "commit_convention": "conventional"
   },
   "gates": { "plan_approval": true },
+  "guard": { "allow_paths": [".env.test"] },
   "limits": { "max_fix_cycles": 3, "max_review_cycles": 2, "max_parallel_developers": 4 },
   "evidence": { "dir": "docs/qa", "format": "jpeg", "quality": 80 },
   "claude_md": { "max_lines": 300 },

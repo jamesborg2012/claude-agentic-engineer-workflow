@@ -555,6 +555,24 @@ git-branch.sh')"
   ! grep -qF 'remove it (`git worktree remove --force' <<< "$step" || { echo "leftover clean-up still force-removes first" >&2; return 1; }
 }
 
+@test "senior-engineer: guarded files are owner hand-offs, and the plan's list matches the edit guard's" {
+  local f="$REPO_ROOT/agents/senior-engineer.md" names n bad=""
+  grep -qF 'Name it in Risks as `Owner hand-off: <path>' "$f" || { echo "plan mode has no owner hand-off rule" >&2; return 1; }
+  grep -qF '`guard.allow_paths`)' "$f" || { echo "plan mode does not read guard.allow_paths" >&2; return 1; }
+  # Every basename pattern in guard-edit.sh's case list, deny rows and exceptions alike.
+  names=$(awk '/case "\$b" in/{f=1; next} /esac/{f=0} f' "$REPO_ROOT/scripts/hooks/guard-edit.sh" | sed -E 's/^ *//; s/\).*//' | tr '|' '\n' | sed -E 's/^ *//; s/ *$//')
+  [ -n "$names" ] || { echo "no patterns read from guard-edit.sh" >&2; return 1; }
+  while IFS= read -r n; do
+    grep -qF "\`$n\`" "$f" || bad="$bad  $n"$'\n'
+  done <<< "$names"
+  report_offenders "guard pattern missing from senior-engineer.md" "$bad"
+}
+
+@test "ship: the plan-approval summary quotes owner hand-offs" {
+  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md" | grep -qF '`Owner hand-off:` line verbatim' ||
+    { echo "plan-approval summary does not quote owner hand-offs" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

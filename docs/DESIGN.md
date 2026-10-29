@@ -158,6 +158,7 @@ Skills with side effects set `disable-model-invocation: true`.
   - `e2e_dir`: `"tests/e2e"`
 - `git`: `{ branch_pattern: "feat/{issue}-{slug}", milestone_branch_pattern: "feat/m{milestone}-{slug}", commit_convention: "conventional" }`
 - `gates`: `{ plan_approval: true }`
+- `guard`: `{ allow_paths: [] }`: committed, non-secret files the edit guard would refuse (for example `.env.test`, `.npmrc`), as repo-relative paths (§11)
 - `limits`: `{ max_fix_cycles: 3, max_review_cycles: 2, max_parallel_developers: 4 }`
 - `evidence`: `{ dir: "docs/qa", format: "jpeg", quality: 80 }`
 - `claude_md`: `{ max_lines: 300 }`
@@ -591,7 +592,7 @@ Matchers: `Bash`; `Edit|Write`; one `SubagentStop` entry with `^aew:(developer|q
   - any `gh` command from an aew agent (the hook payload's `agent_type` starts with `aew:`), because agents never touch GitHub (§2, principle 4).
 
   The guard is a heuristic (it does not unwrap `bash -c` or `eval`); its limits are documented in the script header.
-- **`PreToolUse` on Edit and Write (guard).** Blocks writes to `.env*`, known secret files and `.git/`. It may not cover `MultiEdit` or `NotebookEdit` (undocumented, see section 3).
+- **`PreToolUse` on Edit and Write (guard).** Blocks writes to `.env*`, known secret files and `.git/`. A secret-file block is lifted for a path that `guard.allow_paths` lists, matched exactly against the path relative to the checkout holding it (the main one or a run worktree); `.git/` is never allowed. The deny reason tells the agent the owner can list the file or create it. The senior-engineer plans such a file only if it is listed, and otherwise names it as an owner hand-off in the plan's risks, which the plan-approval summary quotes. It may not cover `MultiEdit` or `NotebookEdit` (undocumented, see section 3). Shell writes to the same files (`>`, `tee`, `cp`, `mv`, `sed -i`) are not caught: the Bash guard does not track write targets, and the developer and QA Bash allowlists already exclude those commands (known limitation).
 - **`SubagentStop` for qa-engineer (gate).** Blocks unless the latest QA artefact for the current stage exists (stage-to-artefact mapping) and ends with a valid return block.
 - **`SubagentStop` for developer (gate).** Blocks unless the newest `06-dev-report*.md` exists, is not older than `state.json`, ends with a valid return block, and, when `STATUS: ok`, lists the commands run with their results.
 - **Gates block once.** The reason becomes the agent's next instruction. When `stop_hook_active` is true, the gate allows the stop and the orchestrator's normal return check decides.

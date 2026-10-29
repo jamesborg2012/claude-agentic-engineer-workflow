@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `guard.allow_paths` in `.aew/config.json`: committed files with no secrets (such as `.env.test` or `.npmrc`)
+  that the edit guard would otherwise refuse, as exact repo-relative paths that also match inside run worktrees.
+  `.git/` is never allowed (#39, #45).
+
 ### Changed
 
 - README: install from GitHub pinned to a release tag (`#aew--v<version>`), with the upgrade steps, the init
@@ -18,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Developer leftover clean-up no longer deletes a blocked work package's uncommitted files: it commits them in
   the worktree, removes the worktree without `--force`, and keeps the attempt on an
   `aew/<run-id>/wp-<n>-salvage-<k>` branch named in the dev report (#46).
+- aew no longer plans work its own edit guard refuses: the senior-engineer names a guarded file that
+  `guard.allow_paths` lacks as an `Owner hand-off:` risk instead of giving it to a work package, and the
+  plan-approval summary quotes it. The guard's deny message no longer names James; it points to
+  `guard.allow_paths`. Shell writes to guarded files are recorded as a known limit of the Bash guard (#39).
 
 ## [0.1.0] - 2026-10-27
 
