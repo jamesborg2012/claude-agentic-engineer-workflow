@@ -12,12 +12,19 @@ milestones, an interrupted run resumed, and prompt mode. The record is
 
 ## Install
 
-This repo is both the plugin and a personal marketplace, `jamesborg-plugins`.
+This repo is both the plugin and a personal marketplace, `jamesborg-plugins`. Install a release from
+GitHub, pinned to its tag:
 
 ```bash
-claude plugin marketplace add /path/to/claude-agentic-engineer-workflow
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.1.0
 claude plugin install aew@jamesborg-plugins --scope user
 ```
+
+`#aew--v0.1.0` pins the marketplace to that release tag. Claude Code copies aew into its plugin cache
+(`claude plugin list --json` shows `installPath` `~/.claude/plugins/cache/jamesborg-plugins/aew/0.1.0`), so
+every project runs the released version. The repo is private: the clone uses the git credentials already on
+your machine (an SSH key that GitHub accepts, otherwise HTTPS with your `gh auth login` credentials) and never
+prompts.
 
 The install pulls in the three dependencies below. On a machine where Claude Code has never run an
 interactive session, `claude-plugins-official` isn't registered yet, and the install warns
@@ -31,24 +38,36 @@ touching your own config, use a throwaway config directory:
 ```bash
 export CLAUDE_CONFIG_DIR="$(mktemp -d)"
 claude plugin marketplace add anthropics/claude-plugins-official
-claude plugin marketplace add /path/to/claude-agentic-engineer-workflow
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v0.1.0
 claude plugin install aew@jamesborg-plugins --scope user   # "(+ 3 dependencies: superpowers, context7, frontend-design)"
 claude plugin list --json | jq -r '.[].id'                 # aew, context7, frontend-design, superpowers
 unset CLAUDE_CONFIG_DIR
 ```
 
-**Refresh after a change.** None is needed. Because the marketplace is a local folder and aew's
-source is a relative path, aew is read from the checkout itself: `claude plugin update` reports
-`aew is read from its folder, … nothing to update`. Committed or uncommitted edits take effect at
-the next session start (or `/reload-plugins`), and every session runs whatever branch the
-checkout has. The `installPath` that `claude plugin list --json` reports
-(`~/.claude/plugins/cache/jamesborg-plugins/aew/0.1.0`) is a copy made at install time and is not
-what loads. This holds only for a marketplace added from a local folder: one added from GitHub copies the plugin
-into the cache, and then `claude plugin marketplace update jamesborg-plugins` followed by
-`claude plugin update aew@jamesborg-plugins` picks up a new version.
+**Upgrade to a new release.** A pinned marketplace keeps its tag, so add it again with the new one (removing
+the marketplace also uninstalls aew; its dependencies stay):
 
-To try it for one session without installing it, run `claude --plugin-dir .` from the repo. The
-dependencies below must already be installed, because a `--plugin-dir` session doesn't install them.
+```bash
+claude plugin marketplace remove jamesborg-plugins
+claude plugin marketplace add jamesborg2012/claude-agentic-engineer-workflow#aew--v<new version>
+claude plugin install aew@jamesborg-plugins --scope user
+```
+
+The cached path includes the version, so re-run `/aew:init` in each project afterwards and accept the
+permission rules: its `.claude/settings.local.json` names the plugin's scripts and folder by that path, and
+headless runs need the new one. Init adds the new rules and keeps the old, harmless ones.
+
+**Every release bumps `version`.** Updates are keyed on `version` in `.claude-plugin/plugin.json`: a release
+that keeps the old version is never picked up by an installed copy (`claude plugin update` reports it is
+already at the latest version).
+
+**Working on aew itself.** Install from your checkout instead, with
+`claude plugin marketplace add /path/to/claude-agentic-engineer-workflow`. A relative-path plugin in a
+local-folder marketplace is read in place: edits take effect at the next session start (or `/reload-plugins`)
+with no update step, and every session runs whatever branch the checkout has, so don't use this route while
+aew is also working in other projects. To try it for one session without installing it, run
+`claude --plugin-dir .` from the repo; the dependencies below must already be installed, because a
+`--plugin-dir` session doesn't install them.
 
 ## Prerequisites
 
