@@ -727,6 +727,16 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "review and QA hand docs follow-ups to the doc-writer in a section, not NEXT (#18)" {
+  local bad=""
+  grep -qx '## Docs follow-ups' "$REPO_ROOT/templates/artefacts/review.md" || bad="${bad}review template has no Docs follow-ups"$'\n'
+  grep -qx '## Docs follow-ups' "$REPO_ROOT/templates/artefacts/qa-report.md" || bad="${bad}QA report template has no Docs follow-ups"$'\n'
+  awk '/^### Mode: review$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF '`## Docs follow-ups`' || bad="${bad}review mode does not write docs follow-ups"$'\n'
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF '`## Docs follow-ups`' || bad="${bad}QA phase B does not write docs follow-ups"$'\n'
+  grep -qF 'Apply every `## Docs follow-ups` line' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}doc-writer does not apply docs follow-ups"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

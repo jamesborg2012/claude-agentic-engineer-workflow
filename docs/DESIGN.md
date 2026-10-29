@@ -476,6 +476,7 @@ The loop repeats until everything passes or `max_fix_cycles` is reached.
   - stay within `claude_md.max_lines`;
   - link to `docs/` for detail;
   - never duplicate the standards docs.
+- **Docs follow-ups:** applies the `## Docs follow-ups` lines that review and QA write (a stale `CLAUDE.md` command, a README step), through the curation rules for `CLAUDE.md`; one outside its outputs goes to the PR body's Follow-ups (#18).
 - **`10-summary.md` and `pr-body.md`:**
   - `## In plain English` first, before `## Summary`, written last so it summarises what is actually there:
     - 100-250 words for a single issue, aiming for about 200; for a bulk PR an opening paragraph plus at most about 80 words per issue, aiming for about 60 (prompt 07, S6: drafts ran over the limit);

@@ -156,6 +156,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
     - Commands and output, with the exploratory label.
     - Screenshots.
     - Accessibility: one row per changed page, counts summed over viewports, with the rule ids and the raw file names in Notes.
+    - `## Docs follow-ups`: a doc the change made stale that you noticed while testing (a `CLAUDE.md` command, a README step), as `- <file>: <what to change and why>`, never a NEXT instruction; or "None.".
     - Failures: the triage table first, then the entries.
 12. If any manual-only case exists, write `manual-tests.md`. Otherwise write none. Overwrite it each cycle.
 13. On `ok` only, copy the report to `docs/qa/<issue>/report.md` with Bash, as one `cp "<run_dir>/08-qa-report-<n>.md" "<abs root>/<evidence.dir>/<issue>/report.md"` (create the directory with `mkdir -p` first if it is missing). Never use Write or Edit for this file: Claude Code refuses a subagent's Write of a file named `report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.

@@ -52,6 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   orchestrator never passed on (#59).
 - `[needs GitHub]` tag for manual tests that need a real pull request, review or workflow run: defined in the run
   protocol, applied by QA phase A, grouped in the PR body and counted once in the final report (#60).
+- `## Docs follow-ups` in the review and QA report: a doc the change made stale, as `<file>: <what to change>`,
+  which the doc-writer applies (through the CLAUDE.md curation rules) instead of a NEXT line (#18).
 
 ### Changed
 

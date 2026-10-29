@@ -127,6 +127,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 6. Give each location as `file:line` taken from the file at HEAD (open it with Read for line numbers), or `file` when the finding is a missing file. Every "Required fix" is a concrete instruction. Never write "consider".
 7. Never run tests, lint or builds, never check out a branch, and never edit code. Running them is the developer's and QA's job.
 8. A finding that can only be fixed by a material spec change (the list in Mode: plan, step 5), for example because every fix rewrites an AC, is not yours to decide. Keep it in Findings at its true severity, write a question for it in `## Questions for James` with your recommended answer and the alternatives, and return `needs_input`. James's answer goes through spec re-analysis, so the change is recorded on the issue. Choosing between fixes that leave the spec intact is an engineering choice: make it in the Required fix. Otherwise `## Questions for James` says "None.".
+9. A doc the change makes stale (a `CLAUDE.md` command, a README line) is a line in `## Docs follow-ups`, `- <file>: <what to change and why>`, never a NEXT instruction: the doc-writer reads the section, and NEXT reaches only the orchestrator. "None." otherwise.
 
 ### Mode: triage
 
