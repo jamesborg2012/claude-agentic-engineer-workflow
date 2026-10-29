@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the brief, as after a triage gate. The gate counts as a review cycle (#40).
 - PR body `## Follow-ups`: the minor and nit findings still open on the last review, so findings an approving
   review raises are no longer lost (#12, #14, #43, #55).
+- Plan hardening, in senior-engineer plan mode (new step 14, tool assumptions):
+  - a tool behaviour the brief flags or the plan relies on is confirmed with context7, or proved by a small test
+    at the start of the work package that relies on it, and listed as an `Unverified:` risk that the plan gate
+    quotes (#42).
 
 ### Changed
 

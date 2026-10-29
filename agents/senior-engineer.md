@@ -101,6 +101,8 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
     - `- service: docker` when a work package or its tests need a running container (a compose file, a database in Docker).
 
     Write "None." when nothing applies. A guarded file stays an `Owner hand-off:` risk (step 6); the same check covers it.
+14. **Tool assumptions**: you cannot run anything, so every claim the plan makes about how a tool behaves is confirmed in its docs or proved in the build before the work rests on it.
+    - A tool behaviour the brief lists as an open risk, or one the plan relies on that you have not confirmed (a config syntax, a CLI flag, a permission rule): confirm it with context7 for the installed version and cite the doc in Risks. If you cannot confirm it, make it the first step of the work package that relies on it, as a small test that proves the behaviour, so that WP blocks on the plan before anything is built on it, and add a Risks line `Unverified: <behaviour>: <how WP-<n> proves it first>`.
 
 ### Mode: review
 

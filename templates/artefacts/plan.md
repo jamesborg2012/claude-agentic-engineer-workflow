@@ -59,6 +59,8 @@ Read by: orchestrator (plan gate summary), developer, senior-engineer (review, t
 
 ## Risks
 
+<!-- Real risks, each with a mitigation, or "None identified.". `Owner hand-off:` and `Unverified:` lines are quoted at the plan gate. -->
+
 ## AC→WP traceability
 
 | AC | WP |

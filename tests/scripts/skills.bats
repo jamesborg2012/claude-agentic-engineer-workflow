@@ -569,7 +569,7 @@ git-branch.sh')"
 }
 
 @test "ship: the plan-approval summary quotes owner hand-offs" {
-  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md" | grep -qF '`Owner hand-off:` line verbatim' ||
+  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md" | grep -qF 'every `Owner hand-off:` and `Unverified:` line verbatim' ||
     { echo "plan-approval summary does not quote owner hand-offs" >&2; return 1; }
 }
 
@@ -633,6 +633,13 @@ git-branch.sh')"
   grep -qF 'fix the blocker, major and minor findings, and list nits under Deviations' "$REPO_ROOT/agents/developer.md" || bad="${bad}developer fix mode does not fix minors"$'\n'
   grep -qx '## Follow-ups' "$REPO_ROOT/templates/artefacts/pr-body.md" || bad="${bad}PR body template has no Follow-ups"$'\n'
   grep -qF 'Follow-ups: every minor and nit finding of the highest-numbered `07-review-<n>.md`' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}doc-writer does not fill Follow-ups"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "plan: an unverified tool behaviour is confirmed or proved first, and quoted at the gate (#42)" {
+  local bad=""
+  grep -qF 'Risks line `Unverified: <behaviour>: <how WP-<n> proves it first>`' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}plan mode has no Unverified rule"$'\n'
+  awk '/^## Gate: plan-approval$/{f=1; next} /^## /{f=0} f' "$REPO_ROOT/skills/ship/references/gates.md" | grep -qF 'every `Owner hand-off:` and `Unverified:` line verbatim' || bad="${bad}plan-approval summary does not quote Unverified lines"$'\n'
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
