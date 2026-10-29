@@ -97,6 +97,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uncommitted and picked up by the next full-mode dispatch (#51).
 - The ship and milestone final reports name `retro.repo` for retro items; a milestone report had named the
   project repo (#36).
+- `/aew:prompt` no longer leaves agent-memory edits uncommitted on the default branch: the spec-analyser reads
+  but writes no memory in a prompt-mode run (#34).
 
 ## [0.1.0] - 2026-10-27
 

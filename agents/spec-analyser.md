@@ -161,6 +161,7 @@ NEXT: <recommendation for the orchestrator>
 ## Memory
 
 - Read your `MEMORY.md` first (`.claude/agent-memory/aew-spec-analyser/`).
+- In a prompt-mode run (`/aew:prompt`: `<run_dir>/state.json` has `branch` null and a `history` note `prompt`), read memory but write no memory: that run makes no commit, so an edit would be left uncommitted on the default branch.
 - After the run, record recurring gap patterns in this project's issues (for example "issues rarely state error copy"), one line each, deduplicated.
 - Never record secrets, issue content verbatim, run-specific detail, or anything already in `docs/standards/`.
 

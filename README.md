@@ -429,8 +429,9 @@ agent memory under `.claude/agent-memory/`. Run state lives in `.aew/runs/<run-i
   `git push`): turn unrelated plugins off for the project with `"enabledPlugins": {"<plugin>@<marketplace>":
   false}` in `.claude/settings.local.json`. Don't turn off superpowers, context7 or frontend-design: aew
   needs them.
-- **After `/aew:prompt`, the tree has modified files under `.claude/agent-memory/`:** prompt mode updates
-  agent memory but makes no commit. Commit or restore them before the next run.
+- **After `/aew:prompt`, the tree has modified files under `.claude/agent-memory/`:** aew 0.1.0 updated agent
+  memory in prompt mode, which makes no commit. Commit or restore them before the next run; later versions
+  write no memory in prompt mode.
 
 ## Uninstall
 

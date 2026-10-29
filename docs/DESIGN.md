@@ -304,7 +304,7 @@ The orchestrator reads return blocks and only reads full artefacts when a gate o
 - Definition of Done
 - Open risks
 
-**Prompt mode.** Writes `prompt.md`, a single self-contained prompt for a plain Claude Code session with no plugin installed. It contains:
+**Prompt mode.** Writes `prompt.md`, a single self-contained prompt for a plain Claude Code session with no plugin installed. The run makes no commit, so the spec-analyser writes no agent memory in it (#34). It contains:
 
 - role and context;
 - the brief inline;
