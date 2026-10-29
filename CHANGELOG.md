@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     fallback and the version used recorded by the developer (#47).
   - a container health check names its probe and tests what the code uses (TCP or a real query), never a socket
     or process check (#48).
+  - tests of state that outlives a request use one isolation pattern the plan names, in a shared helper that
+    QA's phase B specs reuse, with no test-only production code path (#15).
 
 ### Changed
 

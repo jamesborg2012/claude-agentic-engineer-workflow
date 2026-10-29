@@ -663,6 +663,13 @@ git-branch.sh')"
     { echo "plan step 14 has no readiness-probe rule" >&2; return 1; }
 }
 
+@test "plan: stateful endpoints get one isolation pattern that the developer and QA share (#15)" {
+  local bad=""
+  grep -E '^9\. \*\*Unit tests per work package\*\*' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'name one isolation pattern' || bad="${bad}plan has no isolation-pattern rule"$'\n'
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF "the plan's isolation pattern" || bad="${bad}QA phase B does not use the plan's isolation pattern"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
