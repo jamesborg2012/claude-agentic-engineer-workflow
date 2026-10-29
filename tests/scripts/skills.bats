@@ -681,6 +681,15 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "brief: a spec criteria map traces every AC to its spec criterion, into the snapshot (#22)" {
+  local bad=""
+  grep -qx '## Spec criteria map' "$REPO_ROOT/templates/artefacts/brief.md" || bad="${bad}brief template has no Spec criteria map"$'\n'
+  grep -qF '**Spec criteria map**' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief-compiler does not fill the map"$'\n'
+  grep -qF 'AC appears in exactly one row of the spec criteria map' "$REPO_ROOT/agents/brief-compiler.md" || bad="${bad}brief self-check does not check the map"$'\n'
+  grep -qF '`| Spec criterion | AC | TC | Test | Result |`' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}snapshot traceability does not show the spec criterion"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

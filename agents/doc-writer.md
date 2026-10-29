@@ -59,7 +59,7 @@ The snapshot is `docs/specs/<issue>-<slug>.md`. The slug is the issue title in l
 1. `## Spec`: the content of `spec-final.md`.
 2. `## Revision history`: `spec_revision` and a line per `spec-revision-v<N>.md`, or "No revisions".
 3. `## Key decisions`: from the plan's alternatives, each with the reason it was rejected.
-4. `## Traceability`: a table `| AC | TC | Test | Result |` with every AC in the brief. A manual AC points to `manual-tests.md`. Results come from the passing QA report.
+4. `## Traceability`: a table `| Spec criterion | AC | TC | Test | Result |` with every AC in the brief, its spec criterion taken from the brief's `## Spec criteria map`, so a reader of the issue can follow each of its criteria. A manual AC points to `manual-tests.md`. Results come from the passing QA report.
 5. `## Outstanding manual tests`: the open items from `manual-tests.md`, or "None.".
 
 In a bulk run write one snapshot per issue, `docs/specs/<k>-<slug>.md`, the slug from that issue's `issue.json` title, with the same five sections: `## Spec` from `issues/<k>/spec-final.md`; `## Revision history` from that issue's `spec-revision-v<N>.md` files (the current version is the highest N, or 1 when there are none; the run's `spec_revision` is not used in bulk); `## Key decisions` from the shared plan, those that bear on the issue; `## Traceability` with the ACs prefixed `#<k>-` only; `## Outstanding manual tests` with the open items whose AC id has the `#<k>-` prefix, or "None.".

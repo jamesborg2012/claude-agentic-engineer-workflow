@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Brief `## Standards overrides`: an AC whose value contradicts a standards rule (a 422 where the standard says
   400) is recorded once in the brief, carried into `03-standards.md`, and followed by the planner, developer and
   reviewer instead of the standard (#7).
+- Brief `## Spec criteria map`: each spec criterion and the brief ACs it became, so a criterion split into
+  several ACs still traces back; the spec snapshot's traceability table gains a Spec criterion column (#22).
 
 ### Changed
 

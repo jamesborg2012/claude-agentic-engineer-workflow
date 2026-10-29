@@ -293,6 +293,7 @@ The orchestrator reads return blocks and only reads full artefacts when a gate o
 - Goal
 - Context
 - Acceptance criteria. Numbered `AC-1…`, each testable (Given/When/Then where it helps), tagged `[UI] [API] [DATA] [A11Y] [PERF] [SEC]`.
+- Spec criteria map: each spec criterion and the brief ACs it became, so a split criterion traces back; the spec snapshot's traceability table shows both (#22).
 - Non-goals
 - Constraints
 - Standards overrides: each AC whose value contradicts a `docs/standards/` rule, as `<doc>#<section>: <rule> → <what the brief requires> (<AC ids>)`. The standards-setter carries them into `03-standards.md`, and the planner, developer and reviewer follow the override instead of the rule (#7).
