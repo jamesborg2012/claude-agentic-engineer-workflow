@@ -116,7 +116,7 @@ These rules apply in both modes.
    - the second sentence of `## Role and context`: what the session needs to know that it cannot infer from the repo, taken from the brief's Context;
    - commands, from `commands`, set ones only. If none are set, write "the project's lint, format, typecheck and unit test commands";
    - viewports and axe standard, from `ui` (defaults included), written for a reader, for example "desktop 1440x900, mobile 390x844" and "WCAG 2.2 AA" for `wcag22aa`;
-   - branch: `git.branch_pattern` with `{issue}` and `{slug}` filled in (the slug is the issue title in lower-case kebab-case);
+   - branch: `git.branch_pattern` with `{issue}`, `{slug}` and `{spec}` filled in (the slug is the issue title in lower-case kebab-case; `{spec}` is the number in a leading `[NN]` of the title, zeros kept);
    - default branch, from `default_branch`.
 6. Under `## Brief`, inline the full brief with `###` sub-headings in this order: Goal, Context, Acceptance criteria, Non-goals, Constraints, Affected surfaces, Test data and accounts needed, `UI changes: yes` or `UI changes: no`, Open risks. Every AC appears with its id and tags.
 7. Under `## Standards`:
