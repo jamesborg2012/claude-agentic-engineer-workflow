@@ -17,12 +17,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the plan's `Owner hand-off:` files. Its result is in the plan-approval summary, and it runs again before
   every full-mode developer dispatch, so `--auto` runs are covered; a failure goes to the `environment` gate
   (fixed, continue / continue without the check / stop). Init pre-approves the script (#44, #50).
+- `review-decision` gate: a review finding that can only be fixed by a material spec change (for example an AC
+  that must be rewritten) is put to James as a question in the review's new `## Questions for James`. The
+  answer goes through spec re-analysis, so the revision is recorded on the issue, and the run continues from
+  the brief, as after a triage gate. The gate counts as a review cycle (#40).
+- PR body `## Follow-ups`: the minor and nit findings still open on the last review, so findings an approving
+  review raises are no longer lost (#12, #14, #43, #55).
 
 ### Changed
 
 - README: install from GitHub pinned to a release tag (`#aew--v<version>`), with the upgrade steps, the init
   re-run after an upgrade and the rule that every release bumps `version`; the local-folder install is now the
   route for working on aew itself.
+- A review fix cycle now fixes minor findings as well as blocker and major ones, so they are not re-raised
+  unchanged in the next review (#43). The review limit blocks at or above `max_review_cycles`.
 
 ### Fixed
 

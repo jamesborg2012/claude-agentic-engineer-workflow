@@ -112,6 +112,7 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
    - In a bulk run the `10-summary.md` H1 is `# Summary: <run_id> <title>`, and the AC checklist keeps the brief's prefixed ids (`- [x] #12-AC-1: …`), because the orchestrator counts them in that form.
    - Test results come from the passing QA report.
    - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not. When there are more than 20 screenshot rows, put the table inside a `<details>` block with a one-line `<summary>`. Leave a blank line after `</summary>` and before `</details>`, or GitHub shows the table as plain text.
+   - Follow-ups: every minor and nit finding of the highest-numbered `07-review-<n>.md` (the approving review, which re-raises anything still open), one line each, or "None." when there is no such finding or no review.
    - Manual tests: the outstanding items, or "None.".
    - Add `Closes #<n>` for every issue in `state.json` `issues`.
    - Remove every template comment from `pr-body.md`, because it is posted to GitHub as written.
@@ -169,7 +170,7 @@ Never record secrets, run-specific detail or standards content.
 - The passing QA report was found and used.
 - `docs/specs/<issue>-<slug>.md` has the five sections, in order (one snapshot per issue in a bulk run).
 - `CLAUDE.md` is curated, within `claude_md.max_lines`, and every removed, merged or rewritten entry is listed in the Summary with its original text.
-- `10-summary.md` and `pr-body.md` have every template heading, an AC checklist covering the brief, test results, screenshot links in the `blob/<branch>/…?raw=true` form, manual tests, and `Closes #<n>` for every issue.
+- `10-summary.md` and `pr-body.md` have every template heading, an AC checklist covering the brief, test results, screenshot links in the `blob/<branch>/…?raw=true` form, follow-ups, manual tests, and `Closes #<n>` for every issue.
 - `pr-body.md` has no template comments or placeholders.
 - `pr-body.md` opens with `## In plain English` as its first `##` section, once only, within the length limits and obeying the style rules, and it mentions outstanding manual tests and the test outcome in plain words.
 - `retro.md` has only plugin improvements, one `###` heading per item.

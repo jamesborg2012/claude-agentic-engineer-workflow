@@ -130,7 +130,7 @@ Never call the Agent tool, never cherry-pick, and never remove a worktree or del
 1. Read every file in `fix_from` and build the list of failures to fix.
    - From `08-qa-report-<n>.md`, fix the `impl_bug` failures only. The other classes go to senior triage first.
    - From `09-triage-<n>.md`, follow its Fix instructions. Its Test ruling is QA's, not yours.
-   - From `07-review-<n>.md`, fix the blocker and major findings, and list minors and nits under Deviations as "not addressed".
+   - From `07-review-<n>.md`, fix the blocker, major and minor findings, and list nits under Deviations as "not addressed". A minor is a concrete instruction too, and fixing it now saves it being re-raised in the next review.
 2. For each root cause: reproduce it with a unit test where the cause is unit-testable (TDD), fix it within the allowed files, and commit `fix(<scope>): <summary> (#<issue>)`. One commit per root cause. Fix mode may touch files owned by any WP, plus files named in a triage's Fix instructions. It never touches QA's specs (`ui.e2e_dir`), `docs/qa/`, `docs/standards/`, `CLAUDE.md`, `.aew/config.json`, `state.json` or `log.md`.
 3. Re-run the failing tests. Unit tests run directly. For an intermittent failure, re-run the fixed test repeatedly (for example Playwright's `--repeat-each`) and give the repeat count and the result in the report, so QA's recheck can be sized. For failing e2e tests, invoke `aew:ui-qa` with the Skill tool, start the app per its app-start section, run only the failing spec files (`commands.test_e2e` narrowed to them) without `AEW_EVIDENCE_DIR`, and stop the app only if you started it.
 4. Run the full unit suite, lint, format and typecheck, then `commands.build`.

@@ -62,9 +62,11 @@ stateDiagram-v2
 
     state review_verdict <<choice>>
     review --> review_verdict
+    review --> awaiting_input: needs_input (a finding needs a material spec change), review_cycle + 1, gate review-decision
+    awaiting_input --> spec_analysis: review decision answered, revision recorded, the run continues from brief
     review_verdict --> qa: approve
     review_verdict --> develop: changes_required, review_cycle below max_review_cycles (review_cycle + 1)
-    review_verdict --> blocked: changes_required, review_cycle = max_review_cycles
+    review_verdict --> blocked: changes_required, review_cycle at or above max_review_cycles
 
     state qa {
         state qa_result <<choice>>
