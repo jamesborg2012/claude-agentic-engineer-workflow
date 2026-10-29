@@ -643,6 +643,11 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "plan: a mitigation the code can carry is built in the first pass, not left to QA (#19)" {
+  grep -E '^10\. \*\*Risks\*\*' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF 'never leave it as a QA check' ||
+    { echo "plan Risks step does not build code mitigations in" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }

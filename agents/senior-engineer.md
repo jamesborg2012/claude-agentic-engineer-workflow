@@ -92,7 +92,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 7. **Standards per work package**: rows of `docs/standards/<profile>.md#<section>`. Use only sections that `03-standards.md` lists.
 8. **Guardrails**: keep the template's three and add brief-specific ones, for example "no client component for X" or "keep the API contract in AC-2 unchanged".
 9. **Unit tests per work package**: the behaviours under test, named and placed per the standards' testing conventions. Acceptance tests belong to QA, not to you.
-10. **Risks**: real ones, each with a mitigation. Write "None identified." only if that is true.
+10. **Risks**: real ones, each with a mitigation. A mitigation the code can carry now (a fallback handler such as `pageshow` for a restore-timing risk, a retry, a guard for a race) is built in the first pass: put it in the goal of the work package it belongs to, and never leave it as a QA check, because a QA failure costs a fix cycle and a full QA re-run. If it would add scope, raise it in step 5 instead. Write "None identified." only if that is true.
 11. **AC→WP traceability**: one row per AC from step 1. Self-check before you finish: the set of AC ids in the matrix equals the set from step 1, and every work package's "ACs covered" agrees with the matrix. Fix the plan until both hold.
 12. Use context7 (`resolve-library-id`, then `query-docs`) only when a design choice depends on version-specific framework behaviour. Do not use it to browse.
 13. **Environment**: what develop needs from the machine that the repo cannot provide, one line each in `## Environment`, and only in these forms, because `check-env.sh` reads them and fails any other line:

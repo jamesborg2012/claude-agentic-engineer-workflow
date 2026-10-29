@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - a tool behaviour the brief flags or the plan relies on is confirmed with context7, or proved by a small test
     at the start of the work package that relies on it, and listed as an `Unverified:` risk that the plan gate
     quotes (#42).
+  - a risk mitigation the code can carry (a fallback handler, a retry) goes into a work package's goal in the
+    first pass instead of being left as a QA check (#19).
 
 ### Changed
 
