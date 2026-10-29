@@ -133,6 +133,10 @@ Agents:
 
 Agents can then be tested offline, and the permission surface stays small.
 
+A test that needs a real GitHub event (a pull request, a review, a workflow run) is therefore manual: QA tags its
+`manual-tests.md` line `[needs GitHub]`, so the plan and the reports refer to that TC instead of re-explaining
+why, and James is asked once, at the end of the run, for all of them.
+
 ## File naming
 
 - Run artefacts: a two-digit prefix gives pipeline order (`01-`…`10-`). The names are fixed; don't invent new ones.

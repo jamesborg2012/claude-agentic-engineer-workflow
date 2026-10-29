@@ -1,7 +1,7 @@
 <!--
 Artefact: .aew/runs/<run-id>/05-plan.md
 Written by: senior-engineer (plan mode). No code beyond short illustrative signatures.
-Read by: orchestrator (plan gate summary), developer, senior-engineer (review, triage), doc-writer (key decisions)
+Read by: orchestrator (plan gate summary), developer, senior-engineer (review, triage), qa-engineer (phase B, Notes for QA), doc-writer (key decisions)
 -->
 # Plan: #<issue> <title>
 
@@ -49,6 +49,10 @@ Read by: orchestrator (plan gate summary), developer, senior-engineer (review, t
 | WP | Expected unit tests |
 |---|---|
 | WP-1 | <behaviour under test> |
+
+## Notes for QA
+
+<!-- "None." or what QA's phase B tests need to know about how the plan builds the ACs: supporting steps beyond the brief's ordered list (so an order assertion is relative), seams and test data the plan adds, behaviours only a GitHub event can show. They shape how a test asserts, never which behaviours are tested. -->
 
 ## Environment
 

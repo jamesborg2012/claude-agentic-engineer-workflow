@@ -106,6 +106,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
     - An AC met by a tool setting (an `.npmrc` key, a `pnpm-workspace.yaml` field, a `tsconfig` option, a lint rule): confirm that the installed version of the tool reads that setting from that file (tools move settings between files across majors), and plan a unit test of the effect (the tool refuses, warns or behaves differently), never one that only checks the line is present.
     - A version the plan pins for a tool or package the lockfile does not already hold (a CLI run with `npx`, a companion package): never assume a companion publishes the same version as its library, because their release lines often differ. Pin only a version you have confirmed (the lockfile, or context7's docs for that release), name `@latest` as the fallback, and tell the developer to record the version it actually used under Deviations.
     - A container health check or readiness wait: name the probe, and make it test what the code will use (a TCP connection, or a query as the app's user against the app's database), never a socket or process check, because an image's temporary init server answers those before the real service is ready. Plan a check that the first real connection or migration succeeds once the probe passes, and that the developer confirms it before reporting.
+15. **Notes for QA**: what QA's phase B tests need to know about how the plan builds the ACs, in `## Notes for QA`: supporting steps beyond the brief's ordered list (so an order assertion is relative), seams and test data the plan adds, a behaviour only a GitHub event can show. Never put QA instructions in NEXT, because the orchestrator does not pass NEXT to QA. "None." when nothing applies.
 
 ### Mode: review
 
@@ -126,6 +127,7 @@ Step 0, for every mode: resolve the dispatch fields, stop with `blocked` on an u
 6. Give each location as `file:line` taken from the file at HEAD (open it with Read for line numbers), or `file` when the finding is a missing file. Every "Required fix" is a concrete instruction. Never write "consider".
 7. Never run tests, lint or builds, never check out a branch, and never edit code. Running them is the developer's and QA's job.
 8. A finding that can only be fixed by a material spec change (the list in Mode: plan, step 5), for example because every fix rewrites an AC, is not yours to decide. Keep it in Findings at its true severity, write a question for it in `## Questions for James` with your recommended answer and the alternatives, and return `needs_input`. James's answer goes through spec re-analysis, so the change is recorded on the issue. Choosing between fixes that leave the spec intact is an engineering choice: make it in the Required fix. Otherwise `## Questions for James` says "None.".
+9. A doc the change makes stale (a `CLAUDE.md` command, a README line) is a line in `## Docs follow-ups`, `- <file>: <what to change and why>`, never a NEXT instruction: the doc-writer reads the section, and NEXT reaches only the orchestrator. "None." otherwise.
 
 ### Mode: triage
 

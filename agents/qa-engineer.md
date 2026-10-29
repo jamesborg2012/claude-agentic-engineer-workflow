@@ -125,7 +125,7 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 4. Write the TCs, `TC-1` onwards and consecutive. Every AC gets at least one TC. Give each a level (`unit | integration | e2e | UI | manual`), and record the test data and the accounts (roles from `app.test_accounts`, never credentials).
 5. Fill the UI tests table: each UI TC, its viewports by name, and the states to screenshot.
 6. Accessibility checks: an axe scan of every page the brief's Affected surfaces changes, at `ui.axe_standard` expanded as `aew:ui-qa` §7 says, plus keyboard and focus checks for each `[A11Y]` AC.
-7. Manual-only cases: only what can't be automated (an external side effect with no test hook such as email delivery, a physical device, a third-party UI). Each has its reason.
+7. Manual-only cases: only what can't be automated (an external side effect with no test hook such as email delivery, a physical device, a third-party UI). Each has its reason. A case that needs a real GitHub event (a pull request, a review, a workflow run) is manual, because agents never touch GitHub: tag it `[needs GitHub]` (template's second line).
 8. Write `## Files read`, as the last section before the return block. List one bullet per project file you opened with Read, written as the path relative to the project root in backticks, in the order you opened them. Run-dir files are included. Leave out plugin files, the plan itself (`04-qa-test-plan.md`), the memory dir `.claude/agent-memory/aew-qa-engineer/`, and any Read that failed.
 9. Self-check before you finish:
    - the set of ACs in Test cases equals step 3's set;
@@ -135,9 +135,10 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 
 ### Phase B
 
-1. Read the inputs. If `triage` is given, apply its Test ruling to the named tests only.
+1. Read the inputs. If `triage` is given, apply its Test ruling to the named tests only. Apply `## Notes for QA` of `05-plan.md` to how your tests assert (for example, an order check that is relative because the plan adds supporting steps); the notes never change which behaviours the brief requires.
 2. Set up Playwright per `aew:ui-qa` §2, only if the project has none: the config, exact-pinned packages, `npx playwright install chromium`, and the gitignore entries.
 3. Implement the automated TCs:
+   - every test you write, at every level, has a title that starts `TC-<n>: ` (`TC-3, TC-4: ` when one test covers several), so a TC can be traced to its test mechanically;
    - unit and integration tests in the project's framework and test directories;
    - in any test that asserts on rendered markup, compare HTML attribute names case-insensitively (React writes some in camelCase);
    - when `05-plan.md` names an isolation pattern for state that outlives a request, use the plan's isolation pattern and its shared helper rather than inventing another;
@@ -152,10 +153,11 @@ Step 0, for both phases: resolve the dispatch fields, stop with `blocked` on a m
 9. Stop the app if you started it, by its port, per `aew:ui-qa` §3.
 10. Classify each failure (`## Triage classes`) and apply the UI-done rule.
 11. Write `08-qa-report-<n>.md`. In a bulk run the AC column of the Results and triage tables carries the prefixed id (`#12-AC-1`), which gives traceability per issue, and so does each `manual-tests.md` line (`- [ ] **TC-3 (#12-AC-1):** …`), because the milestone report and doc-writer's per-issue snapshot select manual tests by that prefix:
-    - Results: every TC, manual ones as `manual`.
+    - Results: every TC with its test file in the Test column; a manual one has `manual-tests.md` as its Test and `manual` as its Result.
     - Commands and output, with the exploratory label.
     - Screenshots.
     - Accessibility: one row per changed page, counts summed over viewports, with the rule ids and the raw file names in Notes.
+    - `## Docs follow-ups`: a doc the change made stale that you noticed while testing (a `CLAUDE.md` command, a README step), as `- <file>: <what to change and why>`, never a NEXT instruction; or "None.".
     - Failures: the triage table first, then the entries.
 12. If any manual-only case exists, write `manual-tests.md`. Otherwise write none. Overwrite it each cycle.
 13. On `ok` only, copy the report to `docs/qa/<issue>/report.md` with Bash, as one `cp "<run_dir>/08-qa-report-<n>.md" "<abs root>/<evidence.dir>/<issue>/report.md"` (create the directory with `mkdir -p` first if it is missing). Never use Write or Edit for this file: Claude Code refuses a subagent's Write of a file named `report.md`. If this is the last allowed cycle (`n` equals `limits.max_fix_cycles + 1`) and it failed, the committed screenshots are a failing cycle's and there is no `report.md`: say in SUMMARY that the evidence is not final.

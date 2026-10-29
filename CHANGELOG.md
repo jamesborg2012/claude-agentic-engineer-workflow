@@ -47,6 +47,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rules, never write them into a committed file, replacing a one-off NEXT line and agent memory (#17, #23).
 - QA's repository-search tests scope their search to the files the AC is about, never test files, and a plan whose
   work must write a guarded string narrows the guard test in a work package instead of working around it (#16).
+- Plan `## Notes for QA`: what QA's phase B tests need to know about how the plan builds the ACs (supporting
+  steps, so an order check is relative; seams; test data), read by QA phase B instead of a plan NEXT line the
+  orchestrator never passed on (#59).
+- `[needs GitHub]` tag for manual tests that need a real pull request, review or workflow run: defined in the run
+  protocol, applied by QA phase A, grouped in the PR body and counted once in the final report (#60).
+- `## Docs follow-ups` in the review and QA report: a doc the change made stale, as `<file>: <what to change>`,
+  which the doc-writer applies (through the CLAUDE.md curation rules) instead of a NEXT line (#18).
+- Every QA test, at every level, has a title starting `TC-<n>: `, and the QA report's Results table gains a Test
+  column with each TC's test file, which the spec snapshot's traceability table uses (#8, #30).
 
 ### Changed
 

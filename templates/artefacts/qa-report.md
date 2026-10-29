@@ -1,15 +1,17 @@
 <!--
 Artefact: .aew/runs/<run-id>/08-qa-report-<n>.md; the final passing cycle is also copied to docs/qa/<issue>/report.md
 Written by: qa-engineer (phase B)
-Read by: orchestrator (routing), senior-engineer (triage), developer (fix mode), doc-writer, SubagentStop gate hook
+Read by: orchestrator (routing), senior-engineer (triage), developer (fix mode), doc-writer (Docs follow-ups are applied), SubagentStop gate hook
 -->
 # QA report <n>: #<issue> <title>
 
 ## Results
 
-| TC | AC | Result |
-|---|---|---|
-| TC-1 | AC-1 | pass / fail |
+<!-- Test: the file holding the test whose title starts with this TC id, or manual-tests.md for a manual case. -->
+
+| TC | AC | Test | Result |
+|---|---|---|---|
+| TC-1 | AC-1 | <test file> | pass / fail |
 
 ## Commands and output
 
@@ -29,6 +31,10 @@ Read by: orchestrator (routing), senior-engineer (triage), developer (fix mode),
 
 | Page | Critical | Serious | Moderate | Notes |
 |---|---|---|---|---|
+
+## Docs follow-ups
+
+<!-- "None." or one line per doc the change made stale, for the doc-writer: "- <file>: <what to change and why>" (for example a Commands line in CLAUDE.md). -->
 
 ## Failures
 

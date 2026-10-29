@@ -59,7 +59,7 @@ The snapshot is `docs/specs/<issue>-<slug>.md`. The slug is the issue title in l
 1. `## Spec`: the content of `spec-final.md`.
 2. `## Revision history`: `spec_revision` and a line per `spec-revision-v<N>.md`, or "No revisions".
 3. `## Key decisions`: from the plan's alternatives, each with the reason it was rejected.
-4. `## Traceability`: a table `| Spec criterion | AC | TC | Test | Result |` with every AC in the brief, its spec criterion taken from the brief's `## Spec criteria map`, so a reader of the issue can follow each of its criteria. A manual AC points to `manual-tests.md`. Results come from the passing QA report.
+4. `## Traceability`: a table `| Spec criterion | AC | TC | Test | Result |` with every AC in the brief, its spec criterion taken from the brief's `## Spec criteria map`, so a reader of the issue can follow each of its criteria, and its Test from the passing QA report's Results (the test file of each TC). A manual AC points to `manual-tests.md`. Results come from the passing QA report.
 5. `## Outstanding manual tests`: the open items from `manual-tests.md`, or "None.".
 
 In a bulk run write one snapshot per issue, `docs/specs/<k>-<slug>.md`, the slug from that issue's `issue.json` title, with the same five sections: `## Spec` from `issues/<k>/spec-final.md`; `## Revision history` from that issue's `spec-revision-v<N>.md` files (the current version is the highest N, or 1 when there are none; the run's `spec_revision` is not used in bulk); `## Key decisions` from the shared plan, those that bear on the issue; `## Traceability` with the ACs prefixed `#<k>-` only; `## Outstanding manual tests` with the open items whose AC id has the `#<k>-` prefix, or "None.".
@@ -105,7 +105,7 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
 
 1. Resolve `run_dir`, then find the passing QA report. If no `08-qa-report-<n>.md` exists, or the highest one does not pass, return `STATUS: blocked` and name what is missing. Do the same for any other missing required input.
 2. Write the spec snapshot.
-3. Curate `CLAUDE.md` by following the `aew:claude-md-curation` skill. Work on the whole file, stay within `claude_md.max_lines`, and keep a list of every entry you remove, merge or rewrite, with its original text (the skill's section 7).
+3. Apply every `## Docs follow-ups` line of each `07-review-<n>.md` and of the passing `08-qa-report-<n>.md`: a `CLAUDE.md` one through the curation below (the skill's rules still decide), any other file you may write directly, and one outside your outputs goes to the PR body's Follow-ups. Then curate `CLAUDE.md` by following the `aew:claude-md-curation` skill. Work on the whole file, stay within `claude_md.max_lines`, and keep a list of every entry you remove, merge or rewrite, with its original text (the skill's section 7).
 4. Write `10-summary.md` and `pr-body.md` from their templates, fresh on every dispatch except a retry (see `## Retry`): a re-run (`--from docs`) exists so that the current rules and run files apply, so never keep an earlier version because it looks accurate. Before overwriting an earlier `10-summary.md`, carry its list of `CLAUDE.md` entries removed, merged or rewritten forward, then add this pass's. The rules:
    - The Summary lists every `CLAUDE.md` entry you removed, merged or rewritten: its original text quoted in full, what happened to it and why. A line you kept but reworded, even only by adding a link, is a rewrite and is listed. So is a dated rule kept for a human to check (`claude-md-curation` §6 step 2). State the line count you read back from the file after writing it.
    - The AC checklist covers every AC in the brief.
@@ -113,7 +113,7 @@ If the dispatch has `intro_check_output`, the introduction failed the check. Fix
    - Test results come from the passing QA report.
    - Screenshot links take the form `https://github.com/<owner>/<repo>/blob/<branch>/<evidence.dir>/<issue>/screenshots/<TC>-<viewport>.jpg?raw=true`. Parse owner and repo from the `url` in `issue.json` (in a bulk run, the first issue's `issues/<k>/issue.json`, with `<run_id>` as `<issue>`), and take the branch from `state.json`. Add one link per file that exists, found with Glob, and none for files that do not. When there are more than 20 screenshot rows, put the table inside a `<details>` block with a one-line `<summary>`. Leave a blank line after `</summary>` and before `</details>`, or GitHub shows the table as plain text.
    - Follow-ups: every minor and nit finding of the highest-numbered `07-review-<n>.md` (the approving review, which re-raises anything still open), one line each, or "None." when there is no such finding or no review.
-   - Manual tests: the outstanding items, or "None.".
+   - Manual tests: the outstanding items, or "None.". List the `[needs GitHub]` items together under one line saying they need a real pull request or other GitHub event, so James can do them in one pass.
    - Add `Closes #<n>` for every issue in `state.json` `issues`.
    - Remove every template comment from `pr-body.md`, because it is posted to GitHub as written.
    - Write the `## In plain English` section last, once the other sections are done (see In plain English).

@@ -1,7 +1,7 @@
 <!--
 Artefact: .aew/runs/<run-id>/07-review-<n>.md
 Written by: senior-engineer (review mode), comparing git diff <base>...HEAD with the plan, standards and brief
-Read by: orchestrator (routing, gate review-decision), developer (when changes_required), doc-writer (open minors and nits become the PR body's Follow-ups)
+Read by: orchestrator (routing, gate review-decision), developer (when changes_required), doc-writer (open minors and nits become the PR body's Follow-ups; Docs follow-ups are applied)
 -->
 # Review <n>: #<issue> <title>
 
@@ -20,6 +20,10 @@ approve / changes_required
 ## Questions for James
 
 <!-- "None." unless a finding can only be fixed by a material spec change (senior-engineer, Mode: plan, step 5). Then one "### Q<k>. <question>" each, naming the finding, with "**Recommended answer:** <answer>" and "**Alternatives:** <a>; <b>" lines, and STATUS: needs_input. -->
+
+## Docs follow-ups
+
+<!-- "None." or one line per doc the change made stale, for the doc-writer: "- <file>: <what to change and why>" (for example a Commands line in CLAUDE.md). -->
 
 <!-- Return block (DESIGN §7.5). -->
 STATUS: ok | needs_input | blocked | failed

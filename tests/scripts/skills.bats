@@ -709,6 +709,42 @@ git-branch.sh')"
   [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
 }
 
+@test "plan: notes for QA live in the plan, and QA phase B applies them (#59)" {
+  local bad=""
+  grep -qx '## Notes for QA' "$REPO_ROOT/templates/artefacts/plan.md" || bad="${bad}plan template has no Notes for QA"$'\n'
+  grep -qF '15. **Notes for QA**' "$REPO_ROOT/agents/senior-engineer.md" || bad="${bad}plan mode has no Notes for QA step"$'\n'
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF '`## Notes for QA` of `05-plan.md`' || bad="${bad}QA phase B does not read the notes"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "manual tests that need a GitHub event carry one tag, listed once (#60)" {
+  local bad=""
+  grep -qF '`[needs GitHub]`' "$REPO_ROOT/skills/run-protocol/SKILL.md" || bad="${bad}run protocol does not define the tag"$'\n'
+  grep -qF '[needs GitHub]' "$REPO_ROOT/templates/artefacts/manual-tests.md" || bad="${bad}manual-tests template has no tag"$'\n'
+  grep -E '^7\. Manual-only cases' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF '`[needs GitHub]`' || bad="${bad}QA phase A does not tag GitHub-event cases"$'\n'
+  grep -qF 'Manual tests outstanding: <count> (<k> need GitHub)' "$REPO_ROOT/skills/ship/references/final-report.md" || bad="${bad}final report does not count them"$'\n'
+  grep -qF '`[needs GitHub]` items together' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}doc-writer does not group them"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "review and QA hand docs follow-ups to the doc-writer in a section, not NEXT (#18)" {
+  local bad=""
+  grep -qx '## Docs follow-ups' "$REPO_ROOT/templates/artefacts/review.md" || bad="${bad}review template has no Docs follow-ups"$'\n'
+  grep -qx '## Docs follow-ups' "$REPO_ROOT/templates/artefacts/qa-report.md" || bad="${bad}QA report template has no Docs follow-ups"$'\n'
+  awk '/^### Mode: review$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/senior-engineer.md" | grep -qF '`## Docs follow-ups`' || bad="${bad}review mode does not write docs follow-ups"$'\n'
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF '`## Docs follow-ups`' || bad="${bad}QA phase B does not write docs follow-ups"$'\n'
+  grep -qF 'Apply every `## Docs follow-ups` line' "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}doc-writer does not apply docs follow-ups"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
+@test "every QA test title carries its TC id, and the report names each TC's test file (#8, #30)" {
+  local bad=""
+  awk '/^### Phase B$/{f=1; next} /^### /{f=0} f' "$REPO_ROOT/agents/qa-engineer.md" | grep -qF 'at every level, has a title that starts `TC-<n>: `' || bad="${bad}QA titles do not carry TC ids at every level"$'\n'
+  grep -qF '| TC | AC | Test | Result |' "$REPO_ROOT/templates/artefacts/qa-report.md" || bad="${bad}QA report Results has no Test column"$'\n'
+  grep -qF "its Test from the passing QA report's Results" "$REPO_ROOT/agents/doc-writer.md" || bad="${bad}snapshot does not take the test file from the QA report"$'\n'
+  [ -z "$bad" ] || { printf '%s' "$bad" >&2; return 1; }
+}
+
 @test "doc-writer: summary and PR body are rewritten on every dispatch, re-runs included" {
   grep -qE '^4\. Write `10-summary.md` and `pr-body.md` .*every dispatch' "$REPO_ROOT/agents/doc-writer.md" ||
     { echo "doc-writer step 4 does not rewrite on every dispatch" >&2; return 1; }
