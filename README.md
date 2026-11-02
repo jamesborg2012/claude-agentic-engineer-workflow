@@ -63,7 +63,7 @@ Either way, restart Claude Code to load the new version. The cached path include
 plugin's scripts and folder by that path, and headless runs need the new one. Init adds the new rules and
 keeps the old, harmless ones.
 
-**Pin an exact release instead.** Add the marketplace with a release tag, such as `#aew--v0.2.0`, in place of
+**Pin an exact release instead.** Add the marketplace with a release tag, such as `#aew--v0.3.0`, in place of
 `#stable`. A tag never moves, so moving to another release (or to `stable`) means removing the marketplace and
 adding it again; removing it also uninstalls aew, while its dependencies stay:
 

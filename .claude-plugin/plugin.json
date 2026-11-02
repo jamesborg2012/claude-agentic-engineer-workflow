@@ -1,6 +1,6 @@
 {
   "name": "aew",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Delivers GitHub issues end to end through a spec-driven, multi-agent pipeline: spec analysis, brief, standards, plan, build, review, QA (including UI), docs and a PR ready for review.",
   "author": { "name": "James Borg" },
   "dependencies": [
